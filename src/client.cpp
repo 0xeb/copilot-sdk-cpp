@@ -18,8 +18,17 @@ json build_session_create_request(const SessionConfig& config)
 {
     json request;
 
+    // Model: explicit > env (if auto_byok_from_env) > none
     if (config.model.has_value())
+    {
         request["model"] = *config.model;
+    }
+    else if (config.auto_byok_from_env)
+    {
+        if (auto env_model = ProviderConfig::model_from_env())
+            request["model"] = *env_model;
+    }
+
     if (config.session_id.has_value())
         request["sessionId"] = *config.session_id;
     if (config.on_permission_request.has_value())
@@ -57,8 +66,18 @@ json build_session_create_request(const SessionConfig& config)
         request["excludedTools"] = *config.excluded_tools;
     if (config.streaming)
         request["streaming"] = config.streaming;
+
+    // Provider: explicit > env (if auto_byok_from_env) > none
     if (config.provider.has_value())
+    {
         request["provider"] = *config.provider;
+    }
+    else if (config.auto_byok_from_env)
+    {
+        if (auto env_provider = ProviderConfig::from_env())
+            request["provider"] = *env_provider;
+    }
+
     if (config.mcp_servers.has_value())
         request["mcpServers"] = *config.mcp_servers;
     if (config.custom_agents.has_value())
@@ -96,8 +115,18 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
     }
     if (config.streaming)
         request["streaming"] = config.streaming;
+
+    // Provider: explicit > env (if auto_byok_from_env) > none
     if (config.provider.has_value())
+    {
         request["provider"] = *config.provider;
+    }
+    else if (config.auto_byok_from_env)
+    {
+        if (auto env_provider = ProviderConfig::from_env())
+            request["provider"] = *env_provider;
+    }
+
     if (config.mcp_servers.has_value())
         request["mcpServers"] = *config.mcp_servers;
     if (config.custom_agents.has_value())

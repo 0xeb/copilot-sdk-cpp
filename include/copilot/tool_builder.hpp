@@ -141,6 +141,20 @@ struct schema_type<std::optional<T>>
     static json schema() { return schema_type<T>::schema(); }
 };
 
+// Type trait to detect std::optional
+template<typename T>
+struct is_optional : std::false_type
+{
+};
+
+template<typename T>
+struct is_optional<std::optional<T>> : std::true_type
+{
+};
+
+template<typename T>
+inline constexpr bool is_optional_v = is_optional<T>::value;
+
 /// Convert value to string for tool result
 template<typename T>
 std::string to_result_string(const T& value)
@@ -170,7 +184,16 @@ std::string to_result_string(const T& value)
 template<typename T>
 T extract_arg(const json& args, const std::string& name)
 {
-    if constexpr (std::is_same_v<std::decay_t<T>, std::string>)
+    if constexpr (is_optional_v<std::decay_t<T>>)
+    {
+        using value_type = typename std::decay_t<T>::value_type;
+        if (!args.contains(name) || args.at(name).is_null())
+        {
+            return std::nullopt;
+        }
+        return extract_arg<value_type>(args, name);
+    }
+    else if constexpr (std::is_same_v<std::decay_t<T>, std::string>)
     {
         return args.at(name).get<std::string>();
     }
@@ -190,20 +213,6 @@ T extract_arg_or(const json& args, const std::string& name, const T& default_val
     }
     return default_val;
 }
-
-// Type trait to detect std::optional
-template<typename T>
-struct is_optional : std::false_type
-{
-};
-
-template<typename T>
-struct is_optional<std::optional<T>> : std::true_type
-{
-};
-
-template<typename T>
-inline constexpr bool is_optional_v = is_optional<T>::value;
 
 } // namespace detail
 
@@ -526,6 +535,177 @@ class ToolBuilder::StructBuilder
 inline ToolBuilder tool(std::string name, std::string description)
 {
     return ToolBuilder(std::move(name), std::move(description));
+}
+
+// =============================================================================
+// Function Traits for make_tool
+// =============================================================================
+
+namespace detail
+{
+
+/// Remove cv-ref qualifiers
+template <typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+/// Function traits primary template
+template <typename T>
+struct function_traits : function_traits<decltype(&T::operator())>
+{
+};
+
+/// Specialization for function pointers
+template <typename R, typename... Args>
+struct function_traits<R (*)(Args...)>
+{
+    using return_type = R;
+    static constexpr size_t arity = sizeof...(Args);
+
+    template <size_t N>
+    using arg_type = std::tuple_element_t<N, std::tuple<Args...>>;
+};
+
+/// Specialization for member function pointers (const)
+template <typename C, typename R, typename... Args>
+struct function_traits<R (C::*)(Args...) const>
+{
+    using return_type = R;
+    static constexpr size_t arity = sizeof...(Args);
+
+    template <size_t N>
+    using arg_type = std::tuple_element_t<N, std::tuple<Args...>>;
+};
+
+/// Specialization for member function pointers (non-const)
+template <typename C, typename R, typename... Args>
+struct function_traits<R (C::*)(Args...)>
+{
+    using return_type = R;
+    static constexpr size_t arity = sizeof...(Args);
+
+    template <size_t N>
+    using arg_type = std::tuple_element_t<N, std::tuple<Args...>>;
+};
+
+/// Helper to invoke function with JSON args
+template <typename Func, size_t... Is>
+auto invoke_with_json_impl(Func&& func, const json& args,
+                           const std::vector<std::string>& names, std::index_sequence<Is...>)
+{
+    using traits = function_traits<remove_cvref_t<Func>>;
+    return func(
+        extract_arg<remove_cvref_t<typename traits::template arg_type<Is>>>(args, names[Is])...);
+}
+
+template <typename Func>
+auto invoke_with_json(Func&& func, const json& args, const std::vector<std::string>& names)
+{
+    using traits = function_traits<remove_cvref_t<Func>>;
+    return invoke_with_json_impl<Func>(std::forward<Func>(func), args, names,
+                                       std::make_index_sequence<traits::arity>{});
+}
+
+template<typename T>
+void add_required_if(json& required, const std::string& name)
+{
+    if constexpr (!is_optional_v<T>)
+    {
+        required.push_back(name);
+    }
+}
+
+/// Generate schema from function signature
+template <typename Func, size_t... Is>
+json generate_schema_impl(const std::vector<std::string>& names, std::index_sequence<Is...>)
+{
+    using traits = function_traits<remove_cvref_t<Func>>;
+    json schema = {{"type", "object"}, {"properties", json::object()}, {"required", json::array()}};
+
+    ((schema["properties"][names[Is]] =
+          schema_type<remove_cvref_t<typename traits::template arg_type<Is>>>::schema(),
+      add_required_if<remove_cvref_t<typename traits::template arg_type<Is>>>(
+          schema["required"], names[Is])),
+     ...);
+
+    return schema;
+}
+
+template <typename Func>
+json generate_schema(const std::vector<std::string>& names)
+{
+    using traits = function_traits<remove_cvref_t<Func>>;
+    return generate_schema_impl<Func>(names, std::make_index_sequence<traits::arity>{});
+}
+
+} // namespace detail
+
+// =============================================================================
+// make_tool - Claude SDK compatible API
+// =============================================================================
+
+/// Create a tool from a function with custom parameter names
+/// Similar to claude::mcp::make_tool for API consistency
+///
+/// Example:
+/// @code
+/// auto tool = copilot::make_tool("dbg_exec", "Execute debugger command",
+///     [](std::string command) { return execute(command); },
+///     {"command"});
+/// @endcode
+template <typename Func>
+Tool make_tool(std::string name, std::string description, Func&& func,
+               std::vector<std::string> param_names)
+{
+    using traits = detail::function_traits<detail::remove_cvref_t<Func>>;
+
+    if (param_names.size() != traits::arity)
+    {
+        throw std::invalid_argument("Parameter name count mismatch for tool '" + name +
+                                    "': expected " + std::to_string(traits::arity) + ", got " +
+                                    std::to_string(param_names.size()));
+    }
+
+    Tool tool;
+    tool.name = std::move(name);
+    tool.description = std::move(description);
+    tool.parameters_schema = detail::generate_schema<Func>(param_names);
+
+    // Create handler that extracts args and invokes function
+    tool.handler = [f = std::forward<Func>(func),
+                    names = std::move(param_names)](const ToolInvocation& inv) -> ToolResultObject
+    {
+        ToolResultObject result;
+        try
+        {
+            json args = inv.arguments.value_or(json::object());
+            auto output = detail::invoke_with_json(f, args, names);
+            result.text_result_for_llm = detail::to_result_string(output);
+        }
+        catch (const std::exception& e)
+        {
+            result.result_type = "error";
+            result.error = e.what();
+        }
+        return result;
+    };
+
+    return tool;
+}
+
+/// Create a tool with a single string parameter (common case)
+/// @code
+/// auto tool = copilot::make_tool("echo", "Echo message",
+///     [](std::string msg) { return msg; });  // Auto-names param "arg0"
+/// @endcode
+template <typename Func>
+Tool make_tool(std::string name, std::string description, Func&& func)
+{
+    using traits = detail::function_traits<detail::remove_cvref_t<Func>>;
+    std::vector<std::string> names;
+    for (size_t i = 0; i < traits::arity; ++i)
+        names.push_back("arg" + std::to_string(i));
+    return make_tool(std::move(name), std::move(description), std::forward<Func>(func),
+                     std::move(names));
 }
 
 } // namespace copilot

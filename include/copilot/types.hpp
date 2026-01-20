@@ -4,6 +4,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <map>
 #include <memory>
@@ -270,6 +271,61 @@ struct ProviderConfig
     std::optional<std::string> api_key;
     std::optional<std::string> bearer_token;
     std::optional<AzureOptions> azure;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Environment Variable Support
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// Environment variable names for BYOK configuration
+    static constexpr const char* ENV_API_KEY = "COPILOT_SDK_BYOK_API_KEY";
+    static constexpr const char* ENV_BASE_URL = "COPILOT_SDK_BYOK_BASE_URL";
+    static constexpr const char* ENV_PROVIDER_TYPE = "COPILOT_SDK_BYOK_PROVIDER_TYPE";
+    static constexpr const char* ENV_MODEL = "COPILOT_SDK_BYOK_MODEL";
+
+    /// Check if BYOK environment variables are configured
+    /// @return true if COPILOT_SDK_BYOK_API_KEY is set and non-empty
+    static bool is_env_configured()
+    {
+        const char* key = std::getenv(ENV_API_KEY);
+        return key != nullptr && key[0] != '\0';
+    }
+
+    /// Load ProviderConfig from COPILOT_SDK_BYOK_* environment variables
+    /// @return ProviderConfig if API key is set, nullopt otherwise
+    static std::optional<ProviderConfig> from_env()
+    {
+        if (!is_env_configured())
+            return std::nullopt;
+
+        ProviderConfig config;
+
+        // Required: API key
+        config.api_key = std::getenv(ENV_API_KEY);
+
+        // Optional: Base URL (default to OpenAI)
+        if (const char* url = std::getenv(ENV_BASE_URL))
+            config.base_url = url;
+        else
+            config.base_url = "https://api.openai.com/v1";
+
+        // Optional: Provider type (default to openai)
+        if (const char* ptype = std::getenv(ENV_PROVIDER_TYPE))
+            config.type = ptype;
+        else
+            config.type = "openai";
+
+        return config;
+    }
+
+    /// Load model from COPILOT_SDK_BYOK_MODEL environment variable
+    /// @return Model string if set, nullopt otherwise
+    static std::optional<std::string> model_from_env()
+    {
+        const char* model = std::getenv(ENV_MODEL);
+        if (model != nullptr && model[0] != '\0')
+            return std::string(model);
+        return std::nullopt;
+    }
 };
 
 inline void to_json(json& j, const ProviderConfig& c)
@@ -493,6 +549,10 @@ struct SessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+
+    /// If true and provider/model not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
+    /// Default: false (explicit configuration preferred over environment variables)
+    bool auto_byok_from_env = false;
 };
 
 /// Configuration for resuming an existing session
@@ -504,6 +564,10 @@ struct ResumeSessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+
+    /// If true and provider not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
+    /// Default: false (explicit configuration preferred over environment variables)
+    bool auto_byok_from_env = false;
 };
 
 /// Options for sending a message

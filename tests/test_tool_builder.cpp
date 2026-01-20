@@ -330,3 +330,113 @@ TEST(ToolBuilderTest, BackwardCompatibility)
     auto result = old_tool.handler(inv);
     EXPECT_EQ(result.text_result_for_llm, "old style");
 }
+
+// =============================================================================
+// make_tool Function Tests (Claude SDK compatible API)
+// =============================================================================
+
+TEST(MakeToolTest, SingleParam)
+{
+    auto tool = copilot::make_tool(
+        "echo", "Echo message", [](std::string msg) { return msg; }, {"message"});
+
+    EXPECT_EQ(tool.name, "echo");
+    EXPECT_EQ(tool.description, "Echo message");
+
+    // Check schema
+    EXPECT_EQ(tool.parameters_schema["type"], "object");
+    EXPECT_TRUE(tool.parameters_schema["properties"].contains("message"));
+    EXPECT_EQ(tool.parameters_schema["properties"]["message"]["type"], "string");
+
+    // Test invocation
+    ToolInvocation inv;
+    inv.arguments = json{{"message", "Hello"}};
+    auto result = tool.handler(inv);
+    EXPECT_EQ(result.text_result_for_llm, "Hello");
+}
+
+TEST(MakeToolTest, MultipleParams)
+{
+    auto tool = copilot::make_tool(
+        "calc", "Calculator",
+        [](double a, double b) { return std::to_string(a + b); },
+        {"first", "second"});
+
+    EXPECT_EQ(tool.name, "calc");
+
+    // Check schema
+    auto& props = tool.parameters_schema["properties"];
+    EXPECT_TRUE(props.contains("first"));
+    EXPECT_TRUE(props.contains("second"));
+    EXPECT_EQ(props["first"]["type"], "number");
+    EXPECT_EQ(props["second"]["type"], "number");
+
+    // Test invocation
+    ToolInvocation inv;
+    inv.arguments = json{{"first", 10.0}, {"second", 32.0}};
+    auto result = tool.handler(inv);
+    EXPECT_EQ(result.text_result_for_llm, "42.000000");
+}
+
+TEST(MakeToolTest, AutoParamNames)
+{
+    // Use make_tool without param names - should get arg0, arg1, etc.
+    auto tool = copilot::make_tool(
+        "greet", "Greet",
+        [](std::string name, int count) { return name + ":" + std::to_string(count); });
+
+    auto& props = tool.parameters_schema["properties"];
+    EXPECT_TRUE(props.contains("arg0"));
+    EXPECT_TRUE(props.contains("arg1"));
+
+    // Test invocation
+    ToolInvocation inv;
+    inv.arguments = json{{"arg0", "test"}, {"arg1", 5}};
+    auto result = tool.handler(inv);
+    EXPECT_EQ(result.text_result_for_llm, "test:5");
+}
+
+TEST(MakeToolTest, ParamCountMismatch)
+{
+    EXPECT_THROW(
+        copilot::make_tool(
+            "bad", "Bad",
+            [](std::string a, std::string b) { return a + b; },
+            {"only_one"}  // Mismatch: 2 params, 1 name
+        ),
+        std::invalid_argument);
+}
+
+TEST(MakeToolTest, ErrorHandling)
+{
+    auto tool = copilot::make_tool(
+        "fail", "Always fails",
+        [](std::string) -> std::string { throw std::runtime_error("boom"); },
+        {"input"});
+
+    ToolInvocation inv;
+    inv.arguments = json{{"input", "test"}};
+    auto result = tool.handler(inv);
+    EXPECT_EQ(result.result_type, "error");
+    EXPECT_TRUE(result.error.has_value());
+    EXPECT_EQ(*result.error, "boom");
+}
+
+TEST(MakeToolTest, IntAndBoolParams)
+{
+    auto tool = copilot::make_tool(
+        "config", "Config tool",
+        [](int port, bool enabled) {
+            return "port=" + std::to_string(port) + ",enabled=" + (enabled ? "true" : "false");
+        },
+        {"port", "enabled"});
+
+    auto& props = tool.parameters_schema["properties"];
+    EXPECT_EQ(props["port"]["type"], "integer");
+    EXPECT_EQ(props["enabled"]["type"], "boolean");
+
+    ToolInvocation inv;
+    inv.arguments = json{{"port", 8080}, {"enabled", true}};
+    auto result = tool.handler(inv);
+    EXPECT_EQ(result.text_result_for_llm, "port=8080,enabled=true");
+}

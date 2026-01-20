@@ -26,6 +26,94 @@
 using namespace copilot;
 
 // =============================================================================
+// BYOK Environment File Loader
+// =============================================================================
+
+/// Load environment variables from tests/byok.env if it exists.
+/// File format: KEY=VALUE per line (no quotes needed, # comments supported)
+static void load_byok_env_file()
+{
+    static std::once_flag once;
+    std::call_once(
+        once,
+        []()
+        {
+            // Get directory of this source file and look for byok.env
+            std::filesystem::path source_path(__FILE__);
+            std::filesystem::path env_file = source_path.parent_path() / "byok.env";
+
+            if (!std::filesystem::exists(env_file))
+            {
+                std::cerr << "[E2E] No byok.env file found at: " << env_file << "\n";
+                return;
+            }
+
+            std::ifstream file(env_file);
+            if (!file.is_open())
+            {
+                std::cerr << "[E2E] Failed to open byok.env file\n";
+                return;
+            }
+
+            std::cerr << "[E2E] Loading BYOK config from: " << env_file << "\n";
+
+            std::string line;
+            int count = 0;
+            while (std::getline(file, line))
+            {
+                // Skip empty lines and comments
+                if (line.empty() || line[0] == '#')
+                    continue;
+
+                // Trim whitespace
+                size_t start = line.find_first_not_of(" \t");
+                if (start == std::string::npos)
+                    continue;
+                size_t end = line.find_last_not_of(" \t\r\n");
+                line = line.substr(start, end - start + 1);
+
+                // Find KEY=VALUE
+                size_t eq_pos = line.find('=');
+                if (eq_pos == std::string::npos)
+                    continue;
+
+                std::string key = line.substr(0, eq_pos);
+                std::string value = line.substr(eq_pos + 1);
+
+                // Trim key and value
+                key.erase(0, key.find_first_not_of(" \t"));
+                key.erase(key.find_last_not_of(" \t") + 1);
+                value.erase(0, value.find_first_not_of(" \t"));
+                value.erase(value.find_last_not_of(" \t\r\n") + 1);
+
+                // Set environment variable
+#ifdef _WIN32
+                _putenv_s(key.c_str(), value.c_str());
+#else
+                setenv(key.c_str(), value.c_str(), 1);
+#endif
+                // Mask the value for logging (show only last 4 chars)
+                std::string masked = value.length() > 4
+                                         ? std::string(value.length() - 4, '*') + value.substr(value.length() - 4)
+                                         : "****";
+                std::cerr << "[E2E]   " << key << "=" << masked << "\n";
+                count++;
+            }
+
+            std::cerr << "[E2E] Loaded " << count << " environment variables from byok.env\n";
+        }
+    );
+}
+
+/// Check if BYOK is active (API key env var is set)
+/// Used to skip tests that don't work with BYOK providers
+static bool is_byok_active()
+{
+    const char* key = std::getenv("COPILOT_SDK_BYOK_API_KEY");
+    return key != nullptr && key[0] != '\0';
+}
+
+// =============================================================================
 // Test Fixture
 // =============================================================================
 
@@ -34,6 +122,9 @@ class E2ETest : public ::testing::Test
   protected:
     void SetUp() override
     {
+        // Load BYOK environment variables from tests/byok.env if it exists
+        load_byok_env_file();
+
         // E2E tests run by default. CI can set COPILOT_SDK_CPP_SKIP_E2E=1 to disable.
         if (should_skip_e2e_tests())
             GTEST_SKIP() << "E2E tests disabled via COPILOT_SDK_CPP_SKIP_E2E";
@@ -84,7 +175,11 @@ class E2ETest : public ::testing::Test
 
                     Client client(opts);
                     client.start().get();
-                    auto session = client.create_session().get();
+
+                    // Use BYOK config if available (from tests/byok.env)
+                    SessionConfig session_config;
+                    session_config.auto_byok_from_env = true;
+                    auto session = client.create_session(session_config).get();
 
                     std::mutex mtx;
                     std::condition_variable cv;
@@ -166,6 +261,30 @@ class E2ETest : public ::testing::Test
         return std::make_unique<Client>(opts);
     }
 
+    /// Create a default SessionConfig with BYOK env vars enabled.
+    /// If tests/byok.env exists, it will have been loaded and these vars will be used.
+    static SessionConfig default_session_config()
+    {
+        SessionConfig config;
+        config.auto_byok_from_env = true;
+        return config;
+    }
+
+    /// Create a default ResumeSessionConfig with BYOK env vars enabled.
+    static ResumeSessionConfig default_resume_config()
+    {
+        ResumeSessionConfig config;
+        config.auto_byok_from_env = true;
+        return config;
+    }
+
+    /// Print test description for verbose output
+    static void test_info(const char* description)
+    {
+        std::cerr << "\n[TEST] " << description << "\n";
+        std::cerr << std::string(60, '-') << "\n";
+    }
+
     static inline std::atomic<bool> copilot_can_run_{true};
     static inline std::string copilot_skip_reason_;
 };
@@ -176,6 +295,7 @@ class E2ETest : public ::testing::Test
 
 TEST_F(E2ETest, StartAndStop)
 {
+    test_info("Basic connection test: Start CLI process, verify connected, then stop cleanly.");
     auto client = create_client();
 
     EXPECT_EQ(client->state(), ConnectionState::Disconnected);
@@ -191,6 +311,7 @@ TEST_F(E2ETest, StartAndStop)
 
 TEST_F(E2ETest, Ping)
 {
+    test_info("Ping test: Send ping RPC to CLI and verify response with protocol version.");
     auto client = create_client();
     client->start().get();
 
@@ -206,6 +327,7 @@ TEST_F(E2ETest, Ping)
 
 TEST_F(E2ETest, PingWithoutMessage)
 {
+    test_info("Ping without message: Verify ping works with null/empty message.");
     auto client = create_client();
     client->start().get();
 
@@ -223,10 +345,11 @@ TEST_F(E2ETest, PingWithoutMessage)
 
 TEST_F(E2ETest, CreateSession)
 {
+    test_info("Create session: Start client, create session with BYOK config, verify session ID returned.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     auto session = client->create_session(config).get();
 
     EXPECT_NE(session, nullptr);
@@ -238,10 +361,11 @@ TEST_F(E2ETest, CreateSession)
 
 TEST_F(E2ETest, CreateSessionWithModel)
 {
+    test_info("Create session with explicit model: Test model override in SessionConfig.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.model = "gpt-4.1"; // Use a known model
 
     auto session = client->create_session(config).get();
@@ -255,6 +379,7 @@ TEST_F(E2ETest, CreateSessionWithModel)
 
 TEST_F(E2ETest, CreateSessionWithTools)
 {
+    test_info("Tool execution test: Register custom tool, ask AI to use it, verify tool called with correct args.");
     auto client = create_client();
     client->start().get();
 
@@ -293,7 +418,7 @@ TEST_F(E2ETest, CreateSessionWithTools)
     };
 
     // Create session with the tool
-    SessionConfig config;
+    auto config = default_session_config();
     config.tools = {secret_tool};
     config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
     {
@@ -362,6 +487,7 @@ TEST_F(E2ETest, CreateSessionWithTools)
 
 TEST_F(E2ETest, ListSessions)
 {
+    test_info("List sessions: Create session, send message, verify session appears in history list.");
     auto client = create_client();
     client->start().get();
 
@@ -402,6 +528,7 @@ TEST_F(E2ETest, ListSessions)
 
 TEST_F(E2ETest, GetLastSessionId)
 {
+    test_info("Get last session ID: Create session, destroy it, verify get_last_session_id() works.");
     auto client = create_client();
     client->start().get();
 
@@ -424,10 +551,11 @@ TEST_F(E2ETest, GetLastSessionId)
 
 TEST_F(E2ETest, SendMessage)
 {
+    test_info("Send message: Create session, send prompt, wait for SessionIdle, verify events received.");
     auto client = create_client();
     client->start().get();
 
-    auto session = client->create_session().get();
+    auto session = client->create_session(default_session_config()).get();
 
     // Track events
     std::mutex mtx;
@@ -473,10 +601,11 @@ TEST_F(E2ETest, SendMessage)
 
 TEST_F(E2ETest, StreamingResponse)
 {
+    test_info("Streaming response: Enable streaming, send prompt, verify multiple AssistantMessageDelta events.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.streaming = true;
 
     auto session = client->create_session(config).get();
@@ -529,6 +658,7 @@ TEST_F(E2ETest, StreamingResponse)
 
 TEST_F(E2ETest, AbortMessage)
 {
+    test_info("Abort message: Send long prompt, call abort() mid-stream, verify session becomes idle.");
     auto client = create_client();
     client->start().get();
 
@@ -578,6 +708,7 @@ TEST_F(E2ETest, AbortMessage)
 
 TEST_F(E2ETest, GetMessages)
 {
+    test_info("Get messages: Send message, wait for response, call get_messages() to retrieve history.");
     auto client = create_client();
     client->start().get();
 
@@ -625,6 +756,7 @@ TEST_F(E2ETest, GetMessages)
 
 TEST_F(E2ETest, ResumeSession)
 {
+    test_info("Resume session: Create session, stop client, restart, resume by ID, verify same session.");
     auto client = create_client();
     client->start().get();
 
@@ -664,7 +796,7 @@ TEST_F(E2ETest, ResumeSession)
     client = create_client();
     client->start().get();
 
-    ResumeSessionConfig resume_config;
+    auto resume_config = default_resume_config();
     auto session2 = client->resume_session(session_id, resume_config).get();
 
     EXPECT_EQ(session2->session_id(), session_id);
@@ -676,6 +808,12 @@ TEST_F(E2ETest, ResumeSession)
 
 TEST_F(E2ETest, ResumeSessionWithTools)
 {
+    test_info("Resume with tools: Create session, stop, resume with new tool, invoke tool successfully.");
+
+    // BYOK/OpenAI doesn't support resuming sessions with new tools
+    if (is_byok_active())
+        GTEST_SKIP() << "Skipping: BYOK providers don't support resume_session with tools";
+
     auto client = create_client();
     client->start().get();
 
@@ -749,7 +887,7 @@ TEST_F(E2ETest, ResumeSessionWithTools)
     client = create_client();
     client->start().get();
 
-    ResumeSessionConfig resume_config;
+    auto resume_config = default_resume_config();
     resume_config.tools = {secret_tool};
     auto session2 = client->resume_session(session_id, resume_config).get();
 
@@ -813,6 +951,7 @@ TEST_F(E2ETest, ResumeSessionWithTools)
 
 TEST_F(E2ETest, EventSubscription)
 {
+    test_info("Event subscription: Subscribe to session events, send message, verify events received.");
     auto client = create_client();
     client->start().get();
 
@@ -866,6 +1005,7 @@ TEST_F(E2ETest, EventSubscription)
 
 TEST_F(E2ETest, MultipleSubscriptions)
 {
+    test_info("Multiple subscriptions: Register two event handlers, verify both receive same events.");
     auto client = create_client();
     client->start().get();
 
@@ -917,11 +1057,12 @@ TEST_F(E2ETest, MultipleSubscriptions)
 
 TEST_F(E2ETest, InvalidSessionId)
 {
+    test_info("Invalid session ID: Attempt to resume non-existent session, expect exception.");
     auto client = create_client();
     client->start().get();
 
     // Try to resume non-existent session
-    ResumeSessionConfig config;
+    auto config = default_resume_config();
 
     EXPECT_THROW(
         { client->resume_session("non-existent-session-id-12345", config).get(); }, std::exception
@@ -932,6 +1073,7 @@ TEST_F(E2ETest, InvalidSessionId)
 
 TEST_F(E2ETest, ForceStop)
 {
+    test_info("Force stop: Create session, call force_stop(), verify client disconnects immediately.");
     auto client = create_client();
     client->start().get();
 
@@ -949,6 +1091,7 @@ TEST_F(E2ETest, ForceStop)
 
 TEST_F(E2ETest, ConcurrentPings)
 {
+    test_info("Concurrent pings: Send 5 ping requests simultaneously, verify all return correctly.");
     auto client = create_client();
     client->start().get();
 
@@ -975,6 +1118,7 @@ TEST_F(E2ETest, ConcurrentPings)
 
 TEST_F(E2ETest, AcceptMcpServerConfigOnSessionCreate)
 {
+    test_info("MCP on create: Create session with MCP server config, verify session created.");
     auto client = create_client();
     client->start().get();
 
@@ -988,7 +1132,7 @@ TEST_F(E2ETest, AcceptMcpServerConfigOnSessionCreate)
     std::map<std::string, json> mcp_servers;
     mcp_servers["test-server"] = mcp_config;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.mcp_servers = mcp_servers;
 
     auto session = client->create_session(config).get();
@@ -1002,6 +1146,7 @@ TEST_F(E2ETest, AcceptMcpServerConfigOnSessionCreate)
 
 TEST_F(E2ETest, AcceptMcpServerConfigOnSessionResume)
 {
+    test_info("MCP on resume: Create session, stop, resume with MCP config, verify session works.");
     auto client = create_client();
     client->start().get();
 
@@ -1044,7 +1189,7 @@ TEST_F(E2ETest, AcceptMcpServerConfigOnSessionResume)
     std::map<std::string, json> mcp_servers;
     mcp_servers["test-server"] = mcp_config;
 
-    ResumeSessionConfig resume_config;
+    auto resume_config = default_resume_config();
     resume_config.mcp_servers = mcp_servers;
 
     auto session2 = client->resume_session(session_id, resume_config).get();
@@ -1057,6 +1202,7 @@ TEST_F(E2ETest, AcceptMcpServerConfigOnSessionResume)
 
 TEST_F(E2ETest, HandleMultipleMcpServers)
 {
+    test_info("Multiple MCP servers: Create session with two MCP servers, verify session created.");
     auto client = create_client();
     client->start().get();
 
@@ -1076,7 +1222,7 @@ TEST_F(E2ETest, HandleMultipleMcpServers)
     mcp_servers["server1"] = config1;
     mcp_servers["server2"] = config2;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.mcp_servers = mcp_servers;
 
     auto session = client->create_session(config).get();
@@ -1094,6 +1240,7 @@ TEST_F(E2ETest, HandleMultipleMcpServers)
 
 TEST_F(E2ETest, AcceptCustomAgentConfigOnSessionCreate)
 {
+    test_info("Custom agent on create: Create session with custom agent, send message, verify works.");
     auto client = create_client();
     client->start().get();
 
@@ -1104,7 +1251,7 @@ TEST_F(E2ETest, AcceptCustomAgentConfigOnSessionCreate)
     agent.prompt = "You are a helpful test agent.";
     agent.infer = true;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.custom_agents = std::vector<CustomAgentConfig>{agent};
 
     auto session = client->create_session(config).get();
@@ -1143,6 +1290,7 @@ TEST_F(E2ETest, AcceptCustomAgentConfigOnSessionCreate)
 
 TEST_F(E2ETest, HandleCustomAgentWithTools)
 {
+    test_info("Custom agent with tools: Create agent with specific tool restrictions, verify session.");
     auto client = create_client();
     client->start().get();
 
@@ -1154,7 +1302,7 @@ TEST_F(E2ETest, HandleCustomAgentWithTools)
     agent.tools = std::vector<std::string>{"bash", "edit"};
     agent.infer = true;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.custom_agents = std::vector<CustomAgentConfig>{agent};
 
     auto session = client->create_session(config).get();
@@ -1168,6 +1316,7 @@ TEST_F(E2ETest, HandleCustomAgentWithTools)
 
 TEST_F(E2ETest, HandleCustomAgentWithMcpServers)
 {
+    test_info("Custom agent with MCP: Create agent with its own MCP server, verify session.");
     auto client = create_client();
     client->start().get();
 
@@ -1187,7 +1336,7 @@ TEST_F(E2ETest, HandleCustomAgentWithMcpServers)
     agent.prompt = "You are an agent with MCP servers.";
     agent.mcp_servers = agent_mcp_servers;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.custom_agents = std::vector<CustomAgentConfig>{agent};
 
     auto session = client->create_session(config).get();
@@ -1201,6 +1350,7 @@ TEST_F(E2ETest, HandleCustomAgentWithMcpServers)
 
 TEST_F(E2ETest, HandleMultipleCustomAgents)
 {
+    test_info("Multiple custom agents: Create session with two custom agents, verify session.");
     auto client = create_client();
     client->start().get();
 
@@ -1217,7 +1367,7 @@ TEST_F(E2ETest, HandleMultipleCustomAgents)
     agent2.prompt = "You are agent two.";
     agent2.infer = false;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.custom_agents = std::vector<CustomAgentConfig>{agent1, agent2};
 
     auto session = client->create_session(config).get();
@@ -1231,6 +1381,7 @@ TEST_F(E2ETest, HandleMultipleCustomAgents)
 
 TEST_F(E2ETest, AcceptBothMcpServersAndCustomAgents)
 {
+    test_info("MCP + custom agents: Create session with both MCP servers and agents, send message.");
     auto client = create_client();
     client->start().get();
 
@@ -1251,7 +1402,7 @@ TEST_F(E2ETest, AcceptBothMcpServersAndCustomAgents)
     agent.description = "An agent using shared MCP servers";
     agent.prompt = "You are a combined test agent.";
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.mcp_servers = mcp_servers;
     config.custom_agents = std::vector<CustomAgentConfig>{agent};
 
@@ -1295,6 +1446,7 @@ TEST_F(E2ETest, AcceptBothMcpServersAndCustomAgents)
 
 TEST_F(E2ETest, PermissionCallbackIsCalled)
 {
+    test_info("Permission callback: Register callback, send message, verify callback invoked on tool use.");
     auto client = create_client();
     client->start().get();
 
@@ -1302,7 +1454,7 @@ TEST_F(E2ETest, PermissionCallbackIsCalled)
     std::vector<std::string> requested_tools;
     std::mutex tool_mtx;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.on_permission_request = [&](const PermissionRequest& request) -> PermissionRequestResult
     {
         permission_call_count++;
@@ -1363,12 +1515,13 @@ TEST_F(E2ETest, PermissionCallbackIsCalled)
 
 TEST_F(E2ETest, PermissionCallbackCanDeny)
 {
+    test_info("Permission denial: Callback denies bash tools, verify session completes gracefully.");
     auto client = create_client();
     client->start().get();
 
     std::atomic<bool> denied_something{false};
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.on_permission_request = [&](const PermissionRequest& request) -> PermissionRequestResult
     {
         PermissionRequestResult result;
@@ -1430,10 +1583,11 @@ TEST_F(E2ETest, PermissionCallbackCanDeny)
 
 TEST_F(E2ETest, SystemMessageAppendMode)
 {
+    test_info("System message append: Set append mode system message, verify AI follows instruction.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     SystemMessageConfig sys_msg;
     sys_msg.mode = SystemMessageMode::Append;
     sys_msg.content = "Always end your responses with 'APPENDED_MARKER_12345'.";
@@ -1484,10 +1638,11 @@ TEST_F(E2ETest, SystemMessageAppendMode)
 
 TEST_F(E2ETest, SystemMessageReplaceMode)
 {
+    test_info("System message replace: Replace system prompt entirely, verify AI behaves differently.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     SystemMessageConfig sys_msg;
     sys_msg.mode = SystemMessageMode::Replace;
     sys_msg.content = "You are a calculator. Only respond with numbers, no words.";
@@ -1539,10 +1694,11 @@ TEST_F(E2ETest, SystemMessageReplaceMode)
 
 TEST_F(E2ETest, MessageWithFileAttachment)
 {
+    test_info("File attachment: Attach temp file to message, verify AI reads file content.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
     {
         PermissionRequestResult r;
@@ -1609,10 +1765,11 @@ TEST_F(E2ETest, MessageWithFileAttachment)
 
 TEST_F(E2ETest, MessageWithMultipleAttachments)
 {
+    test_info("Multiple attachments: Attach two files, verify AI references content from both.");
     auto client = create_client();
     client->start().get();
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
     {
         PermissionRequestResult r;
@@ -1691,6 +1848,7 @@ TEST_F(E2ETest, MessageWithMultipleAttachments)
 
 TEST_F(E2ETest, ToolCallIdIsPropagated)
 {
+    test_info("Tool call ID propagation: Verify tool_call_id is passed to handler and matches events.");
     auto client = create_client();
     client->start().get();
 
@@ -1721,7 +1879,7 @@ TEST_F(E2ETest, ToolCallIdIsPropagated)
         return result;
     };
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.tools = {test_tool};
     config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
     {
@@ -1789,6 +1947,7 @@ TEST_F(E2ETest, ToolCallIdIsPropagated)
 
 TEST_F(E2ETest, ResumeSessionWithPermissionCallback)
 {
+    test_info("Resume with permissions: Create session, resume with permission callback, verify works.");
     auto client = create_client();
     client->start().get();
 
@@ -1831,7 +1990,7 @@ TEST_F(E2ETest, ResumeSessionWithPermissionCallback)
     client = create_client();
     client->start().get();
 
-    ResumeSessionConfig resume_config;
+    auto resume_config = default_resume_config();
     resume_config.on_permission_request = [&](const PermissionRequest& request) -> PermissionRequestResult
     {
         permission_call_count++;
@@ -1876,6 +2035,12 @@ TEST_F(E2ETest, ResumeSessionWithPermissionCallback)
 
 TEST_F(E2ETest, ResumeSessionWithToolsAndPermissions)
 {
+    test_info("Resume with tools+perms: Resume with both tools and permission callback, invoke tool.");
+
+    // BYOK/OpenAI doesn't support resuming sessions with new tools
+    if (is_byok_active())
+        GTEST_SKIP() << "Skipping: BYOK providers don't support resume_session with tools";
+
     auto client = create_client();
     client->start().get();
 
@@ -1933,7 +2098,7 @@ TEST_F(E2ETest, ResumeSessionWithToolsAndPermissions)
     client = create_client();
     client->start().get();
 
-    ResumeSessionConfig resume_config;
+    auto resume_config = default_resume_config();
     resume_config.tools = {resume_tool};
     resume_config.on_permission_request = [&](const PermissionRequest&) -> PermissionRequestResult
     {
@@ -1986,13 +2151,14 @@ TEST_F(E2ETest, ResumeSessionWithToolsAndPermissions)
 
 TEST_F(E2ETest, PermissionDenialWithMessage)
 {
+    test_info("Permission denial message: Deny all tools with reason, verify session handles gracefully.");
     auto client = create_client();
     client->start().get();
 
     std::atomic<bool> denial_triggered{false};
     std::string denial_reason;
 
-    SessionConfig config;
+    auto config = default_session_config();
     config.on_permission_request = [&](const PermissionRequest& request) -> PermissionRequestResult
     {
         PermissionRequestResult result;
@@ -2062,6 +2228,7 @@ TEST_F(E2ETest, PermissionDenialWithMessage)
 
 TEST_F(E2ETest, FluentToolBuilderIntegration)
 {
+    test_info("Fluent ToolBuilder: Use ToolBuilder API for calc+echo tools, verify both work.");
     auto client = create_client();
     client->start().get();
 
@@ -2113,7 +2280,7 @@ TEST_F(E2ETest, FluentToolBuilderIntegration)
                     });
 
     // Create session with fluent-built tools
-    SessionConfig config;
+    auto config = default_session_config();
     config.tools = {calculator, echo};
     config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
     {

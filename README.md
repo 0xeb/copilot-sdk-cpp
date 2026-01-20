@@ -66,6 +66,106 @@ auto session = client.resume_session(session_id, resume_config).get();
 
 See `examples/tools.cpp` and `examples/resume_with_tools.cpp` for complete examples.
 
+### Fluent Tool Builder
+
+Use `make_tool` to create tools with automatic schema generation from lambda signatures:
+
+```cpp
+#include <copilot/tool_builder.hpp>
+
+// Single parameter - schema auto-generated
+auto echo_tool = copilot::make_tool(
+    "echo", "Echo a message",
+    [](std::string message) { return message; },
+    {"message"}  // Parameter names
+);
+
+// Multiple parameters
+auto calc_tool = copilot::make_tool(
+    "add", "Add two numbers",
+    [](double a, double b) { return std::to_string(a + b); },
+    {"first", "second"}
+);
+
+// Optional parameters (not added to "required" in schema)
+auto greet_tool = copilot::make_tool(
+    "greet", "Greet someone",
+    [](std::string name, std::optional<std::string> title) {
+        if (title)
+            return "Hello, " + *title + " " + name + "!";
+        return "Hello, " + name + "!";
+    },
+    {"name", "title"}
+);
+
+// Use in session config
+copilot::SessionConfig config;
+config.tools = {echo_tool, calc_tool, greet_tool};
+```
+
+## BYOK (Bring Your Own Key)
+
+Use your own API key instead of GitHub Copilot authentication.
+
+### Method 1: Explicit Configuration
+
+```cpp
+copilot::ProviderConfig provider;
+provider.api_key = "sk-your-api-key";
+provider.base_url = "https://api.openai.com/v1";
+provider.type = "openai";
+
+copilot::SessionConfig config;
+config.provider = provider;
+config.model = "gpt-4";
+auto session = client.create_session(config).get();
+```
+
+### Method 2: Environment Variables
+
+Set environment variables:
+
+```bash
+export COPILOT_SDK_BYOK_API_KEY=sk-your-api-key
+export COPILOT_SDK_BYOK_BASE_URL=https://api.openai.com/v1   # Optional, defaults to OpenAI
+export COPILOT_SDK_BYOK_PROVIDER_TYPE=openai                 # Optional, defaults to "openai"
+export COPILOT_SDK_BYOK_MODEL=gpt-4                          # Optional
+```
+
+Then enable auto-loading in your code:
+
+```cpp
+copilot::SessionConfig config;
+config.auto_byok_from_env = true;  // Load from COPILOT_SDK_BYOK_* env vars
+auto session = client.create_session(config).get();
+```
+
+**Precedence** (for each field):
+1. Explicit value in `SessionConfig` (highest priority)
+2. Environment variable (if `auto_byok_from_env = true`)
+3. Default Copilot behavior (lowest priority)
+
+**Note:** `auto_byok_from_env` defaults to `false` for backwards compatibility. Existing code will not be affected by setting these environment variables.
+
+### Checking Environment Configuration
+
+```cpp
+// Check if BYOK env vars are configured
+if (copilot::ProviderConfig::is_env_configured()) {
+    // COPILOT_SDK_BYOK_API_KEY is set
+}
+
+// Load provider config from env (returns nullopt if not configured)
+if (auto provider = copilot::ProviderConfig::from_env()) {
+    // Use *provider
+}
+
+// Load model from env
+if (auto model = copilot::ProviderConfig::model_from_env()) {
+    // Use *model
+}
+```
+
 ## Install / Package
 
 ```sh

@@ -1,3 +1,5 @@
+tests/byok.env
+tests/logs/
 build*/
 cmake-build*/
 out*/
