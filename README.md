@@ -182,6 +182,16 @@ cmake --install build --config Release
 | [claude-agent-sdk-dotnet](https://github.com/0xeb/claude-agent-sdk-dotnet) | C# | .NET port of the Claude Agent SDK |
 | [fastmcpp](https://github.com/0xeb/fastmcpp) | C++ | C++ port of FastMCP for building MCP servers |
 
+## Projects Using This SDK
+
+| Project | Description |
+|---------|-------------|
+| [windbg_copilot](https://github.com/0xeb/windbg_copilot) | WinDbg extension for AI-assisted debugging |
+| [lldb_copilot](https://github.com/0xeb/lldb_copilot) | LLDB plugin for AI-assisted debugging |
+| [libagents](https://github.com/0xeb/libagents) | Unified C++ library for AI agent providers |
+
+Want to add your project? Open a PR!
+
 ## License
 
 Copyright 2025 Elias Bachaalany
