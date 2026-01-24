@@ -32,7 +32,7 @@ struct SessionEvent;
 // =============================================================================
 
 /// SDK protocol version - must match copilot-agent-runtime server
-inline constexpr int kSdkProtocolVersion = 1;
+inline constexpr int kSdkProtocolVersion = 2;
 
 // =============================================================================
 // Enums
