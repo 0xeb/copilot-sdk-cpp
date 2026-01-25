@@ -93,6 +93,8 @@ json build_session_create_request(const SessionConfig& config)
         request["disabledSkills"] = *config.disabled_skills;
     if (config.infinite_sessions.has_value())
         request["infiniteSessions"] = *config.infinite_sessions;
+    if (config.config_dir.has_value())
+        request["configDir"] = *config.config_dir;
 
     return request;
 }
@@ -146,6 +148,8 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
         request["skillDirectories"] = *config.skill_directories;
     if (config.disabled_skills.has_value())
         request["disabledSkills"] = *config.disabled_skills;
+    if (config.config_dir.has_value())
+        request["configDir"] = *config.config_dir;
 
     return request;
 }

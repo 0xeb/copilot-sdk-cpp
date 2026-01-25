@@ -151,6 +151,15 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future that resolves to list of session events
     std::future<std::vector<SessionEvent>> get_messages();
 
+    /// Send a message and wait until the session becomes idle.
+    /// @param options Message options including prompt and attachments
+    /// @param timeout Maximum time to wait (default: 60 seconds)
+    /// @return Future that resolves to the final assistant message, or nullopt if none
+    /// @throws std::runtime_error if timeout is reached or session error occurs
+    std::future<std::optional<SessionEvent>> send_and_wait(
+        MessageOptions options,
+        std::chrono::seconds timeout = std::chrono::seconds(60));
+
     // =========================================================================
     // Event Handling
     // =========================================================================

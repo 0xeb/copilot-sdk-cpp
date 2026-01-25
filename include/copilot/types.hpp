@@ -605,6 +605,10 @@ struct SessionConfig
     /// When enabled (default), sessions automatically manage context limits and persist state.
     std::optional<InfiniteSessionConfig> infinite_sessions;
 
+    /// Custom configuration directory for the CLI.
+    /// When set, overrides the default config location.
+    std::optional<std::string> config_dir;
+
     /// If true and provider/model not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
     /// Default: false (explicit configuration preferred over environment variables)
     bool auto_byok_from_env = false;
@@ -625,6 +629,10 @@ struct ResumeSessionConfig
 
     /// List of skill names to disable.
     std::optional<std::vector<std::string>> disabled_skills;
+
+    /// Custom configuration directory for the CLI.
+    /// When set, overrides the default config location.
+    std::optional<std::string> config_dir;
 
     /// If true and provider not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
     /// Default: false (explicit configuration preferred over environment variables)

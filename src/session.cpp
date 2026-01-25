@@ -3,6 +3,7 @@
 
 #include <copilot/client.hpp>
 #include <copilot/session.hpp>
+#include <condition_variable>
 
 namespace copilot
 {
@@ -79,6 +80,68 @@ std::future<std::vector<SessionEvent>> Session::get_messages()
                 for (const auto& event_json : response["events"])
                     events.push_back(parse_session_event(event_json));
             return events;
+        }
+    );
+}
+
+std::future<std::optional<SessionEvent>> Session::send_and_wait(
+    MessageOptions options,
+    std::chrono::seconds timeout)
+{
+    return std::async(
+        std::launch::async,
+        [this, options = std::move(options), timeout]() -> std::optional<SessionEvent>
+        {
+            std::mutex mtx;
+            std::condition_variable cv;
+            bool done = false;
+            std::optional<SessionEvent> last_assistant_message;
+            std::optional<std::string> error_message;
+
+            // Subscribe to events
+            auto subscription = on(
+                [&](const SessionEvent& evt)
+                {
+                    std::lock_guard<std::mutex> lock(mtx);
+                    if (evt.type == SessionEventType::AssistantMessage)
+                    {
+                        last_assistant_message = evt;
+                    }
+                    else if (evt.type == SessionEventType::SessionIdle)
+                    {
+                        done = true;
+                        cv.notify_one();
+                    }
+                    else if (evt.type == SessionEventType::SessionError)
+                    {
+                        if (auto* data = evt.try_as<SessionErrorData>())
+                            error_message = data->message;
+                        else
+                            error_message = "Session error";
+                        done = true;
+                        cv.notify_one();
+                    }
+                }
+            );
+
+            // Send the message
+            send(options).get();
+
+            // Wait for completion or timeout
+            {
+                std::unique_lock<std::mutex> lock(mtx);
+                if (!cv.wait_for(lock, timeout, [&] { return done; }))
+                {
+                    throw std::runtime_error("Timeout waiting for session to become idle");
+                }
+            }
+
+            if (error_message.has_value())
+            {
+                throw std::runtime_error("Session error: " + *error_message);
+            }
+
+            return last_assistant_message;
         }
     );
 }
