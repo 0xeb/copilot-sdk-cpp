@@ -106,7 +106,8 @@ class Session : public std::enable_shared_from_this<Session>
     using PermissionHandler = std::function<PermissionRequestResult(const PermissionRequest&)>;
 
     /// Create a session (called by Client)
-    Session(const std::string& session_id, Client* client);
+    Session(const std::string& session_id, Client* client,
+            const std::optional<std::string>& workspace_path = std::nullopt);
 
     ~Session();
 
@@ -122,6 +123,15 @@ class Session : public std::enable_shared_from_this<Session>
     const std::string& session_id() const
     {
         return session_id_;
+    }
+
+    /// Get the workspace path for infinite sessions.
+    ///
+    /// Contains checkpoints/, plan.md, and files/ subdirectories.
+    /// Returns nullopt if infinite sessions are disabled.
+    const std::optional<std::string>& workspace_path() const
+    {
+        return workspace_path_;
     }
 
     // =========================================================================
@@ -191,6 +201,7 @@ class Session : public std::enable_shared_from_this<Session>
   private:
     std::string session_id_;
     Client* client_;
+    std::optional<std::string> workspace_path_;
 
     // Event handlers
     mutable std::mutex handlers_mutex_;

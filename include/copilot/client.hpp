@@ -143,6 +143,19 @@ class Client
     /// @return Future that resolves to ping response
     std::future<PingResponse> ping(std::optional<std::string> message = std::nullopt);
 
+    /// Get CLI status including version and protocol information
+    /// @return Future that resolves to status response
+    std::future<GetStatusResponse> get_status();
+
+    /// Get current authentication status
+    /// @return Future that resolves to auth status response
+    std::future<GetAuthStatusResponse> get_auth_status();
+
+    /// List available models with their metadata
+    /// @return Future that resolves to list of model info
+    /// @throws Error if not authenticated
+    std::future<std::vector<ModelInfo>> list_models();
+
     // =========================================================================
     // Internal API (used by Session)
     // =========================================================================

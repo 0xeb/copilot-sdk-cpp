@@ -2365,3 +2365,183 @@ TEST_F(E2ETest, FluentToolBuilderIntegration)
     session->destroy().get();
     client->force_stop();
 }
+
+// =============================================================================
+// Infinite Sessions Tests
+// =============================================================================
+
+TEST_F(E2ETest, InfiniteSessionConfig)
+{
+    test_info("Infinite session config: Create session with infinite sessions enabled, verify workspace path.");
+    auto client = create_client();
+    client->start().get();
+
+    // Create session with infinite sessions enabled
+    auto config = default_session_config();
+    config.infinite_sessions = InfiniteSessionConfig{
+        .enabled = true,
+        .background_compaction_threshold = std::nullopt,
+        .buffer_exhaustion_threshold = std::nullopt
+    };
+
+    auto session = client->create_session(config).get();
+
+    EXPECT_NE(session, nullptr);
+    EXPECT_FALSE(session->session_id().empty());
+
+    // Check if workspace_path is provided (depends on server support)
+    if (session->workspace_path().has_value())
+    {
+        std::cout << "Infinite session workspace path: " << *session->workspace_path() << "\n";
+        EXPECT_FALSE(session->workspace_path()->empty()) << "Workspace path should not be empty";
+    }
+    else
+    {
+        std::cout << "No workspace_path returned (infinite sessions may not be fully enabled on server)\n";
+    }
+
+    // Session should still work normally
+    std::atomic<bool> idle{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    MessageOptions opts;
+    opts.prompt = "Say 'hi'.";
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(30), [&]() { return idle.load(); });
+    }
+
+    EXPECT_TRUE(idle.load()) << "Session should complete successfully";
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+TEST_F(E2ETest, InfiniteSessionWithCustomThresholds)
+{
+    test_info("Infinite session custom thresholds: Create session with custom compaction thresholds.");
+    auto client = create_client();
+    client->start().get();
+
+    // Create session with custom compaction thresholds
+    auto config = default_session_config();
+    config.infinite_sessions = InfiniteSessionConfig{
+        .enabled = true,
+        .background_compaction_threshold = 0.7,
+        .buffer_exhaustion_threshold = 0.9
+    };
+
+    auto session = client->create_session(config).get();
+
+    EXPECT_NE(session, nullptr);
+    EXPECT_FALSE(session->session_id().empty());
+
+    // Session should work normally
+    std::atomic<bool> idle{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    MessageOptions opts;
+    opts.prompt = "What is 2+2?";
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(30), [&]() { return idle.load(); });
+    }
+
+    EXPECT_TRUE(idle.load()) << "Session should complete successfully";
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Client Status Methods Tests
+// =============================================================================
+
+TEST_F(E2ETest, GetStatus)
+{
+    test_info("GetStatus: Get CLI version and protocol information.");
+    auto client = create_client();
+    client->start().get();
+
+    auto status = client->get_status().get();
+
+    EXPECT_FALSE(status.version.empty()) << "Version should not be empty";
+    EXPECT_GE(status.protocol_version, 1) << "Protocol version should be >= 1";
+
+    std::cout << "CLI version: " << status.version
+              << ", protocol: " << status.protocol_version << "\n";
+
+    client->force_stop();
+}
+
+TEST_F(E2ETest, GetAuthStatus)
+{
+    test_info("GetAuthStatus: Get current authentication status.");
+    auto client = create_client();
+    client->start().get();
+
+    auto auth_status = client->get_auth_status().get();
+
+    // Auth status should at least have is_authenticated field
+    std::cout << "Auth status: is_authenticated=" << auth_status.is_authenticated;
+    if (auth_status.auth_type.has_value())
+        std::cout << ", auth_type=" << *auth_status.auth_type;
+    std::cout << "\n";
+
+    client->force_stop();
+}
+
+TEST_F(E2ETest, ListModels)
+{
+    test_info("ListModels: List available models (requires authentication).");
+    auto client = create_client();
+    client->start().get();
+
+    // Check if authenticated first
+    auto auth_status = client->get_auth_status().get();
+
+    if (!auth_status.is_authenticated)
+    {
+        std::cout << "Skipping ListModels test - not authenticated\n";
+        client->force_stop();
+        return;
+    }
+
+    auto models = client->list_models().get();
+
+    std::cout << "Found " << models.size() << " models:\n";
+    for (const auto& model : models)
+    {
+        std::cout << "  - " << model.name << " (" << model.id << ")\n";
+    }
+
+    client->force_stop();
+}
