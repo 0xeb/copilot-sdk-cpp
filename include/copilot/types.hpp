@@ -532,6 +532,51 @@ struct Tool
 };
 
 // =============================================================================
+// Infinite Session Configuration
+// =============================================================================
+
+/// Configuration for infinite sessions with automatic context compaction.
+///
+/// When enabled, sessions automatically manage context window limits through
+/// background compaction and persist state to a workspace directory.
+struct InfiniteSessionConfig
+{
+    /// Whether infinite sessions are enabled (default: true when config is provided)
+    std::optional<bool> enabled;
+
+    /// Context utilization threshold (0.0-1.0) at which background compaction starts.
+    /// Compaction runs asynchronously, allowing the session to continue processing.
+    /// Default: 0.80
+    std::optional<double> background_compaction_threshold;
+
+    /// Context utilization threshold (0.0-1.0) at which the session blocks until
+    /// compaction completes. This prevents context overflow when compaction hasn't
+    /// finished in time. Default: 0.95
+    std::optional<double> buffer_exhaustion_threshold;
+};
+
+inline void to_json(json& j, const InfiniteSessionConfig& c)
+{
+    j = json::object();
+    if (c.enabled)
+        j["enabled"] = *c.enabled;
+    if (c.background_compaction_threshold)
+        j["backgroundCompactionThreshold"] = *c.background_compaction_threshold;
+    if (c.buffer_exhaustion_threshold)
+        j["bufferExhaustionThreshold"] = *c.buffer_exhaustion_threshold;
+}
+
+inline void from_json(const json& j, InfiniteSessionConfig& c)
+{
+    if (j.contains("enabled"))
+        c.enabled = j.at("enabled").get<bool>();
+    if (j.contains("backgroundCompactionThreshold"))
+        c.background_compaction_threshold = j.at("backgroundCompactionThreshold").get<double>();
+    if (j.contains("bufferExhaustionThreshold"))
+        c.buffer_exhaustion_threshold = j.at("bufferExhaustionThreshold").get<double>();
+}
+
+// =============================================================================
 // Session Configuration
 // =============================================================================
 
@@ -550,6 +595,16 @@ struct SessionConfig
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
 
+    /// Directories to load skills from.
+    std::optional<std::vector<std::string>> skill_directories;
+
+    /// List of skill names to disable.
+    std::optional<std::vector<std::string>> disabled_skills;
+
+    /// Infinite session configuration for persistent workspaces and automatic compaction.
+    /// When enabled (default), sessions automatically manage context limits and persist state.
+    std::optional<InfiniteSessionConfig> infinite_sessions;
+
     /// If true and provider/model not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
     /// Default: false (explicit configuration preferred over environment variables)
     bool auto_byok_from_env = false;
@@ -564,6 +619,12 @@ struct ResumeSessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+
+    /// Directories to load skills from.
+    std::optional<std::vector<std::string>> skill_directories;
+
+    /// List of skill names to disable.
+    std::optional<std::vector<std::string>> disabled_skills;
 
     /// If true and provider not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
     /// Default: false (explicit configuration preferred over environment variables)
@@ -782,6 +843,122 @@ inline void from_json(const json& j, PingResponse& r)
     j.at("timestamp").get_to(r.timestamp);
     if (j.contains("protocolVersion"))
         r.protocol_version = j.at("protocolVersion").get<int>();
+}
+
+/// Response from status.get request
+struct GetStatusResponse
+{
+    std::string version;
+    int protocol_version;
+};
+
+inline void from_json(const json& j, GetStatusResponse& r)
+{
+    j.at("version").get_to(r.version);
+    j.at("protocolVersion").get_to(r.protocol_version);
+}
+
+/// Response from auth.getStatus request
+struct GetAuthStatusResponse
+{
+    bool is_authenticated;
+    std::optional<std::string> auth_type;
+    std::optional<std::string> host;
+    std::optional<std::string> login;
+    std::optional<std::string> status_message;
+};
+
+inline void from_json(const json& j, GetAuthStatusResponse& r)
+{
+    j.at("isAuthenticated").get_to(r.is_authenticated);
+    if (j.contains("authType") && !j["authType"].is_null())
+        r.auth_type = j["authType"].get<std::string>();
+    if (j.contains("host") && !j["host"].is_null())
+        r.host = j["host"].get<std::string>();
+    if (j.contains("login") && !j["login"].is_null())
+        r.login = j["login"].get<std::string>();
+    if (j.contains("statusMessage") && !j["statusMessage"].is_null())
+        r.status_message = j["statusMessage"].get<std::string>();
+}
+
+/// Model capabilities - what the model supports
+struct ModelCapabilities
+{
+    struct Supports
+    {
+        bool vision = false;
+    };
+    struct Limits
+    {
+        std::optional<int> max_prompt_tokens;
+        int max_context_window_tokens = 0;
+    };
+    Supports supports;
+    Limits limits;
+};
+
+inline void from_json(const json& j, ModelCapabilities& c)
+{
+    if (j.contains("supports"))
+    {
+        if (j["supports"].contains("vision"))
+            j["supports"]["vision"].get_to(c.supports.vision);
+    }
+    if (j.contains("limits"))
+    {
+        if (j["limits"].contains("max_prompt_tokens") && !j["limits"]["max_prompt_tokens"].is_null())
+            c.limits.max_prompt_tokens = j["limits"]["max_prompt_tokens"].get<int>();
+        if (j["limits"].contains("max_context_window_tokens"))
+            j["limits"]["max_context_window_tokens"].get_to(c.limits.max_context_window_tokens);
+    }
+}
+
+/// Model policy state
+struct ModelPolicy
+{
+    std::string state;
+    std::string terms;
+};
+
+inline void from_json(const json& j, ModelPolicy& p)
+{
+    j.at("state").get_to(p.state);
+    if (j.contains("terms"))
+        j.at("terms").get_to(p.terms);
+}
+
+/// Model billing information
+struct ModelBilling
+{
+    double multiplier = 1.0;
+};
+
+inline void from_json(const json& j, ModelBilling& b)
+{
+    if (j.contains("multiplier"))
+        j.at("multiplier").get_to(b.multiplier);
+}
+
+/// Information about an available model
+struct ModelInfo
+{
+    std::string id;
+    std::string name;
+    ModelCapabilities capabilities;
+    std::optional<ModelPolicy> policy;
+    std::optional<ModelBilling> billing;
+};
+
+inline void from_json(const json& j, ModelInfo& m)
+{
+    j.at("id").get_to(m.id);
+    j.at("name").get_to(m.name);
+    if (j.contains("capabilities"))
+        j.at("capabilities").get_to(m.capabilities);
+    if (j.contains("policy") && !j["policy"].is_null())
+        m.policy = j["policy"].get<ModelPolicy>();
+    if (j.contains("billing") && !j["billing"].is_null())
+        m.billing = j["billing"].get<ModelBilling>();
 }
 
 } // namespace copilot

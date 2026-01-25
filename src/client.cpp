@@ -87,6 +87,12 @@ json build_session_create_request(const SessionConfig& config)
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.skill_directories.has_value())
+        request["skillDirectories"] = *config.skill_directories;
+    if (config.disabled_skills.has_value())
+        request["disabledSkills"] = *config.disabled_skills;
+    if (config.infinite_sessions.has_value())
+        request["infiniteSessions"] = *config.infinite_sessions;
 
     return request;
 }
@@ -136,6 +142,10 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.skill_directories.has_value())
+        request["skillDirectories"] = *config.skill_directories;
+    if (config.disabled_skills.has_value())
+        request["disabledSkills"] = *config.disabled_skills;
 
     return request;
 }
@@ -543,7 +553,12 @@ std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig confi
             auto response = rpc_->invoke("session.create", request).get();
             std::string session_id = response["sessionId"].get<std::string>();
 
-            auto session = std::make_shared<Session>(session_id, this);
+            // Capture workspace path for infinite sessions
+            std::optional<std::string> workspace_path;
+            if (response.contains("workspacePath") && response["workspacePath"].is_string())
+                workspace_path = response["workspacePath"].get<std::string>();
+
+            auto session = std::make_shared<Session>(session_id, this, workspace_path);
 
             // Register tools locally for handling callbacks from the server
             for (const auto& tool : config.tools)
@@ -582,7 +597,12 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
             auto response = rpc_->invoke("session.resume", request).get();
             std::string returned_session_id = response["sessionId"].get<std::string>();
 
-            auto session = std::make_shared<Session>(returned_session_id, this);
+            // Capture workspace_path if present (for infinite sessions)
+            std::optional<std::string> workspace_path;
+            if (response.contains("workspacePath") && response["workspacePath"].is_string())
+                workspace_path = response["workspacePath"].get<std::string>();
+
+            auto session = std::make_shared<Session>(returned_session_id, this, workspace_path);
 
             // Register tools locally for handling callbacks from the server
             for (const auto& tool : config.tools)
@@ -710,6 +730,72 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
             if (response.contains("protocolVersion") && !response["protocolVersion"].is_null())
                 result.protocol_version = response["protocolVersion"].get<int>();
             return result;
+        }
+    );
+}
+
+std::future<GetStatusResponse> Client::get_status()
+{
+    return std::async(
+        std::launch::async,
+        [this]()
+        {
+            if (state_ != ConnectionState::Connected)
+            {
+                if (options_.auto_start)
+                    start().get();
+                else
+                    throw std::runtime_error("Client not connected. Call start() first.");
+            }
+
+            auto response = rpc_->invoke("status.get", json::object()).get();
+            return response.get<GetStatusResponse>();
+        }
+    );
+}
+
+std::future<GetAuthStatusResponse> Client::get_auth_status()
+{
+    return std::async(
+        std::launch::async,
+        [this]()
+        {
+            if (state_ != ConnectionState::Connected)
+            {
+                if (options_.auto_start)
+                    start().get();
+                else
+                    throw std::runtime_error("Client not connected. Call start() first.");
+            }
+
+            auto response = rpc_->invoke("auth.getStatus", json::object()).get();
+            return response.get<GetAuthStatusResponse>();
+        }
+    );
+}
+
+std::future<std::vector<ModelInfo>> Client::list_models()
+{
+    return std::async(
+        std::launch::async,
+        [this]()
+        {
+            if (state_ != ConnectionState::Connected)
+            {
+                if (options_.auto_start)
+                    start().get();
+                else
+                    throw std::runtime_error("Client not connected. Call start() first.");
+            }
+
+            auto response = rpc_->invoke("models.list", json::object()).get();
+            std::vector<ModelInfo> models;
+            if (response.contains("models") && response["models"].is_array())
+            {
+                for (const auto& m : response["models"])
+                    models.push_back(m.get<ModelInfo>());
+            }
+            return models;
         }
     );
 }

@@ -11,8 +11,9 @@ namespace copilot
 // Constructor / Destructor
 // =============================================================================
 
-Session::Session(const std::string& session_id, Client* client)
-    : session_id_(session_id), client_(client)
+Session::Session(const std::string& session_id, Client* client,
+                 const std::optional<std::string>& workspace_path)
+    : session_id_(session_id), client_(client), workspace_path_(workspace_path)
 {
 }
 
