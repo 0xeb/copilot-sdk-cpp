@@ -35,73 +35,66 @@ Snapshot conformance tests (optional):
 
 ## Custom Tools
 
-Custom tools must be provided when creating or resuming a session. The SDK registers tool handlers locally and sends tool definitions to the server:
+Custom tools are provided when creating or resuming a session. The SDK auto-generates JSON schemas from C++ types.
 
-```cpp
-// Define your tool
-copilot::Tool calc_tool;
-calc_tool.name = "calculator";
-calc_tool.description = "Perform math calculations";
-calc_tool.parameters_schema = copilot::json{
-    {"type", "object"},
-    {"properties", {{"expression", {{"type", "string"}}}}},
-    {"required", {"expression"}}
-};
-calc_tool.handler = [](const copilot::ToolInvocation& inv) {
-    copilot::ToolResultObject result;
-    // Handle the tool call...
-    return result;
-};
-
-// Pass tools when creating the session
-copilot::SessionConfig config;
-config.tools = {calc_tool};
-auto session = client.create_session(config).get();
-
-// Or when resuming an existing session
-copilot::ResumeSessionConfig resume_config;
-resume_config.tools = {calc_tool};
-auto session = client.resume_session(session_id, resume_config).get();
-```
-
-See `examples/tools.cpp` and `examples/resume_with_tools.cpp` for complete examples.
-
-### Fluent Tool Builder
-
-Use `make_tool` to create tools with automatic schema generation from lambda signatures:
+### Fluent Builder (Recommended)
 
 ```cpp
 #include <copilot/tool_builder.hpp>
 
-// Single parameter - schema auto-generated
-auto echo_tool = copilot::make_tool(
+// Fluent builder with full control over parameters
+auto calc = copilot::ToolBuilder("calculator", "Perform math calculations")
+    .param<std::string>("expression", "Math expression to evaluate")
+    .handler([](std::string expression) {
+        // Evaluate expression...
+        return "42";
+    });
+
+// With enum constraints and default values
+auto search = copilot::ToolBuilder("search", "Search the web")
+    .param<std::string>("query", "Search query")
+    .param<int>("limit", "Max results").default_value(10)
+    .param<std::string>("sort", "Sort order").one_of("relevance", "date")
+    .handler([](std::string query, int limit, std::string sort) {
+        return "Results for: " + query;
+    });
+
+// Use in session
+copilot::SessionConfig config;
+config.tools = {calc, search};
+auto session = client.create_session(config).get();
+```
+
+### Quick One-Liner with `make_tool`
+
+```cpp
+// Simple tools with auto-generated schema
+auto echo = copilot::make_tool(
     "echo", "Echo a message",
     [](std::string message) { return message; },
-    {"message"}  // Parameter names
+    {"message"}
 );
 
-// Multiple parameters
-auto calc_tool = copilot::make_tool(
+auto add = copilot::make_tool(
     "add", "Add two numbers",
     [](double a, double b) { return std::to_string(a + b); },
     {"first", "second"}
 );
 
-// Optional parameters (not added to "required" in schema)
-auto greet_tool = copilot::make_tool(
+// Optional parameters (use std::optional)
+auto greet = copilot::make_tool(
     "greet", "Greet someone",
     [](std::string name, std::optional<std::string> title) {
-        if (title)
-            return "Hello, " + *title + " " + name + "!";
-        return "Hello, " + name + "!";
+        return title ? "Hello, " + *title + " " + name + "!"
+                     : "Hello, " + name + "!";
     },
     {"name", "title"}
 );
 
-// Use in session config
-copilot::SessionConfig config;
-config.tools = {echo_tool, calc_tool, greet_tool};
+config.tools = {echo, add, greet};
 ```
+
+See `examples/tools.cpp` and `examples/resume_with_tools.cpp` for complete examples.
 
 ## BYOK (Bring Your Own Key)
 
