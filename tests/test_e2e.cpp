@@ -225,7 +225,11 @@ class E2ETest : public ::testing::Test
                             c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
 
                         if (lower.find("quota") != std::string::npos ||
-                            lower.find("402") != std::string::npos)
+                            lower.find("402") != std::string::npos ||
+                            lower.find("401") != std::string::npos ||
+                            lower.find("authorization") != std::string::npos ||
+                            lower.find("authentication") != std::string::npos ||
+                            lower.find("unauthorized") != std::string::npos)
                         {
                             copilot_can_run_ = false;
                             copilot_skip_reason_ =
@@ -379,8 +383,6 @@ TEST_F(E2ETest, CreateSessionWithModel)
 
 TEST_F(E2ETest, CreateSessionWithTools)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Tool execution test: Register custom tool, ask AI to use it, verify tool called with correct args.");
     auto client = create_client();
     client->start().get();
@@ -603,8 +605,6 @@ TEST_F(E2ETest, SendMessage)
 
 TEST_F(E2ETest, StreamingResponse)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support streaming deltas";
     test_info("Streaming response: Enable streaming, send prompt, verify multiple AssistantMessageDelta events.");
     auto client = create_client();
     client->start().get();
@@ -812,8 +812,6 @@ TEST_F(E2ETest, ResumeSession)
 
 TEST_F(E2ETest, ResumeSessionWithTools)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Resume with tools: Create session, stop, resume with new tool, invoke tool successfully.");
 
     // BYOK/OpenAI doesn't support resuming sessions with new tools
@@ -1697,8 +1695,6 @@ TEST_F(E2ETest, SystemMessageReplaceMode)
 
 TEST_F(E2ETest, MessageWithFileAttachment)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support file attachments";
     test_info("File attachment: Attach temp file to message, verify AI reads file content.");
     auto client = create_client();
     client->start().get();
@@ -1770,8 +1766,6 @@ TEST_F(E2ETest, MessageWithFileAttachment)
 
 TEST_F(E2ETest, MessageWithMultipleAttachments)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support file attachments";
     test_info("Multiple attachments: Attach two files, verify AI references content from both.");
     auto client = create_client();
     client->start().get();
@@ -1855,8 +1849,6 @@ TEST_F(E2ETest, MessageWithMultipleAttachments)
 
 TEST_F(E2ETest, ToolCallIdIsPropagated)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Tool call ID propagation: Verify tool_call_id is passed to handler and matches events.");
     auto client = create_client();
     client->start().get();
@@ -2044,8 +2036,6 @@ TEST_F(E2ETest, ResumeSessionWithPermissionCallback)
 
 TEST_F(E2ETest, ResumeSessionWithToolsAndPermissions)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Resume with tools+perms: Resume with both tools and permission callback, invoke tool.");
 
     // BYOK/OpenAI doesn't support resuming sessions with new tools
@@ -2236,8 +2226,6 @@ TEST_F(E2ETest, PermissionDenialWithMessage)
 
 TEST_F(E2ETest, FluentToolBuilderIntegration)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Fluent ToolBuilder: Use ToolBuilder API for calc+echo tools, verify both work.");
     auto client = create_client();
     client->start().get();
@@ -2820,8 +2808,6 @@ TEST_F(E2ETest, SessionWithHooksConfigCreatesSuccessfully)
 
 TEST_F(E2ETest, PreToolUseHookInvokedOnToolCall)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Pre-tool-use hook: Register preToolUse hook with a tool, verify hook fires.");
     auto client = create_client();
     client->start().get();
@@ -2908,8 +2894,6 @@ TEST_F(E2ETest, PreToolUseHookInvokedOnToolCall)
 
 TEST_F(E2ETest, PreToolUseHookDeniesToolExecution)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Hook deny: preToolUse hook denies tool execution via decision='deny'.");
     auto client = create_client();
     client->start().get();
@@ -3005,8 +2989,6 @@ TEST_F(E2ETest, PreToolUseHookDeniesToolExecution)
 
 TEST_F(E2ETest, PostToolUseHookInvokedAfterToolExecution)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Post-tool-use hook: Register postToolUse hook, verify fires after tool runs.");
     auto client = create_client();
     client->start().get();
@@ -3136,8 +3118,6 @@ TEST_F(E2ETest, SessionWithUserInputHandlerCreates)
 
 TEST_F(E2ETest, SessionWithReasoningEffort)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support reasoning effort";
     test_info("Reasoning effort: Create session with reasoning effort set, verify it's accepted.");
     auto client = create_client();
     client->start().get();
@@ -3396,8 +3376,6 @@ TEST_F(E2ETest, SessionWithWorkingDirectory)
 
 TEST_F(E2ETest, ResumeSessionWithNewConfigFields)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support reasoning effort";
     test_info("Resume with new fields: Create session, then resume with v0.1.23 config fields.");
     auto client = create_client();
     client->start().get();
@@ -3488,8 +3466,6 @@ TEST_F(E2ETest, ModelInfoReasoningEffortFields)
 
 TEST_F(E2ETest, FullFeaturedSessionWithAllNewConfig)
 {
-    if (is_byok_active())
-        GTEST_SKIP() << "BYOK model does not support tool calling";
     test_info("Full config: Create session with all v0.1.23 features combined.");
     auto client = create_client();
     client->start().get();
