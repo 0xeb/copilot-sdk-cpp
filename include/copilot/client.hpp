@@ -29,6 +29,7 @@ namespace copilot
 
 // Forward declaration
 class Session;
+class Subscription;
 
 // =============================================================================
 // Request Builder Helpers (for unit testing request JSON shape)
@@ -57,7 +58,7 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
 /// Example usage:
 /// @code
 /// ClientOptions opts;
-/// opts.log_level = "debug";
+/// opts.log_level = LogLevel::Debug;
 ///
 /// Client client(opts);
 /// client.start().get();
@@ -95,8 +96,8 @@ class Client
 
     /// Stop the client gracefully
     /// Destroys all sessions and closes the connection
-    /// @return Future that completes when stopped
-    std::future<void> stop();
+    /// @return Future that completes with any errors encountered during cleanup
+    std::future<std::vector<StopError>> stop();
 
     /// Force stop the client immediately
     /// Kills the CLI process without graceful cleanup
@@ -155,6 +156,24 @@ class Client
     /// @return Future that resolves to list of model info
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
+
+    // =========================================================================
+    // Lifecycle Events
+    // =========================================================================
+
+    /// Subscribe to session lifecycle events (created, deleted, updated, foreground, background)
+    using LifecycleHandler = std::function<void(const SessionLifecycleEvent&)>;
+    Subscription on_lifecycle(LifecycleHandler handler);
+
+    // =========================================================================
+    // Foreground Session
+    // =========================================================================
+
+    /// Get the current foreground session ID
+    std::future<std::optional<std::string>> get_foreground_session_id();
+
+    /// Set the foreground session
+    std::future<void> set_foreground_session_id(const std::string& session_id);
 
     // =========================================================================
     // Internal API (used by Session)
@@ -221,6 +240,10 @@ class Client
     // Models cache
     mutable std::mutex models_cache_mutex_;
     std::optional<std::vector<ModelInfo>> models_cache_;
+
+    // Lifecycle handlers
+    mutable std::mutex lifecycle_mutex_;
+    std::vector<LifecycleHandler> lifecycle_handlers_;
 };
 
 } // namespace copilot

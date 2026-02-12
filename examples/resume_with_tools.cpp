@@ -39,19 +39,19 @@ copilot::ToolResultObject secret_handler(const copilot::ToolInvocation& invocati
         if (it != secrets.end())
         {
             result.text_result_for_llm = "Secret value for '" + key + "': " + it->second;
-            result.result_type = "success";
+            result.result_type = copilot::ToolResultType::Success;
         }
         else
         {
             result.text_result_for_llm = "No secret found for key: " + key;
-            result.result_type = "failure";
+            result.result_type = copilot::ToolResultType::Failure;
             result.error = "Key not found";
         }
     }
     catch (const std::exception& e)
     {
         result.text_result_for_llm = "Error retrieving secret";
-        result.result_type = "failure";
+        result.result_type = copilot::ToolResultType::Failure;
         result.error = e.what();
     }
 
@@ -64,7 +64,7 @@ int main()
     {
         // Create client
         copilot::ClientOptions options;
-        options.log_level = "info";
+        options.log_level = copilot::LogLevel::Info;
         copilot::Client client(options);
 
         std::cout << "=== Phase 1: Create Initial Session ===\n\n";

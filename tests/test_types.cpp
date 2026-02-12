@@ -52,7 +52,7 @@ TEST(TypesTest, ToolBinaryResultRoundTrip)
 
 TEST(TypesTest, ToolResultObjectMinimal)
 {
-    ToolResultObject result{.text_result_for_llm = "Success!", .result_type = "success"};
+    ToolResultObject result{.text_result_for_llm = "Success!", .result_type = ToolResultType::Success};
 
     json j = result;
     EXPECT_EQ(j["textResultForLlm"], "Success!");
@@ -1195,7 +1195,7 @@ TEST(ReasoningEffortTest, ModelInfoWithReasoningEfforts)
 TEST(ReasoningEffortTest, SessionConfigReasoningEffort)
 {
     SessionConfig config;
-    config.reasoning_effort = "high";
+    config.reasoning_effort = ReasoningEffort::High;
     auto request = build_session_create_request(config);
     EXPECT_EQ(request["reasoningEffort"], "high");
 }
@@ -1203,7 +1203,7 @@ TEST(ReasoningEffortTest, SessionConfigReasoningEffort)
 TEST(ReasoningEffortTest, ResumeConfigReasoningEffort)
 {
     ResumeSessionConfig config;
-    config.reasoning_effort = "low";
+    config.reasoning_effort = ReasoningEffort::Low;
     auto request = build_session_resume_request("test-session", config);
     EXPECT_EQ(request["reasoningEffort"], "low");
 }
@@ -1567,7 +1567,7 @@ TEST(RequestBuilderTest, ResumeSessionAllNewFields)
 {
     ResumeSessionConfig config;
     config.model = "gpt-4o";
-    config.reasoning_effort = "high";
+    config.reasoning_effort = ReasoningEffort::High;
     config.system_message = SystemMessageConfig{.content = "Be helpful"};
     config.available_tools = {"read_file"};
     config.excluded_tools = {"dangerous_tool"};
@@ -1721,4 +1721,71 @@ TEST(UserInputHandlerTest, NoHandlerThrows)
     UserInputRequest request;
     request.question = "test";
     EXPECT_THROW(session->handle_user_input_request(request), std::runtime_error);
+}
+
+// =============================================================================
+// Event Forward-Compatibility Tests
+// =============================================================================
+
+TEST(Events, UnknownEventTypeHandled)
+{
+    json event_json = {
+        {"type", "some.future.event"},
+        {"id", "e-unknown"},
+        {"timestamp", "2025-06-01T00:00:00Z"},
+        {"data", {{"foo", "bar"}}}
+    };
+
+    // Parsing an unknown event type should not throw
+    EXPECT_NO_THROW({
+        auto event = parse_session_event(event_json);
+        EXPECT_EQ(event.type, SessionEventType::Unknown);
+        EXPECT_EQ(event.type_string, "some.future.event");
+    });
+}
+
+TEST(Events, SessionShutdownParsed)
+{
+    json event_json = {
+        {"type", "session.shutdown"},
+        {"id", "e-shutdown"},
+        {"timestamp", "2025-06-01T00:00:00Z"},
+        {"data", {
+            {"shutdownType", "routine"},
+            {"totalPremiumRequests", 5},
+            {"totalApiDurationMs", 1234.5},
+            {"sessionStartTime", 1700000000.0},
+            {"codeChanges", {{"linesAdded", 10}, {"linesRemoved", 3}}}
+        }}
+    };
+
+    auto event = parse_session_event(event_json);
+    EXPECT_EQ(event.type, SessionEventType::SessionShutdown);
+    EXPECT_TRUE(event.is<SessionShutdownData>());
+
+    const auto& data = event.as<SessionShutdownData>();
+    EXPECT_EQ(data.total_premium_requests, 5);
+    EXPECT_NEAR(data.total_api_duration_ms, 1234.5, 0.1);
+}
+
+TEST(Events, SessionUsageInfoRecognized)
+{
+    json event_json = {
+        {"type", "session.usage_info"},
+        {"id", "e-usage"},
+        {"timestamp", "2025-06-01T00:00:00Z"},
+        {"data", {
+            {"tokenLimit", 128000},
+            {"currentTokens", 5000},
+            {"messagesLength", 42}
+        }}
+    };
+
+    auto event = parse_session_event(event_json);
+    EXPECT_EQ(event.type, SessionEventType::SessionUsageInfo);
+    EXPECT_TRUE(event.is<SessionUsageInfoData>());
+
+    const auto& data = event.as<SessionUsageInfoData>();
+    EXPECT_EQ(data.token_limit, 128000);
+    EXPECT_EQ(data.current_tokens, 5000);
 }

@@ -217,6 +217,10 @@ Client::Client(ClientOptions options) : options_(std::move(options))
                 "(external server manages its own auth)");
     }
 
+    // Smart default for use_logged_in_user (only when managing our own server)
+    if (!options_.cli_url.has_value() && !options_.use_logged_in_user.has_value())
+        options_.use_logged_in_user = !options_.github_token.has_value();
+
     // Parse CLI URL if provided
     if (options_.cli_url.has_value())
         parse_cli_url(*options_.cli_url);
@@ -320,13 +324,14 @@ std::future<void> Client::start()
     );
 }
 
-std::future<void> Client::stop()
+std::future<std::vector<StopError>> Client::stop()
 {
     return std::async(
         std::launch::async,
-        [this]()
+        [this]() -> std::vector<StopError>
         {
             std::lock_guard<std::mutex> lock(mutex_);
+            std::vector<StopError> errors;
 
             // Destroy all sessions
             for (auto& [id, session] : sessions_)
@@ -335,9 +340,13 @@ std::future<void> Client::stop()
                 {
                     session->destroy().get();
                 }
+                catch (const std::exception& e)
+                {
+                    errors.push_back(StopError{e.what()});
+                }
                 catch (...)
                 {
-                    // Ignore errors during cleanup
+                    errors.push_back(StopError{"Unknown error destroying session " + id});
                 }
             }
             sessions_.clear();
@@ -371,6 +380,7 @@ std::future<void> Client::stop()
             }
 
             state_ = ConnectionState::Disconnected;
+            return errors;
         }
     );
 }
@@ -459,7 +469,7 @@ void Client::start_cli_server()
         args.insert(args.end(), options_.cli_args->begin(), options_.cli_args->end());
     args.push_back("--server");
     args.push_back("--log-level");
-    args.push_back(options_.log_level);
+    args.push_back(json(options_.log_level).get<std::string>());
 
     if (options_.use_stdio)
     {
@@ -492,6 +502,10 @@ void Client::start_cli_server()
 
     // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC
     proc_opts.environment.erase("NODE_DEBUG");
+
+    // Forward GitHub token as environment variable
+    if (options_.github_token.has_value())
+        proc_opts.environment["COPILOT_SDK_AUTH_TOKEN"] = *options_.github_token;
 
     // Spawn process
     process_ = std::make_unique<Process>();
@@ -558,6 +572,19 @@ void Client::connect_to_server()
         {
             if (method == "session.event")
                 handle_session_event(method, params);
+            else if (method == "session.lifecycle")
+            {
+                try
+                {
+                    auto event = params.get<SessionLifecycleEvent>();
+                    std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+                    for (const auto& handler : lifecycle_handlers_)
+                        handler(event);
+                }
+                catch (...)
+                {
+                }
+            }
         }
     );
 
@@ -1076,6 +1103,52 @@ json Client::handle_hooks_invoke(const json& params)
     {
         throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
     }
+}
+
+// =============================================================================
+// Lifecycle Events
+// =============================================================================
+
+Subscription Client::on_lifecycle(LifecycleHandler handler)
+{
+    std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+    lifecycle_handlers_.push_back(std::move(handler));
+    auto* ptr = &lifecycle_handlers_.back();
+    return Subscription([this, ptr]() {
+        std::lock_guard<std::mutex> lock(lifecycle_mutex_);
+        lifecycle_handlers_.erase(
+            std::remove_if(lifecycle_handlers_.begin(), lifecycle_handlers_.end(),
+                           [ptr](const LifecycleHandler& h) { return &h == ptr; }),
+            lifecycle_handlers_.end());
+    });
+}
+
+// =============================================================================
+// Foreground Session
+// =============================================================================
+
+std::future<std::optional<std::string>> Client::get_foreground_session_id()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> std::optional<std::string>
+        {
+            auto response = rpc_client()->invoke("session.getForeground", json::object()).get();
+            auto parsed = response.get<GetForegroundSessionResponse>();
+            return parsed.session_id;
+        }
+    );
+}
+
+std::future<void> Client::set_foreground_session_id(const std::string& session_id)
+{
+    return std::async(
+        std::launch::async,
+        [this, session_id]()
+        {
+            rpc_client()->invoke("session.setForeground", json{{"sessionId", session_id}}).get();
+        }
+    );
 }
 
 } // namespace copilot

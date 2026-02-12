@@ -168,7 +168,7 @@ class E2ETest : public ::testing::Test
                 try
                 {
                     ClientOptions opts;
-                    opts.log_level = "info";
+                    opts.log_level = LogLevel::Info;
                     opts.use_stdio = true;
                     opts.cli_args = std::vector<std::string>{"--allow-all-tools", "--allow-all-paths"};
                     opts.auto_start = false;
@@ -256,7 +256,7 @@ class E2ETest : public ::testing::Test
     std::unique_ptr<Client> create_client()
     {
         ClientOptions opts;
-        opts.log_level = "info";
+        opts.log_level = LogLevel::Info;
         opts.use_stdio = true;
         // Make E2E tests reliable/non-interactive by pre-approving tool and path access.
         // These flags are only used for tests; library defaults remain secure-by-default.
@@ -417,7 +417,7 @@ TEST_F(E2ETest, CreateSessionWithTools)
             result.text_result_for_llm = "54321";
         else
             result.text_result_for_llm = "Unknown key";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 
@@ -880,7 +880,7 @@ TEST_F(E2ETest, ResumeSessionWithTools)
             result.text_result_for_llm = "SECRET_VALUE_12345";
         else
             result.text_result_for_llm = "Unknown key";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 
@@ -1876,7 +1876,7 @@ TEST_F(E2ETest, ToolCallIdIsPropagated)
         }
 
         result.text_result_for_llm = "Tool executed successfully. ID: " + inv.tool_call_id;
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 
@@ -2088,7 +2088,7 @@ TEST_F(E2ETest, ResumeSessionWithToolsAndPermissions)
         tool_called = true;
         ToolResultObject result;
         result.text_result_for_llm = "RESUME_TOOL_RESULT_99999";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 
@@ -2832,7 +2832,7 @@ TEST_F(E2ETest, PreToolUseHookInvokedOnToolCall)
         tool_called = true;
         ToolResultObject result;
         result.text_result_for_llm = "Echo: " + inv.arguments.value()["message"].get<std::string>();
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
     config.tools = {echo_tool};
@@ -2921,7 +2921,7 @@ TEST_F(E2ETest, PreToolUseHookDeniesToolExecution)
         tool_called = true;
         ToolResultObject result;
         result.text_result_for_llm = "This should not execute";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
     config.tools = {denied_tool};
@@ -3014,7 +3014,7 @@ TEST_F(E2ETest, PostToolUseHookInvokedAfterToolExecution)
         tool_called = true;
         ToolResultObject result;
         result.text_result_for_llm = "Hello, " + inv.arguments.value()["name"].get<std::string>() + "!";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
     config.tools = {greet_tool};
@@ -3123,7 +3123,7 @@ TEST_F(E2ETest, SessionWithReasoningEffort)
     client->start().get();
 
     auto config = default_session_config();
-    config.reasoning_effort = "medium";
+    config.reasoning_effort = ReasoningEffort::Medium;
 
     auto session = client->create_session(config).get();
     EXPECT_NE(session, nullptr);
@@ -3409,7 +3409,7 @@ TEST_F(E2ETest, ResumeSessionWithNewConfigFields)
     }
 
     auto resume_config = default_resume_config();
-    resume_config.reasoning_effort = "low";
+    resume_config.reasoning_effort = ReasoningEffort::Low;
     resume_config.working_directory = std::filesystem::current_path().string();
 
     auto resumed = client->resume_session(session_id, resume_config).get();
@@ -3471,7 +3471,7 @@ TEST_F(E2ETest, FullFeaturedSessionWithAllNewConfig)
     client->start().get();
 
     auto config = default_session_config();
-    config.reasoning_effort = "high";
+    config.reasoning_effort = ReasoningEffort::High;
     config.working_directory = std::filesystem::current_path().string();
 
     config.on_user_input_request = [](const UserInputRequest& req, const UserInputInvocation&) -> UserInputResponse

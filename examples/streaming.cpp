@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     {
         // Create client with streaming enabled
         copilot::ClientOptions options;
-        options.log_level = "info";
+        options.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 

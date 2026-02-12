@@ -536,3 +536,123 @@ TEST(JsonRpcErrorTest, ErrorWithData)
     EXPECT_STREQ(error.what(), "Bad params");
     EXPECT_EQ(error.data()["field"], "name");
 }
+
+// =============================================================================
+// Large Payload Tests
+// =============================================================================
+
+TEST(JsonRpc, LargePayload64KBBoundary)
+{
+    auto [client_transport, server_transport] = PipeTransport::create_pair();
+    JsonRpcClient client(std::move(client_transport));
+    MessageFramer server_framer(*server_transport);
+
+    client.start();
+
+    // Create payload exactly at 64KB boundary
+    std::string large_data(64 * 1024, 'A');
+    auto future = client.invoke("large.method", json{{"data", large_data}});
+
+    std::thread server_thread(
+        [&]
+        {
+            auto msg = server_framer.read_message();
+            auto req = json::parse(msg);
+            EXPECT_EQ(req["method"], "large.method");
+            EXPECT_EQ(req["params"]["data"].get<std::string>().size(), 64 * 1024);
+
+            json response = {
+                {"jsonrpc", "2.0"}, {"result", {{"ok", true}}}, {"id", req["id"]}
+            };
+            server_framer.write_message(response.dump());
+        }
+    );
+
+    auto result = future.get();
+    EXPECT_EQ(result["ok"], true);
+
+    server_thread.join();
+    client.stop();
+}
+
+TEST(JsonRpc, LargePayload70KB)
+{
+    auto [client_transport, server_transport] = PipeTransport::create_pair();
+    JsonRpcClient client(std::move(client_transport));
+    MessageFramer server_framer(*server_transport);
+
+    client.start();
+
+    std::string large_data(70 * 1024, 'B');
+    auto future = client.invoke("large.method", json{{"data", large_data}});
+
+    std::thread server_thread(
+        [&]
+        {
+            auto msg = server_framer.read_message();
+            auto req = json::parse(msg);
+            EXPECT_EQ(req["params"]["data"].get<std::string>().size(), 70 * 1024);
+
+            json response = {
+                {"jsonrpc", "2.0"}, {"result", {{"ok", true}}}, {"id", req["id"]}
+            };
+            server_framer.write_message(response.dump());
+        }
+    );
+
+    auto result = future.get();
+    EXPECT_EQ(result["ok"], true);
+
+    server_thread.join();
+    client.stop();
+}
+
+TEST(JsonRpc, LargePayload100KB)
+{
+    auto [client_transport, server_transport] = PipeTransport::create_pair();
+    JsonRpcClient client(std::move(client_transport));
+    MessageFramer server_framer(*server_transport);
+
+    client.start();
+
+    std::string large_data(100 * 1024, 'C');
+    auto future = client.invoke("large.method", json{{"data", large_data}});
+
+    std::thread server_thread(
+        [&]
+        {
+            auto msg = server_framer.read_message();
+            auto req = json::parse(msg);
+            EXPECT_EQ(req["params"]["data"].get<std::string>().size(), 100 * 1024);
+
+            json response = {
+                {"jsonrpc", "2.0"}, {"result", {{"size", 100 * 1024}}}, {"id", req["id"]}
+            };
+            server_framer.write_message(response.dump());
+        }
+    );
+
+    auto result = future.get();
+    EXPECT_EQ(result["size"], 100 * 1024);
+
+    server_thread.join();
+    client.stop();
+}
+
+TEST(JsonRpc, EOFOnPartialData)
+{
+    auto [client_transport, server_transport] = PipeTransport::create_pair();
+    JsonRpcClient client(std::move(client_transport));
+
+    client.start();
+
+    auto future = client.invoke("test.method");
+
+    // Close server transport immediately to simulate EOF on partial data
+    server_transport->close();
+
+    // The future should eventually fail or throw
+    EXPECT_THROW(future.get(), std::exception);
+
+    client.stop();
+}

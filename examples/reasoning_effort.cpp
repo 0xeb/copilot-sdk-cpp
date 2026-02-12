@@ -63,7 +63,7 @@ int main()
 
         // Create session with reasoning effort
         copilot::SessionConfig config;
-        config.reasoning_effort = "medium";
+        config.reasoning_effort = copilot::ReasoningEffort::Medium;
 
         // Permission handler
         config.on_permission_request = [](const copilot::PermissionRequest&)

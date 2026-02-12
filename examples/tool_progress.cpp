@@ -42,7 +42,7 @@ copilot::ToolResultObject word_count_handler(const copilot::ToolInvocation& invo
     }
     catch (const std::exception& e)
     {
-        result.result_type = "failure";
+        result.result_type = copilot::ToolResultType::Failure;
         result.error = e.what();
         result.text_result_for_llm = std::string("Error: ") + e.what();
     }
@@ -70,7 +70,7 @@ copilot::ToolResultObject search_handler(const copilot::ToolInvocation& invocati
     }
     catch (const std::exception& e)
     {
-        result.result_type = "failure";
+        result.result_type = copilot::ToolResultType::Failure;
         result.error = e.what();
         result.text_result_for_llm = std::string("Error: ") + e.what();
     }
@@ -83,7 +83,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = "info";
+        options.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 

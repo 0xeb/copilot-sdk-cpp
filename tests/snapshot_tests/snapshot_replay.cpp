@@ -87,7 +87,7 @@ Tool create_tool_from_config(const json& tool_config,
         }
 
         result.text_result_for_llm = fixed_result;
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 
@@ -502,7 +502,7 @@ int main(int argc, char* argv[])
         int port = server.start();
 
         ClientOptions opts;
-        opts.log_level = "info";
+        opts.log_level = LogLevel::Info;
         opts.use_stdio = false;
         opts.cli_url = std::to_string(port);
         opts.auto_start = false;

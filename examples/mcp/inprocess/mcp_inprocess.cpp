@@ -195,7 +195,7 @@ int main()
         std::cout << "Creating Copilot SDK client...\n";
 
         copilot::ClientOptions client_opts;
-        client_opts.log_level = "info";
+        client_opts.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(client_opts);
         client.start().get();

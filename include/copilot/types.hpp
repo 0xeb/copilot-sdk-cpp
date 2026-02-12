@@ -11,6 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace copilot
@@ -73,6 +74,67 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     }
 )
 
+/// Log level for the CLI
+enum class LogLevel
+{
+    None,
+    Error,
+    Warning,
+    Info,
+    Debug,
+    All
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    LogLevel,
+    {
+        {LogLevel::None, "none"},
+        {LogLevel::Error, "error"},
+        {LogLevel::Warning, "warning"},
+        {LogLevel::Info, "info"},
+        {LogLevel::Debug, "debug"},
+        {LogLevel::All, "all"},
+    }
+)
+
+/// Result type for tool execution
+enum class ToolResultType
+{
+    Success,
+    Failure,
+    Rejected,
+    Denied
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ToolResultType,
+    {
+        {ToolResultType::Success, "success"},
+        {ToolResultType::Failure, "failure"},
+        {ToolResultType::Rejected, "rejected"},
+        {ToolResultType::Denied, "denied"},
+    }
+)
+
+/// Reasoning effort level for model inference
+enum class ReasoningEffort
+{
+    Low,
+    Medium,
+    High,
+    XHigh
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ReasoningEffort,
+    {
+        {ReasoningEffort::Low, "low"},
+        {ReasoningEffort::Medium, "medium"},
+        {ReasoningEffort::High, "high"},
+        {ReasoningEffort::XHigh, "xhigh"},
+    }
+)
+
 // =============================================================================
 // Tool Types
 // =============================================================================
@@ -107,7 +169,7 @@ struct ToolResultObject
 {
     std::string text_result_for_llm;
     std::optional<std::vector<ToolBinaryResult>> binary_results_for_llm;
-    std::string result_type = "success";
+    ToolResultType result_type = ToolResultType::Success;
     std::optional<std::string> error;
     std::optional<std::string> session_log;
     std::optional<std::map<std::string, json>> tool_telemetry;
@@ -739,6 +801,9 @@ inline void from_json(const json& j, McpRemoteServerConfig& c)
         c.headers = j.at("headers").get<std::map<std::string, std::string>>();
 }
 
+/// Union type for MCP server configuration
+using MCPServerConfig = std::variant<McpLocalServerConfig, McpRemoteServerConfig>;
+
 // =============================================================================
 // Custom Agent Configuration
 // =============================================================================
@@ -921,8 +986,7 @@ struct SessionConfig
     bool auto_byok_from_env = false;
 
     /// Reasoning effort level for models that support it.
-    /// Valid values: "low", "medium", "high", "xhigh".
-    std::optional<std::string> reasoning_effort;
+    std::optional<ReasoningEffort> reasoning_effort;
 
     /// Handler for user input requests from the agent (enables ask_user tool).
     std::optional<UserInputHandler> on_user_input_request;
@@ -962,8 +1026,7 @@ struct ResumeSessionConfig
     std::optional<std::string> model;
 
     /// Reasoning effort level for models that support it.
-    /// Valid values: "low", "medium", "high", "xhigh".
-    std::optional<std::string> reasoning_effort;
+    std::optional<ReasoningEffort> reasoning_effort;
 
     /// System message configuration.
     std::optional<SystemMessageConfig> system_message;
@@ -1020,7 +1083,7 @@ struct ClientOptions
     int port = 0;
     bool use_stdio = true;
     std::optional<std::string> cli_url;
-    std::string log_level = "info";
+    LogLevel log_level = LogLevel::Info;
     bool auto_start = true;
     bool auto_restart = true;
     std::optional<std::map<std::string, std::string>> environment;
@@ -1194,6 +1257,12 @@ inline void from_json(const json& j, SessionMetadata& m)
     if (j.contains("isRemote"))
         j.at("isRemote").get_to(m.is_remote);
 }
+
+/// Error reported during client stop/cleanup
+struct StopError
+{
+    std::string message;
+};
 
 /// Response from a ping request
 struct PingResponse

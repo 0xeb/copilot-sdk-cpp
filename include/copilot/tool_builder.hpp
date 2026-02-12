@@ -180,6 +180,28 @@ std::string to_result_string(const T& value)
     }
 }
 
+/// Normalize handler return value to ToolResultObject
+template<typename T>
+ToolResultObject normalize_result(T&& value)
+{
+    if constexpr (std::is_same_v<std::decay_t<T>, ToolResultObject>)
+    {
+        return std::forward<T>(value);
+    }
+    else if constexpr (std::is_same_v<std::decay_t<T>, json>)
+    {
+        return ToolResultObject{
+            .text_result_for_llm = value.dump(),
+            .result_type = ToolResultType::Success};
+    }
+    else
+    {
+        return ToolResultObject{
+            .text_result_for_llm = to_result_string(value),
+            .result_type = ToolResultType::Success};
+    }
+}
+
 /// Extract argument from JSON by name
 template<typename T>
 T extract_arg(const json& args, const std::string& name)
@@ -341,7 +363,6 @@ class ToolBuilderWithParams
         auto params = params_;
         tool.handler = [fn = std::forward<Func>(fn), params](const ToolInvocation& inv) -> ToolResultObject
         {
-            ToolResultObject result;
             try
             {
                 const json& args = inv.arguments.value_or(json::object());
@@ -352,16 +373,22 @@ class ToolBuilderWithParams
 
                 // Call the handler with extracted arguments
                 auto ret = std::apply(fn, extracted);
-                result.text_result_for_llm = detail::to_result_string(ret);
-                result.result_type = "success";
+                return detail::normalize_result(std::move(ret));
             }
             catch (const std::exception& e)
             {
-                result.result_type = "error";
-                result.error = e.what();
-                result.text_result_for_llm = std::string("Error: ") + e.what();
+                return ToolResultObject{
+                    .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                    .result_type = ToolResultType::Failure,
+                    .error = e.what()};
             }
-            return result;
+            catch (...)
+            {
+                return ToolResultObject{
+                    .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                    .result_type = ToolResultType::Failure,
+                    .error = "Unknown error"};
+            }
         };
 
         return tool;
@@ -473,7 +500,6 @@ class ToolBuilder::StructBuilder
 
         tool.handler = [fn = std::forward<Func>(fn)](const ToolInvocation& inv) -> ToolResultObject
         {
-            ToolResultObject result;
             try
             {
                 const json& args = inv.arguments.value_or(json::object());
@@ -482,16 +508,22 @@ class ToolBuilder::StructBuilder
                 ArgsStruct parsed = args.get<ArgsStruct>();
 
                 auto ret = fn(parsed);
-                result.text_result_for_llm = detail::to_result_string(ret);
-                result.result_type = "success";
+                return detail::normalize_result(std::move(ret));
             }
             catch (const std::exception& e)
             {
-                result.result_type = "error";
-                result.error = e.what();
-                result.text_result_for_llm = std::string("Error: ") + e.what();
+                return ToolResultObject{
+                    .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                    .result_type = ToolResultType::Failure,
+                    .error = e.what()};
             }
-            return result;
+            catch (...)
+            {
+                return ToolResultObject{
+                    .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                    .result_type = ToolResultType::Failure,
+                    .error = "Unknown error"};
+            }
         };
 
         return tool;
@@ -674,19 +706,26 @@ Tool make_tool(std::string name, std::string description, Func&& func,
     tool.handler = [f = std::forward<Func>(func),
                     names = std::move(param_names)](const ToolInvocation& inv) -> ToolResultObject
     {
-        ToolResultObject result;
         try
         {
             json args = inv.arguments.value_or(json::object());
             auto output = detail::invoke_with_json(f, args, names);
-            result.text_result_for_llm = detail::to_result_string(output);
+            return detail::normalize_result(std::move(output));
         }
         catch (const std::exception& e)
         {
-            result.result_type = "error";
-            result.error = e.what();
+            return ToolResultObject{
+                .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                .result_type = ToolResultType::Failure,
+                .error = e.what()};
         }
-        return result;
+        catch (...)
+        {
+            return ToolResultObject{
+                .text_result_for_llm = "Invoking this tool produced an error. Detailed information is not available.",
+                .result_type = ToolResultType::Failure,
+                .error = "Unknown error"};
+        }
     };
 
     return tool;

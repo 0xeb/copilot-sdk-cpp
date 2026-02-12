@@ -46,7 +46,7 @@ copilot::ToolResultObject calculate_handler(const copilot::ToolInvocation& invoc
         {
             if (b == 0)
             {
-                result.result_type = "failure";
+                result.result_type = copilot::ToolResultType::Failure;
                 result.error = "Division by zero";
                 result.text_result_for_llm = "Error: Cannot divide by zero";
                 return result;
@@ -59,7 +59,7 @@ copilot::ToolResultObject calculate_handler(const copilot::ToolInvocation& invoc
         }
         else
         {
-            result.result_type = "failure";
+            result.result_type = copilot::ToolResultType::Failure;
             result.error = "Unknown operation: " + operation;
             result.text_result_for_llm = "Error: Unknown operation '" + operation + "'";
             return result;
@@ -72,7 +72,7 @@ copilot::ToolResultObject calculate_handler(const copilot::ToolInvocation& invoc
     }
     catch (const std::exception& e)
     {
-        result.result_type = "failure";
+        result.result_type = copilot::ToolResultType::Failure;
         result.error = e.what();
         result.text_result_for_llm = std::string("Error: ") + e.what();
     }
@@ -105,7 +105,7 @@ copilot::ToolResultObject get_time_handler(const copilot::ToolInvocation& invoca
     }
     catch (const std::exception& e)
     {
-        result.result_type = "failure";
+        result.result_type = copilot::ToolResultType::Failure;
         result.error = e.what();
         result.text_result_for_llm = std::string("Error: ") + e.what();
     }
@@ -132,7 +132,7 @@ int main()
     {
         // Create client
         copilot::ClientOptions options;
-        options.log_level = "info";
+        options.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 

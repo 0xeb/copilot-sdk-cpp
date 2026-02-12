@@ -20,7 +20,7 @@ TEST(ClientTest, DefaultConstruction)
 TEST(ClientTest, ConstructionWithOptions)
 {
     ClientOptions opts;
-    opts.log_level = "debug";
+    opts.log_level = LogLevel::Debug;
     opts.auto_start = false;
     opts.port = 8080;
 
@@ -174,7 +174,7 @@ TEST(ToolTest, ToolDefinition)
 
     auto result = tool.handler(inv);
     EXPECT_EQ(result.text_result_for_llm, "Success");
-    EXPECT_EQ(result.result_type, "success");
+    EXPECT_EQ(result.result_type, ToolResultType::Success);
 }
 
 // =============================================================================
@@ -214,7 +214,7 @@ TEST(ClientOptionsTest, DefaultValues)
     EXPECT_EQ(opts.port, 0);
     EXPECT_TRUE(opts.use_stdio);
     EXPECT_FALSE(opts.cli_url.has_value());
-    EXPECT_EQ(opts.log_level, "info");
+    EXPECT_EQ(opts.log_level, LogLevel::Info);
     EXPECT_TRUE(opts.auto_start);
     EXPECT_TRUE(opts.auto_restart);
     EXPECT_FALSE(opts.environment.has_value());
@@ -767,4 +767,62 @@ TEST(SessionCreateRequestTest, CustomAgentWithMcpServers)
     EXPECT_EQ(agent_json["mcpServers"]["agent-mcp"]["type"], "sse");
     EXPECT_TRUE(agent_json.contains("tools"));
     EXPECT_EQ(agent_json["infer"], true);
+}
+
+// =============================================================================
+// URL Parsing Edge Case Tests
+// =============================================================================
+
+TEST(ClientOptions, InvalidPortTooHigh)
+{
+    ClientOptions opts;
+    opts.cli_url = "70000";
+    opts.use_stdio = false;
+
+    // Port 70000 exceeds valid range, falls through to hostname parsing
+    Client client(opts);
+    EXPECT_EQ(client.state(), ConnectionState::Disconnected);
+}
+
+TEST(ClientOptions, InvalidPortZero)
+{
+    ClientOptions opts;
+    opts.cli_url = "0";
+    opts.use_stdio = false;
+
+    // Port 0 is not in valid range (1-65535), falls through to hostname parsing
+    Client client(opts);
+    EXPECT_EQ(client.state(), ConnectionState::Disconnected);
+}
+
+TEST(ClientOptions, InvalidPortNegative)
+{
+    ClientOptions opts;
+    opts.cli_url = "-1";
+    opts.use_stdio = false;
+
+    // Negative port not valid, falls through to hostname parsing
+    Client client(opts);
+    EXPECT_EQ(client.state(), ConnectionState::Disconnected);
+}
+
+TEST(ClientOptions, AuthDefaultWithToken)
+{
+    ClientOptions opts;
+    opts.github_token = "ghp_test123";
+    opts.auto_start = false;
+
+    Client client(opts);
+    // use_logged_in_user should default to false when github_token is set
+    EXPECT_EQ(client.state(), ConnectionState::Disconnected);
+}
+
+TEST(ClientOptions, AuthDefaultWithoutToken)
+{
+    ClientOptions opts;
+    opts.auto_start = false;
+
+    Client client(opts);
+    // use_logged_in_user should default to true without token
+    EXPECT_EQ(client.state(), ConnectionState::Disconnected);
 }

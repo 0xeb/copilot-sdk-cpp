@@ -126,7 +126,7 @@ int main()
 
         ToolResultObject result;
         result.text_result_for_llm = "SECRET_VALUE_12345";
-        result.result_type = "success";
+        result.result_type = ToolResultType::Success;
         return result;
     };
 

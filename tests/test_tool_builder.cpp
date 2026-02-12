@@ -142,7 +142,7 @@ TEST(ToolBuilderTest, HandlerInvocationSuccess)
     inv.arguments = json{{"a", 10.0}, {"b", 32.0}};
 
     auto result = add.handler(inv);
-    EXPECT_EQ(result.result_type, "success");
+    EXPECT_EQ(result.result_type, ToolResultType::Success);
     EXPECT_EQ(result.text_result_for_llm, "42.000000");
 }
 
@@ -159,7 +159,7 @@ TEST(ToolBuilderTest, HandlerInvocationWithStrings)
     inv.arguments = json{{"name", "World"}};
 
     auto result = greet.handler(inv);
-    EXPECT_EQ(result.result_type, "success");
+    EXPECT_EQ(result.result_type, ToolResultType::Success);
     EXPECT_EQ(result.text_result_for_llm, "Hello, World!");
 }
 
@@ -201,7 +201,7 @@ TEST(ToolBuilderTest, HandlerErrorHandling)
     inv.arguments = json{{"a", 10.0}, {"b", 0.0}};
 
     auto result = div.handler(inv);
-    EXPECT_EQ(result.result_type, "error");
+    EXPECT_EQ(result.result_type, ToolResultType::Failure);
     EXPECT_TRUE(result.error.has_value());
     EXPECT_EQ(*result.error, "Division by zero");
 }
@@ -216,7 +216,7 @@ TEST(ToolBuilderTest, MissingRequiredArg)
     inv.arguments = json::object(); // Missing "name"
 
     auto result = greet.handler(inv);
-    EXPECT_EQ(result.result_type, "error");
+    EXPECT_EQ(result.result_type, ToolResultType::Failure);
     EXPECT_TRUE(result.error.has_value());
 }
 
@@ -263,7 +263,7 @@ TEST(ToolBuilderTest, StructBasedHandlerInvocation)
     inv.arguments = json{{"query", "test"}, {"limit", 5}};
 
     auto result = search.handler(inv);
-    EXPECT_EQ(result.result_type, "success");
+    EXPECT_EQ(result.result_type, ToolResultType::Success);
     EXPECT_EQ(result.text_result_for_llm, "test:5");
 }
 
@@ -319,7 +319,7 @@ TEST(ToolBuilderTest, BackwardCompatibility)
     old_tool.handler = [](const ToolInvocation& inv) -> ToolResultObject {
         ToolResultObject r;
         r.text_result_for_llm = "old style";
-        r.result_type = "success";
+        r.result_type = ToolResultType::Success;
         return r;
     };
 
@@ -417,7 +417,7 @@ TEST(MakeToolTest, ErrorHandling)
     ToolInvocation inv;
     inv.arguments = json{{"input", "test"}};
     auto result = tool.handler(inv);
-    EXPECT_EQ(result.result_type, "error");
+    EXPECT_EQ(result.result_type, ToolResultType::Failure);
     EXPECT_TRUE(result.error.has_value());
     EXPECT_EQ(*result.error, "boom");
 }

@@ -150,7 +150,7 @@ int main()
         std::cout << "=== Starting Copilot Session ===\n\n";
 
         ClientOptions opts;
-        opts.log_level = "info";
+        opts.log_level = LogLevel::Info;
         opts.use_stdio = true;
         Client client(opts);
 
