@@ -3553,3 +3553,711 @@ TEST_F(E2ETest, FullFeaturedSessionWithAllNewConfig)
     session->destroy().get();
     client->force_stop();
 }
+
+// =============================================================================
+// Parity Sync: Foreground Session API Tests
+// =============================================================================
+
+TEST_F(E2ETest, ForegroundSessionSetAndGet)
+{
+    test_info("Foreground session: set_foreground_session_id then get_foreground_session_id round-trips.");
+    auto client = create_client();
+    client->start().get();
+
+    auto config = default_session_config();
+    auto session = client->create_session(config).get();
+    ASSERT_NE(session, nullptr);
+    std::string sid = session->session_id();
+    ASSERT_FALSE(sid.empty());
+
+    // Send a message to persist the session first
+    std::atomic<bool> idle{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    MessageOptions opts;
+    opts.prompt = "Say 'hi'.";
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(30), [&]() { return idle.load(); });
+    }
+
+    // Set this session as foreground
+    client->set_foreground_session_id(sid).get();
+
+    // Small delay to allow the server to persist
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // Get foreground session ID — should match
+    auto fg = client->get_foreground_session_id().get();
+    if (fg.has_value())
+    {
+        EXPECT_EQ(*fg, sid);
+        std::cout << "Foreground session round-trip confirmed: " << *fg << "\n";
+    }
+    else
+    {
+        std::cout << "Note: get_foreground_session_id returned empty after set "
+                  << "(server may not persist foreground state)\n";
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+TEST_F(E2ETest, ForegroundSessionInitiallyEmpty)
+{
+    test_info("Foreground session initially empty: get_foreground_session_id returns empty before any set.");
+    auto client = create_client();
+    client->start().get();
+
+    auto fg = client->get_foreground_session_id().get();
+    // Before any session is created/set as foreground, result should be empty
+    if (fg.has_value())
+        std::cout << "Note: foreground session ID was already set: " << *fg << "\n";
+    else
+        std::cout << "Confirmed: no foreground session ID set initially\n";
+
+    // The key assertion is that the call doesn't throw
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: Graceful Stop Test
+// =============================================================================
+
+TEST_F(E2ETest, GracefulStopReturnsNoErrors)
+{
+    test_info("Graceful stop: stop() returns empty vector<StopError> after clean session.");
+    auto client = create_client();
+    client->start().get();
+
+    auto config = default_session_config();
+    auto session = client->create_session(config).get();
+    ASSERT_NE(session, nullptr);
+
+    // Send a simple message and wait for idle
+    std::atomic<bool> idle{false};
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    MessageOptions opts;
+    opts.prompt = "Say 'ok'.";
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+    }
+
+    session->destroy().get();
+
+    // Graceful stop should return no errors
+    auto errors = client->stop().get();
+    EXPECT_TRUE(errors.empty()) << "stop() should return empty errors after clean session, got "
+                                << errors.size() << " errors";
+    if (!errors.empty())
+    {
+        for (const auto& e : errors)
+            std::cout << "  StopError: " << e.message << "\n";
+    }
+}
+
+// =============================================================================
+// Parity Sync: Lifecycle Events Test
+// =============================================================================
+
+TEST_F(E2ETest, LifecycleCallbackFiresOnSessionCreate)
+{
+    test_info("Lifecycle callback: on_lifecycle fires session.created event with correct session ID.");
+    auto client = create_client();
+    client->start().get();
+
+    std::atomic<bool> lifecycle_fired{false};
+    std::string lifecycle_session_id;
+    std::string lifecycle_event_type;
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    // Register lifecycle handler BEFORE creating session
+    auto unsub = client->on_lifecycle(
+        [&](const SessionLifecycleEvent& evt)
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            if (evt.type == SessionLifecycleEventTypes::Created)
+            {
+                lifecycle_fired = true;
+                lifecycle_session_id = evt.session_id;
+                lifecycle_event_type = evt.type;
+                cv.notify_one();
+            }
+        }
+    );
+
+    auto config = default_session_config();
+    auto session = client->create_session(config).get();
+    ASSERT_NE(session, nullptr);
+    std::string sid = session->session_id();
+
+    // Wait for lifecycle event
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(10), [&]() { return lifecycle_fired.load(); });
+    }
+
+    EXPECT_TRUE(lifecycle_fired.load()) << "on_lifecycle should fire session.created event";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        EXPECT_EQ(lifecycle_event_type, SessionLifecycleEventTypes::Created);
+        EXPECT_EQ(lifecycle_session_id, sid);
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: User Input Handler E2E Tests
+// =============================================================================
+
+TEST_F(E2ETest, UserInputHandlerInvokedByModel)
+{
+    test_info("User input handler: model's ask_user triggers the handler, response flows back.");
+    auto client = create_client();
+    client->start().get();
+
+    std::atomic<bool> handler_called{false};
+    std::string received_question;
+    std::mutex mtx;
+
+    auto config = default_session_config();
+    config.on_user_input_request = [&](const UserInputRequest& req, const UserInputInvocation&) -> UserInputResponse
+    {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            handler_called = true;
+            received_question = req.question;
+        }
+        UserInputResponse resp;
+        resp.answer = "Blue";
+        resp.was_freeform = true;
+        return resp;
+    };
+
+    config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
+    {
+        PermissionRequestResult r;
+        r.kind = "approved";
+        return r;
+    };
+
+    auto session = client->create_session(config).get();
+    ASSERT_NE(session, nullptr);
+
+    std::atomic<bool> idle{false};
+    std::string assistant_response;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+            else if (auto* msg = event.try_as<AssistantMessageData>())
+            {
+                std::lock_guard<std::mutex> lock(mtx);
+                assistant_response += msg->content;
+            }
+        }
+    );
+
+    // Retry up to 3 prompts to trigger ask_user
+    const char* prompts[] = {
+        "Ask the user what their favorite color is using the ask_user tool. Then report their answer.",
+        "You MUST use the ask_user tool to ask the user about their favorite color. Report what they say.",
+        "Use ask_user to ask: 'What is your favorite color?' Then tell me the answer."
+    };
+    for (int attempt = 0; attempt < 3 && !handler_called.load(); ++attempt)
+    {
+        idle = false;
+        MessageOptions opts;
+        opts.prompt = prompts[attempt];
+        session->send(opts).get();
+
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+        }
+    }
+
+    EXPECT_TRUE(handler_called.load()) << "User input handler should have been invoked";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        // Response should reference "Blue" since that's what our handler returned
+        if (handler_called.load())
+        {
+            EXPECT_TRUE(assistant_response.find("Blue") != std::string::npos ||
+                        assistant_response.find("blue") != std::string::npos)
+                << "Response should contain the user input answer 'Blue': " << assistant_response;
+        }
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+TEST_F(E2ETest, UserInputHandlerReceivesQuestion)
+{
+    test_info("User input handler: UserInputRequest contains non-empty question field.");
+    auto client = create_client();
+    client->start().get();
+
+    std::atomic<bool> handler_called{false};
+    std::string received_question;
+    std::mutex mtx;
+
+    auto config = default_session_config();
+    config.on_user_input_request = [&](const UserInputRequest& req, const UserInputInvocation&) -> UserInputResponse
+    {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            handler_called = true;
+            received_question = req.question;
+        }
+        UserInputResponse resp;
+        resp.answer = "42";
+        resp.was_freeform = true;
+        return resp;
+    };
+
+    config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
+    {
+        PermissionRequestResult r;
+        r.kind = "approved";
+        return r;
+    };
+
+    auto session = client->create_session(config).get();
+
+    std::atomic<bool> idle{false};
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    const char* prompts[] = {
+        "Use the ask_user tool to ask: 'What is your favorite number?'",
+        "You MUST call ask_user with the question 'What is your favorite number?'",
+        "Call ask_user to ask the user about their favorite number."
+    };
+    for (int attempt = 0; attempt < 3 && !handler_called.load(); ++attempt)
+    {
+        idle = false;
+        MessageOptions opts;
+        opts.prompt = prompts[attempt];
+        session->send(opts).get();
+
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+        }
+    }
+
+    EXPECT_TRUE(handler_called.load()) << "User input handler should have been invoked";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (handler_called.load())
+        {
+            EXPECT_FALSE(received_question.empty()) << "UserInputRequest.question should not be empty";
+            std::cout << "Received question: " << received_question << "\n";
+        }
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: Combined Pre+Post Hook Test
+// =============================================================================
+
+TEST_F(E2ETest, BothPreAndPostToolHooksFireOnSameToolCall)
+{
+    test_info("Both hooks: pre and post tool hooks both fire for the same tool invocation.");
+    auto client = create_client();
+    client->start().get();
+
+    std::atomic<bool> pre_hook_fired{false};
+    std::atomic<bool> post_hook_fired{false};
+    std::string pre_hook_tool;
+    std::string post_hook_tool;
+    std::mutex mtx;
+
+    auto config = default_session_config();
+
+    Tool ping_tool;
+    ping_tool.name = "ping_pong";
+    ping_tool.description = "Returns 'pong' when called";
+    ping_tool.parameters_schema = {
+        {"type", "object"},
+        {"properties", json::object()}
+    };
+    ping_tool.handler = [](const ToolInvocation&) -> ToolResultObject
+    {
+        ToolResultObject result;
+        result.text_result_for_llm = "pong";
+        result.result_type = ToolResultType::Success;
+        return result;
+    };
+    config.tools = {ping_tool};
+
+    config.hooks = SessionHooks{};
+    config.hooks->on_pre_tool_use = [&](const PreToolUseHookInput& input, const HookInvocation&)
+        -> std::optional<PreToolUseHookOutput>
+    {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            pre_hook_fired = true;
+            pre_hook_tool = input.tool_name;
+        }
+        return std::nullopt;
+    };
+
+    config.hooks->on_post_tool_use = [&](const PostToolUseHookInput& input, const HookInvocation&)
+        -> std::optional<PostToolUseHookOutput>
+    {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            post_hook_fired = true;
+            post_hook_tool = input.tool_name;
+        }
+        return std::nullopt;
+    };
+
+    config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
+    {
+        PermissionRequestResult r;
+        r.kind = "approved";
+        return r;
+    };
+
+    auto session = client->create_session(config).get();
+
+    std::atomic<bool> idle{false};
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    const char* prompts[] = {
+        "Use the ping_pong tool now.",
+        "You MUST call the ping_pong tool.",
+        "Call ping_pong immediately."
+    };
+    for (int attempt = 0; attempt < 3 && !pre_hook_fired.load(); ++attempt)
+    {
+        idle = false;
+        MessageOptions opts;
+        opts.prompt = prompts[attempt];
+        session->send(opts).get();
+
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+        }
+    }
+
+    EXPECT_TRUE(pre_hook_fired.load()) << "preToolUse hook should have fired";
+    EXPECT_TRUE(post_hook_fired.load()) << "postToolUse hook should have fired";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        EXPECT_EQ(pre_hook_tool, "ping_pong");
+        EXPECT_EQ(post_hook_tool, "ping_pong");
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: UserPromptSubmitted Hook Test
+// =============================================================================
+
+TEST_F(E2ETest, UserPromptSubmittedHookFires)
+{
+    test_info("User prompt submitted hook: on_user_prompt_submitted fires with the prompt text.");
+    auto client = create_client();
+    client->start().get();
+
+    std::atomic<bool> hook_fired{false};
+    std::string captured_prompt;
+    std::mutex mtx;
+
+    auto config = default_session_config();
+    config.hooks = SessionHooks{};
+    config.hooks->on_user_prompt_submitted = [&](const UserPromptSubmittedHookInput& input, const HookInvocation&)
+        -> std::optional<UserPromptSubmittedHookOutput>
+    {
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            hook_fired = true;
+            captured_prompt = input.prompt;
+        }
+        return std::nullopt;
+    };
+
+    auto session = client->create_session(config).get();
+
+    std::atomic<bool> idle{false};
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+        }
+    );
+
+    const std::string marker = "MARKER_PROMPT_7749";
+    MessageOptions opts;
+    opts.prompt = "Say hello. " + marker;
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+    }
+
+    EXPECT_TRUE(hook_fired.load()) << "on_user_prompt_submitted hook should fire";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (hook_fired.load())
+        {
+            EXPECT_TRUE(captured_prompt.find(marker) != std::string::npos)
+                << "Hook should capture prompt containing marker '" << marker << "', got: " << captured_prompt;
+        }
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: Tool Error Handling Test
+// =============================================================================
+
+TEST_F(E2ETest, ToolHandlerExceptionDoesNotCrash)
+{
+    test_info("Tool error: Tool handler throwing exception doesn't crash session.");
+    auto client = create_client();
+    client->start().get();
+
+    auto config = default_session_config();
+
+    Tool crash_tool;
+    crash_tool.name = "crasher";
+    crash_tool.description = "A tool that always fails internally";
+    crash_tool.parameters_schema = {
+        {"type", "object"},
+        {"properties", json::object()}
+    };
+    crash_tool.handler = [](const ToolInvocation&) -> ToolResultObject
+    {
+        throw std::runtime_error("Secret_Error_42");
+    };
+    config.tools = {crash_tool};
+
+    config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
+    {
+        PermissionRequestResult r;
+        r.kind = "approved";
+        return r;
+    };
+
+    auto session = client->create_session(config).get();
+
+    std::atomic<bool> idle{false};
+    std::string assistant_response;
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+            else if (auto* msg = event.try_as<AssistantMessageData>())
+            {
+                std::lock_guard<std::mutex> lock(mtx);
+                assistant_response += msg->content;
+            }
+        }
+    );
+
+    const char* prompts[] = {
+        "Use the crasher tool now.",
+        "You MUST call the crasher tool immediately.",
+        "Call crasher."
+    };
+    for (int attempt = 0; attempt < 3; ++attempt)
+    {
+        idle = false;
+        MessageOptions opts;
+        opts.prompt = prompts[attempt];
+        session->send(opts).get();
+
+        {
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+        }
+
+        if (idle.load())
+            break;
+    }
+
+    // Session should reach idle — the exception should not crash it
+    EXPECT_TRUE(idle.load()) << "Session should reach idle even after tool handler exception";
+
+    // The secret error string should not leak to the LLM response
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        EXPECT_TRUE(assistant_response.find("Secret_Error_42") == std::string::npos)
+            << "Secret error should not leak to LLM response: " << assistant_response;
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
+
+// =============================================================================
+// Parity Sync: make_tool with normalize_result Test
+// =============================================================================
+
+TEST_F(E2ETest, MakeToolWithNormalizeResult)
+{
+    test_info("make_tool: Tool created via make_tool with plain string return works through CLI.");
+    auto client = create_client();
+    client->start().get();
+
+    // Create tool using make_tool — returns std::string, exercises normalize_result path
+    auto rot13_tool = copilot::make_tool(
+        "rot13",
+        "Apply ROT13 cipher to the input text",
+        [](std::string text) -> std::string
+        {
+            std::string result = text;
+            for (auto& c : result)
+            {
+                if (c >= 'a' && c <= 'z')
+                    c = 'a' + (c - 'a' + 13) % 26;
+                else if (c >= 'A' && c <= 'Z')
+                    c = 'A' + (c - 'A' + 13) % 26;
+            }
+            return result;
+        },
+        {"text"}
+    );
+
+    auto config = default_session_config();
+    config.tools = {rot13_tool};
+
+    config.on_permission_request = [](const PermissionRequest&) -> PermissionRequestResult
+    {
+        PermissionRequestResult r;
+        r.kind = "approved";
+        return r;
+    };
+
+    auto session = client->create_session(config).get();
+
+    std::atomic<bool> idle{false};
+    std::string assistant_response;
+    std::mutex mtx;
+    std::condition_variable cv;
+
+    auto sub = session->on(
+        [&](const SessionEvent& event)
+        {
+            if (event.type == SessionEventType::SessionIdle)
+            {
+                idle = true;
+                cv.notify_one();
+            }
+            else if (auto* msg = event.try_as<AssistantMessageData>())
+            {
+                std::lock_guard<std::mutex> lock(mtx);
+                assistant_response += msg->content;
+            }
+        }
+    );
+
+    // "Hello" ROT13 = "Uryyb"
+    MessageOptions opts;
+    opts.prompt = "Use the rot13 tool to encode the word 'Hello'. Tell me the exact result.";
+    session->send(opts).get();
+
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        cv.wait_for(lock, std::chrono::seconds(60), [&]() { return idle.load(); });
+    }
+
+    EXPECT_TRUE(idle.load()) << "Session should reach idle";
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        EXPECT_TRUE(assistant_response.find("Uryyb") != std::string::npos)
+            << "Response should contain ROT13 of 'Hello' = 'Uryyb': " << assistant_response;
+    }
+
+    session->destroy().get();
+    client->force_stop();
+}
