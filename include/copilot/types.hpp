@@ -901,6 +901,23 @@ struct Tool
     std::string description;
     json parameters_schema;
     ToolHandler handler;
+
+    /// When true, this tool executes without triggering a permission prompt.
+    /// Use for read-only or otherwise safe tools.
+    bool skip_permission = false;
+
+    /// When true, allows this tool to replace a built-in CLI tool
+    /// (e.g. edit_file, read_file). Without this flag, registering a tool
+    /// with a built-in name will cause an error.
+    bool overrides_built_in_tool = false;
+
+    /// Fluent setter — mark this tool as not requiring permission prompts
+    Tool& with_skip_permission(bool value = true) & { skip_permission = value; return *this; }
+    Tool  with_skip_permission(bool value = true) && { skip_permission = value; return std::move(*this); }
+
+    /// Fluent setter — mark this tool as replacing a built-in CLI tool
+    Tool& with_overrides_built_in_tool(bool value = true) & { overrides_built_in_tool = value; return *this; }
+    Tool  with_overrides_built_in_tool(bool value = true) && { overrides_built_in_tool = value; return std::move(*this); }
 };
 
 // =============================================================================
