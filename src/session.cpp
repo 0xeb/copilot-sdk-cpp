@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <copilot/client.hpp>
+#include <copilot/rpc_methods.hpp>
 #include <copilot/session.hpp>
 #include <condition_variable>
 
@@ -44,7 +45,7 @@ std::future<std::string> Session::send(MessageOptions options)
             if (options.mode.has_value())
                 params["mode"] = *options.mode;
 
-            auto response = client_->rpc_client()->invoke("session.send", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionSend, params).get();
             return response["messageId"].get<std::string>();
         }
     );
@@ -59,7 +60,7 @@ std::future<void> Session::abort()
             json params;
             params["sessionId"] = session_id_;
 
-            client_->rpc_client()->invoke("session.abort", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionAbort, params).get();
         }
     );
 }
@@ -73,7 +74,7 @@ std::future<std::vector<SessionEvent>> Session::get_messages()
             json params;
             params["sessionId"] = session_id_;
 
-            auto response = client_->rpc_client()->invoke("session.getMessages", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionGetMessages, params).get();
 
             std::vector<SessionEvent> events;
             if (response.contains("events") && response["events"].is_array())
@@ -381,7 +382,7 @@ std::future<void> Session::destroy()
             json params;
             params["sessionId"] = session_id_;
 
-            client_->rpc_client()->invoke("session.destroy", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionDestroy, params).get();
         }
     );
 }
@@ -402,7 +403,7 @@ std::future<void> Session::set_model(const std::string& model_id, SetModelOption
             if (options.reasoning_effort.has_value())
                 params["reasoningEffort"] = *options.reasoning_effort;
 
-            client_->rpc_client()->invoke("session.model.switchTo", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModelSwitchTo, params).get();
         }
     );
 }
@@ -415,7 +416,7 @@ std::future<std::optional<std::string>> Session::get_current_model()
         {
             json params;
             params["sessionId"] = session_id_;
-            auto response = client_->rpc_client()->invoke("session.model.getCurrent", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModelGetCurrent, params).get();
             // Response: { modelId?: string } per nodejs CurrentModel shape.
             if (response.contains("modelId") && !response["modelId"].is_null())
                 return response["modelId"].get<std::string>();
@@ -455,7 +456,7 @@ std::future<void> Session::set_mode(Mode mode)
             json params;
             params["sessionId"] = session_id_;
             params["mode"] = mode_to_wire(mode);
-            client_->rpc_client()->invoke("session.mode.set", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModeSet, params).get();
         }
     );
 }
@@ -468,7 +469,7 @@ std::future<Session::Mode> Session::get_mode()
         {
             json params;
             params["sessionId"] = session_id_;
-            auto response = client_->rpc_client()->invoke("session.mode.get", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModeGet, params).get();
             // Response shape: { mode: "interactive" | "plan" | "autopilot" }
             std::string wire = response.contains("mode") && response["mode"].is_string()
                                    ? response["mode"].get<std::string>()

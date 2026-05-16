@@ -13,6 +13,8 @@
 #include <copilot/events.hpp>
 #include <copilot/jsonrpc.hpp>
 #include <copilot/process.hpp>
+#include <copilot/rpc_methods.hpp>
+#include <copilot/rpc_types.hpp>
 #include <copilot/session.hpp>
 #include <copilot/tool_builder.hpp>
 #include <copilot/transport.hpp>

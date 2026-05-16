@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include <copilot/client.hpp>
+#include <copilot/rpc_methods.hpp>
 #include <copilot/session.hpp>
 #include <cstdio>
 #include <random>
@@ -706,7 +707,7 @@ void Client::connect_to_server()
 
 void Client::verify_protocol_version()
 {
-    auto response = rpc_->invoke("ping", json{{"message", nullptr}}).get();
+    auto response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
 
     if (!response.contains("protocolVersion") || response["protocolVersion"].is_null())
     {
@@ -759,7 +760,7 @@ std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig confi
 
             // Build and send request
             json request = build_session_create_request(config);
-            auto response = rpc_->invoke("session.create", request).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionCreate, request).get();
             std::string session_id = response["sessionId"].get<std::string>();
 
             // Capture workspace path for infinite sessions
@@ -811,7 +812,7 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
 
             // Build and send request
             json request = build_session_resume_request(session_id, config);
-            auto response = rpc_->invoke("session.resume", request).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionResume, request).get();
             std::string returned_session_id = response["sessionId"].get<std::string>();
 
             // Capture workspace_path if present (for infinite sessions)
@@ -870,7 +871,7 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilte
             if (!filter_json.empty())
                 params["filter"] = std::move(filter_json);
 
-            auto response = rpc_->invoke("session.list", params).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionList, params).get();
             std::vector<SessionMetadata> sessions;
 
             if (response.contains("sessions") && response["sessions"].is_array())
@@ -902,7 +903,7 @@ Client::get_session_metadata(const std::string& session_id)
             }
 
             auto response =
-                rpc_->invoke("session.getMetadata", json{{"sessionId", session_id}}).get();
+                rpc_->invoke(copilot::rpc::methods::kSessionGetMetadata, json{{"sessionId", session_id}}).get();
 
             if (!response.contains("session") || response["session"].is_null())
                 return std::nullopt;
@@ -922,7 +923,7 @@ std::future<void> Client::delete_session(const std::string& session_id)
                 throw std::runtime_error("Client not connected");
 
             auto response =
-                rpc_->invoke("session.delete", json{{"sessionId", session_id}}).get();
+                rpc_->invoke(copilot::rpc::methods::kSessionDelete, json{{"sessionId", session_id}}).get();
 
             if (response.contains("success") && !response["success"].get<bool>())
             {
@@ -952,7 +953,7 @@ std::future<std::optional<std::string>> Client::get_last_session_id()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("session.getLastId", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionGetLastId, json::object()).get();
 
             if (response.contains("sessionId") && !response["sessionId"].is_null())
                 return response["sessionId"].get<std::string>();
@@ -981,7 +982,7 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
             else
                 params["message"] = nullptr;
 
-            auto response = rpc_->invoke("ping", params).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kPing, params).get();
 
             PingResponse result;
             if (response.contains("message") && !response["message"].is_null())
@@ -1009,7 +1010,7 @@ std::future<GetStatusResponse> Client::get_status()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("status.get", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kStatusGet, json::object()).get();
             return response.get<GetStatusResponse>();
         }
     );
@@ -1029,7 +1030,7 @@ std::future<GetAuthStatusResponse> Client::get_auth_status()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("auth.getStatus", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kAuthGetStatus, json::object()).get();
             return response.get<GetAuthStatusResponse>();
         }
     );
@@ -1071,7 +1072,7 @@ std::future<std::vector<ModelInfo>> Client::list_models()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("models.list", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kModelsList, json::object()).get();
             auto models_response = response.get<GetModelsResponse>();
 
             // Store in cache
@@ -1302,7 +1303,7 @@ std::future<std::optional<std::string>> Client::get_foreground_session_id()
         std::launch::async,
         [this]() -> std::optional<std::string>
         {
-            auto response = rpc_client()->invoke("session.getForeground", json::object()).get();
+            auto response = rpc_client()->invoke(copilot::rpc::methods::kSessionGetForeground, json::object()).get();
             auto parsed = response.get<GetForegroundSessionResponse>();
             return parsed.session_id;
         }
@@ -1315,7 +1316,7 @@ std::future<void> Client::set_foreground_session_id(const std::string& session_i
         std::launch::async,
         [this, session_id]()
         {
-            rpc_client()->invoke("session.setForeground", json{{"sessionId", session_id}}).get();
+            rpc_client()->invoke(copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}).get();
         }
     );
 }

@@ -107,6 +107,19 @@ target_link_libraries(test_tool_builder
 
 set_target_properties(test_tool_builder PROPERTIES FOLDER "Tests")
 
+# Test for RPC method catalog and typed parameter/result structs
+add_executable(test_rpc_methods
+    test_rpc_methods.cpp
+)
+
+target_link_libraries(test_rpc_methods
+    PRIVATE
+        copilot_sdk_cpp
+        GTest::gtest_main
+)
+
+set_target_properties(test_rpc_methods PROPERTIES FOLDER "Tests")
+
 include(GoogleTest)
 gtest_discover_tests(test_types)
 gtest_discover_tests(test_transport)
@@ -115,6 +128,7 @@ gtest_discover_tests(test_process)
 gtest_discover_tests(test_client_session)
 gtest_discover_tests(test_e2e)
 gtest_discover_tests(test_tool_builder)
+gtest_discover_tests(test_rpc_methods)
 
 # Snapshot conformance tests (optional, requires upstream snapshots + Python)
 if(COPILOT_BUILD_SNAPSHOT_TESTS)

@@ -62,6 +62,8 @@ add_library(copilot_sdk_cpp
     include/copilot/process.hpp
     include/copilot/client.hpp
     include/copilot/session.hpp
+    include/copilot/rpc_methods.hpp
+    include/copilot/rpc_types.hpp
     # Sources
     src/types.cpp
     src/events.cpp
