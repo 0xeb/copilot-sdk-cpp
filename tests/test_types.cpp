@@ -1972,3 +1972,25 @@ TEST(ResumeSessionConfigTest, V0149FieldsSerialize)
     EXPECT_EQ(req["instructionDirectories"][0], "/x");
     EXPECT_EQ(req["remoteSession"], "on");
 }
+
+
+// =============================================================================
+// Session::Mode enum sanity (v0.1.49 mode handler APIs)
+// =============================================================================
+
+TEST(SessionModeTest, EnumValuesExist)
+{
+    // Compile-time check that the enum has the expected variants.
+    Session::Mode m = Session::Mode::Interactive;
+    EXPECT_EQ(static_cast<int>(m), 0);
+    m = Session::Mode::Plan;
+    EXPECT_EQ(static_cast<int>(m), 1);
+    m = Session::Mode::Autopilot;
+    EXPECT_EQ(static_cast<int>(m), 2);
+}
+
+TEST(SessionSetModelOptionsTest, DefaultsEmpty)
+{
+    Session::SetModelOptions opts;
+    EXPECT_FALSE(opts.reasoning_effort.has_value());
+}

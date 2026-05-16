@@ -232,6 +232,47 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future that completes when destroyed
     std::future<void> destroy();
 
+    // =========================================================================
+    // Model & Mode (v0.1.49 additions)
+    // =========================================================================
+
+    /// Options for set_model() mirroring upstream session.model.switchTo params.
+    struct SetModelOptions
+    {
+        std::optional<ReasoningEffort> reasoning_effort;
+    };
+
+    /// Switch the session to a different model mid-conversation.
+    /// Calls the v3 session.model.switchTo RPC.
+    /// @param model_id Identifier of the target model
+    /// @param options Optional reasoning effort override
+    /// @return Future that completes when the switch is acknowledged
+    std::future<void> set_model(const std::string& model_id, SetModelOptions options = {});
+
+    /// Get the currently selected model for the session.
+    /// Calls the v3 session.model.getCurrent RPC.
+    /// @return Future resolving to the model identifier (or nullopt if none)
+    std::future<std::optional<std::string>> get_current_model();
+
+    /// Agent interaction mode. Matches upstream nodejs SessionMode union.
+    enum class Mode
+    {
+        Interactive,
+        Plan,
+        Autopilot,
+    };
+
+    /// Set the agent interaction mode.
+    /// Calls the v3 session.mode.set RPC.
+    /// @param mode New mode to apply
+    /// @return Future that completes when the mode change is acknowledged
+    std::future<void> set_mode(Mode mode);
+
+    /// Get the current agent interaction mode.
+    /// Calls the v3 session.mode.get RPC.
+    /// @return Future resolving to the current mode
+    std::future<Mode> get_mode();
+
   private:
     std::string session_id_;
     Client* client_;

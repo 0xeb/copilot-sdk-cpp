@@ -386,4 +386,97 @@ std::future<void> Session::destroy()
     );
 }
 
+// =============================================================================
+// Model & Mode (v0.1.49 additions)
+// =============================================================================
+
+std::future<void> Session::set_model(const std::string& model_id, SetModelOptions options)
+{
+    return std::async(
+        std::launch::async,
+        [this, model_id, options]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            params["modelId"] = model_id;
+            if (options.reasoning_effort.has_value())
+                params["reasoningEffort"] = *options.reasoning_effort;
+
+            client_->rpc_client()->invoke("session.model.switchTo", params).get();
+        }
+    );
+}
+
+std::future<std::optional<std::string>> Session::get_current_model()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> std::optional<std::string>
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            auto response = client_->rpc_client()->invoke("session.model.getCurrent", params).get();
+            // Response: { modelId?: string } per nodejs CurrentModel shape.
+            if (response.contains("modelId") && !response["modelId"].is_null())
+                return response["modelId"].get<std::string>();
+            return std::nullopt;
+        }
+    );
+}
+
+namespace
+{
+const char* mode_to_wire(Session::Mode m)
+{
+    switch (m)
+    {
+    case Session::Mode::Interactive: return "interactive";
+    case Session::Mode::Plan:        return "plan";
+    case Session::Mode::Autopilot:   return "autopilot";
+    }
+    return "interactive";
+}
+
+std::optional<Session::Mode> mode_from_wire(const std::string& s)
+{
+    if (s == "interactive") return Session::Mode::Interactive;
+    if (s == "plan")        return Session::Mode::Plan;
+    if (s == "autopilot")   return Session::Mode::Autopilot;
+    return std::nullopt;
+}
+} // namespace
+
+std::future<void> Session::set_mode(Mode mode)
+{
+    return std::async(
+        std::launch::async,
+        [this, mode]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            params["mode"] = mode_to_wire(mode);
+            client_->rpc_client()->invoke("session.mode.set", params).get();
+        }
+    );
+}
+
+std::future<Session::Mode> Session::get_mode()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> Mode
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            auto response = client_->rpc_client()->invoke("session.mode.get", params).get();
+            // Response shape: { mode: "interactive" | "plan" | "autopilot" }
+            std::string wire = response.contains("mode") && response["mode"].is_string()
+                                   ? response["mode"].get<std::string>()
+                                   : std::string{"interactive"};
+            auto parsed = mode_from_wire(wire);
+            return parsed.value_or(Mode::Interactive);
+        }
+    );
+}
+
 } // namespace copilot
