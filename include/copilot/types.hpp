@@ -1138,6 +1138,61 @@ struct ClientOptions
 // Response Types
 // =============================================================================
 
+/// Working directory context (cwd, git info) from session creation
+struct SessionContext
+{
+    std::string cwd;
+    std::optional<std::string> git_root;
+    std::optional<std::string> repository; ///< owner/repo
+    std::optional<std::string> branch;
+};
+
+inline void from_json(const json& j, SessionContext& c)
+{
+    if (j.contains("cwd") && !j.at("cwd").is_null())
+        j.at("cwd").get_to(c.cwd);
+    if (j.contains("gitRoot") && !j.at("gitRoot").is_null())
+        c.git_root = j.at("gitRoot").get<std::string>();
+    if (j.contains("repository") && !j.at("repository").is_null())
+        c.repository = j.at("repository").get<std::string>();
+    if (j.contains("branch") && !j.at("branch").is_null())
+        c.branch = j.at("branch").get<std::string>();
+}
+
+inline void to_json(json& j, const SessionContext& c)
+{
+    j = json{{"cwd", c.cwd}};
+    if (c.git_root)
+        j["gitRoot"] = *c.git_root;
+    if (c.repository)
+        j["repository"] = *c.repository;
+    if (c.branch)
+        j["branch"] = *c.branch;
+}
+
+/// Filter for Client::list_sessions(). All fields are optional; only matching
+/// sessions are returned. Matches upstream nodejs SessionListFilter.
+struct SessionListFilter
+{
+    std::optional<std::string> cwd;        ///< exact cwd match
+    std::optional<std::string> git_root;   ///< exact git root match
+    std::optional<std::string> repository; ///< owner/repo
+    std::optional<std::string> branch;
+};
+
+inline void to_json(json& j, const SessionListFilter& f)
+{
+    j = json::object();
+    if (f.cwd)
+        j["cwd"] = *f.cwd;
+    if (f.git_root)
+        j["gitRoot"] = *f.git_root;
+    if (f.repository)
+        j["repository"] = *f.repository;
+    if (f.branch)
+        j["branch"] = *f.branch;
+}
+
 /// Metadata about a session
 struct SessionMetadata
 {
@@ -1146,6 +1201,7 @@ struct SessionMetadata
     std::chrono::system_clock::time_point modified_time;
     std::optional<std::string> summary;
     bool is_remote = false;
+    std::optional<SessionContext> context;
 };
 
 namespace detail
@@ -1294,6 +1350,8 @@ inline void from_json(const json& j, SessionMetadata& m)
         m.summary = j.at("summary").get<std::string>();
     if (j.contains("isRemote"))
         j.at("isRemote").get_to(m.is_remote);
+    if (j.contains("context") && !j.at("context").is_null())
+        m.context = j.at("context").get<SessionContext>();
 }
 
 /// Error reported during client stop/cleanup

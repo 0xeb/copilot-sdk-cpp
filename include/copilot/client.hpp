@@ -126,6 +126,17 @@ class Client
     /// @return Future that resolves to list of session metadata
     std::future<std::vector<SessionMetadata>> list_sessions();
 
+    /// List sessions matching a filter (matches upstream nodejs SDK).
+    /// @param filter Filter criteria (cwd / git_root / repository / branch)
+    /// @return Future that resolves to list of matching session metadata
+    std::future<std::vector<SessionMetadata>> list_sessions(SessionListFilter filter);
+
+    /// Get metadata for a specific session by ID (O(1) lookup).
+    /// @param session_id ID of the session
+    /// @return Future that resolves to metadata, or nullopt if not found
+    std::future<std::optional<SessionMetadata>>
+    get_session_metadata(const std::string& session_id);
+
     /// Delete a session
     /// @param session_id ID of the session to delete
     /// @return Future that completes when deleted

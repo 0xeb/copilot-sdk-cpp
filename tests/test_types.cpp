@@ -1791,3 +1791,96 @@ TEST(Events, SessionUsageInfoRecognized)
     EXPECT_EQ(data.token_limit, 128000);
     EXPECT_EQ(data.current_tokens, 5000);
 }
+
+
+// =============================================================================
+// SessionListFilter / SessionContext / SessionMetadata.context Tests (v0.1.49)
+// =============================================================================
+
+TEST(SessionListFilterTest, EmptyFilterSerializesToEmptyObject)
+{
+    SessionListFilter f;
+    json j = f;
+    EXPECT_TRUE(j.is_object());
+    EXPECT_EQ(j.size(), 0u);
+}
+
+TEST(SessionListFilterTest, AllFieldsSerialize)
+{
+    SessionListFilter f;
+    f.cwd = "/work/repo";
+    f.git_root = "/work/repo";
+    f.repository = "owner/repo";
+    f.branch = "main";
+
+    json j = f;
+    EXPECT_EQ(j["cwd"], "/work/repo");
+    EXPECT_EQ(j["gitRoot"], "/work/repo");
+    EXPECT_EQ(j["repository"], "owner/repo");
+    EXPECT_EQ(j["branch"], "main");
+}
+
+TEST(SessionContextTest, RoundTrip)
+{
+    json input = {
+        {"cwd", "/home/user/proj"},
+        {"gitRoot", "/home/user/proj"},
+        {"repository", "octo/proj"},
+        {"branch", "feature/x"}
+    };
+
+    auto ctx = input.get<SessionContext>();
+    EXPECT_EQ(ctx.cwd, "/home/user/proj");
+    ASSERT_TRUE(ctx.git_root.has_value());
+    EXPECT_EQ(*ctx.git_root, "/home/user/proj");
+    ASSERT_TRUE(ctx.repository.has_value());
+    EXPECT_EQ(*ctx.repository, "octo/proj");
+    ASSERT_TRUE(ctx.branch.has_value());
+    EXPECT_EQ(*ctx.branch, "feature/x");
+
+    json out = ctx;
+    EXPECT_EQ(out["cwd"], "/home/user/proj");
+    EXPECT_EQ(out["gitRoot"], "/home/user/proj");
+    EXPECT_EQ(out["repository"], "octo/proj");
+    EXPECT_EQ(out["branch"], "feature/x");
+}
+
+TEST(SessionMetadataTest, ParsesContextField)
+{
+    json input = {
+        {"sessionId", "sess-1"},
+        {"startTime", "2025-01-15T10:30:00.000Z"},
+        {"modifiedTime", "2025-01-15T10:35:00.000Z"},
+        {"summary", "hi"},
+        {"isRemote", true},
+        {"context", {
+            {"cwd", "/w"},
+            {"gitRoot", "/w"},
+            {"repository", "o/r"},
+            {"branch", "main"}
+        }}
+    };
+
+    auto m = input.get<SessionMetadata>();
+    EXPECT_EQ(m.session_id, "sess-1");
+    ASSERT_TRUE(m.summary.has_value());
+    EXPECT_EQ(*m.summary, "hi");
+    EXPECT_TRUE(m.is_remote);
+    ASSERT_TRUE(m.context.has_value());
+    EXPECT_EQ(m.context->cwd, "/w");
+    ASSERT_TRUE(m.context->repository.has_value());
+    EXPECT_EQ(*m.context->repository, "o/r");
+}
+
+TEST(SessionMetadataTest, ContextAbsentIsNullopt)
+{
+    json input = {
+        {"sessionId", "sess-2"},
+        {"startTime", "2025-01-15T10:30:00.000Z"},
+        {"modifiedTime", "2025-01-15T10:35:00.000Z"},
+        {"isRemote", false}
+    };
+
+    auto m = input.get<SessionMetadata>();
+    EXPECT_FALSE(m.context.has_value());
+}

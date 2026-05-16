@@ -811,9 +811,14 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
 
 std::future<std::vector<SessionMetadata>> Client::list_sessions()
 {
+    return list_sessions(SessionListFilter{});
+}
+
+std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilter filter)
+{
     return std::async(
         std::launch::async,
-        [this]()
+        [this, filter = std::move(filter)]()
         {
             if (state_ != ConnectionState::Connected)
             {
@@ -823,19 +828,50 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("session.list", json::object()).get();
+            // session.list takes an optional 'filter' param (matches nodejs SDK shape).
+            json params = json::object();
+            json filter_json = filter; // uses to_json(SessionListFilter)
+            if (!filter_json.empty())
+                params["filter"] = std::move(filter_json);
+
+            auto response = rpc_->invoke("session.list", params).get();
             std::vector<SessionMetadata> sessions;
 
-            for (const auto& item : response["sessions"])
+            if (response.contains("sessions") && response["sessions"].is_array())
             {
-                SessionMetadata meta;
-                meta.session_id = item["sessionId"].get<std::string>();
-                if (item.contains("summary") && !item["summary"].is_null())
-                    meta.summary = item["summary"].get<std::string>();
-                sessions.push_back(std::move(meta));
+                for (const auto& item : response["sessions"])
+                {
+                    sessions.push_back(item.get<SessionMetadata>());
+                }
             }
 
             return sessions;
+        }
+    );
+}
+
+std::future<std::optional<SessionMetadata>>
+Client::get_session_metadata(const std::string& session_id)
+{
+    return std::async(
+        std::launch::async,
+        [this, session_id]() -> std::optional<SessionMetadata>
+        {
+            if (state_ != ConnectionState::Connected)
+            {
+                if (options_.auto_start)
+                    start().get();
+                else
+                    throw std::runtime_error("Client not connected. Call start() first.");
+            }
+
+            auto response =
+                rpc_->invoke("session.getMetadata", json{{"sessionId", session_id}}).get();
+
+            if (!response.contains("session") || response["session"].is_null())
+                return std::nullopt;
+
+            return response["session"].get<SessionMetadata>();
         }
     );
 }
