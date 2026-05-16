@@ -157,6 +157,10 @@ class Client
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
 
+    /// Get the negotiated protocol version (set after successful start()).
+    /// Returns std::nullopt before connection is established.
+    std::optional<int> negotiated_protocol_version() const;
+
     // =========================================================================
     // Lifecycle Events
     // =========================================================================
@@ -244,6 +248,10 @@ class Client
     // Lifecycle handlers
     mutable std::mutex lifecycle_mutex_;
     std::vector<LifecycleHandler> lifecycle_handlers_;
+
+    // Protocol version negotiation result (set after verify_protocol_version()).
+    mutable std::mutex protocol_version_mutex_;
+    std::optional<int> negotiated_protocol_version_;
 };
 
 } // namespace copilot

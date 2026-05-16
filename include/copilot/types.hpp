@@ -32,8 +32,13 @@ struct SessionEvent;
 // Protocol Version
 // =============================================================================
 
-/// SDK protocol version - must match copilot-agent-runtime server
-inline constexpr int kSdkProtocolVersion = 2;
+/// Maximum SDK protocol version supported (matches copilot-agent-runtime server).
+/// Upstream nodejs SDK_PROTOCOL_VERSION = 3 since v0.1.24-series.
+inline constexpr int kSdkProtocolVersion = 3;
+
+/// Minimum SDK protocol version this SDK can communicate with.
+/// Older servers (reporting < kMinProtocolVersion) are rejected.
+inline constexpr int kMinProtocolVersion = 2;
 
 // =============================================================================
 // Enums

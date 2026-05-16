@@ -619,14 +619,25 @@ void Client::verify_protocol_version()
     }
 
     int server_version = response["protocolVersion"].get<int>();
-    if (server_version != kSdkProtocolVersion)
+    if (server_version < kMinProtocolVersion || server_version > kSdkProtocolVersion)
     {
         throw std::runtime_error(
-            "SDK protocol version mismatch: SDK expects version " +
-            std::to_string(kSdkProtocolVersion) + ", but server reports version " +
-            std::to_string(server_version)
+            "SDK protocol version mismatch: SDK supports versions [" +
+            std::to_string(kMinProtocolVersion) + ".." + std::to_string(kSdkProtocolVersion) +
+            "], but server reports version " + std::to_string(server_version)
         );
     }
+
+    {
+        std::lock_guard<std::mutex> lock(protocol_version_mutex_);
+        negotiated_protocol_version_ = server_version;
+    }
+}
+
+std::optional<int> Client::negotiated_protocol_version() const
+{
+    std::lock_guard<std::mutex> lock(protocol_version_mutex_);
+    return negotiated_protocol_version_;
 }
 
 // =============================================================================

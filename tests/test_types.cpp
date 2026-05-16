@@ -153,17 +153,19 @@ TEST(TypesTest, MessageOptions)
 
 TEST(TypesTest, PingResponse)
 {
-    json input = {{"message", "pong"}, {"timestamp", 1234567890}, {"protocolVersion", 2}};
+    json input = {{"message", "pong"}, {"timestamp", 1234567890}, {"protocolVersion", 3}};
 
     auto resp = input.get<PingResponse>();
     EXPECT_EQ(resp.message, "pong");
     EXPECT_EQ(resp.timestamp, 1234567890);
-    EXPECT_EQ(resp.protocol_version, 2);
+    EXPECT_EQ(resp.protocol_version, 3);
 }
 
 TEST(TypesTest, ProtocolVersion)
 {
-    EXPECT_EQ(kSdkProtocolVersion, 2);
+    EXPECT_EQ(kSdkProtocolVersion, 3);
+    EXPECT_EQ(kMinProtocolVersion, 2);
+    EXPECT_LE(kMinProtocolVersion, kSdkProtocolVersion);
 }
 
 TEST(TypesTest, SessionMetadataParsesIso8601Timestamps)
