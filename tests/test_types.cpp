@@ -1903,3 +1903,72 @@ TEST(ToolTest, DefaultFlagsFalse)
     EXPECT_FALSE(t.overrides_built_in_tool);
     EXPECT_FALSE(t.skip_permission);
 }
+
+
+// =============================================================================
+// SessionConfig v0.1.49 additions (instruction_directories, remote_session,
+// enable_session_telemetry, include_sub_agent_streaming_events,
+// enable_config_discovery, client_name)
+// =============================================================================
+
+TEST(RemoteSessionModeTest, RoundTrip)
+{
+    json j = RemoteSessionMode::Off;
+    EXPECT_EQ(j, "off");
+    j = RemoteSessionMode::Export;
+    EXPECT_EQ(j, "export");
+    j = RemoteSessionMode::On;
+    EXPECT_EQ(j, "on");
+    EXPECT_EQ(json("off").get<RemoteSessionMode>(), RemoteSessionMode::Off);
+    EXPECT_EQ(json("export").get<RemoteSessionMode>(), RemoteSessionMode::Export);
+    EXPECT_EQ(json("on").get<RemoteSessionMode>(), RemoteSessionMode::On);
+}
+
+TEST(SessionConfigTest, V0149FieldsOmittedByDefault)
+{
+    SessionConfig cfg;
+    json req = build_session_create_request(cfg);
+
+    EXPECT_FALSE(req.contains("clientName"));
+    EXPECT_FALSE(req.contains("enableSessionTelemetry"));
+    EXPECT_FALSE(req.contains("includeSubAgentStreamingEvents"));
+    EXPECT_FALSE(req.contains("enableConfigDiscovery"));
+    EXPECT_FALSE(req.contains("instructionDirectories"));
+    EXPECT_FALSE(req.contains("remoteSession"));
+}
+
+TEST(SessionConfigTest, V0149FieldsSerialize)
+{
+    SessionConfig cfg;
+    cfg.client_name = "my-app";
+    cfg.enable_session_telemetry = true;
+    cfg.include_sub_agent_streaming_events = false;
+    cfg.enable_config_discovery = true;
+    cfg.instruction_directories = std::vector<std::string>{"/a", "/b"};
+    cfg.remote_session = RemoteSessionMode::Export;
+
+    json req = build_session_create_request(cfg);
+
+    EXPECT_EQ(req["clientName"], "my-app");
+    EXPECT_TRUE(req["enableSessionTelemetry"].get<bool>());
+    EXPECT_FALSE(req["includeSubAgentStreamingEvents"].get<bool>());
+    EXPECT_TRUE(req["enableConfigDiscovery"].get<bool>());
+    ASSERT_TRUE(req["instructionDirectories"].is_array());
+    EXPECT_EQ(req["instructionDirectories"][0], "/a");
+    EXPECT_EQ(req["instructionDirectories"][1], "/b");
+    EXPECT_EQ(req["remoteSession"], "export");
+}
+
+TEST(ResumeSessionConfigTest, V0149FieldsSerialize)
+{
+    ResumeSessionConfig cfg;
+    cfg.client_name = "my-app";
+    cfg.instruction_directories = std::vector<std::string>{"/x"};
+    cfg.remote_session = RemoteSessionMode::On;
+
+    json req = build_session_resume_request("sess-1", cfg);
+
+    EXPECT_EQ(req["clientName"], "my-app");
+    EXPECT_EQ(req["instructionDirectories"][0], "/x");
+    EXPECT_EQ(req["remoteSession"], "on");
+}

@@ -110,6 +110,20 @@ json build_session_create_request(const SessionConfig& config)
     if (config.working_directory.has_value())
         request["workingDirectory"] = *config.working_directory;
 
+    // v0.1.49 additions
+    if (config.client_name.has_value())
+        request["clientName"] = *config.client_name;
+    if (config.enable_session_telemetry.has_value())
+        request["enableSessionTelemetry"] = *config.enable_session_telemetry;
+    if (config.include_sub_agent_streaming_events.has_value())
+        request["includeSubAgentStreamingEvents"] = *config.include_sub_agent_streaming_events;
+    if (config.enable_config_discovery.has_value())
+        request["enableConfigDiscovery"] = *config.enable_config_discovery;
+    if (config.instruction_directories.has_value())
+        request["instructionDirectories"] = *config.instruction_directories;
+    if (config.remote_session.has_value())
+        request["remoteSession"] = *config.remote_session;
+
     return request;
 }
 
@@ -200,6 +214,20 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
         request["requestUserInput"] = true;
     if (config.hooks.has_value() && config.hooks->has_any())
         request["hooks"] = true;
+
+    // v0.1.49 additions (mirror SessionConfig)
+    if (config.client_name.has_value())
+        request["clientName"] = *config.client_name;
+    if (config.enable_session_telemetry.has_value())
+        request["enableSessionTelemetry"] = *config.enable_session_telemetry;
+    if (config.include_sub_agent_streaming_events.has_value())
+        request["includeSubAgentStreamingEvents"] = *config.include_sub_agent_streaming_events;
+    if (config.enable_config_discovery.has_value())
+        request["enableConfigDiscovery"] = *config.enable_config_discovery;
+    if (config.instruction_directories.has_value())
+        request["instructionDirectories"] = *config.instruction_directories;
+    if (config.remote_session.has_value())
+        request["remoteSession"] = *config.remote_session;
 
     return request;
 }

@@ -969,6 +969,24 @@ inline void from_json(const json& j, InfiniteSessionConfig& c)
 // =============================================================================
 
 /// Configuration for creating a new session
+/// Remote session mode (matches upstream nodejs RemoteSessionMode).
+/// Controls how the session is exposed to remote consumers (Mission Control).
+enum class RemoteSessionMode
+{
+    Off,
+    Export,
+    On,
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RemoteSessionMode,
+    {
+        {RemoteSessionMode::Off, "off"},
+        {RemoteSessionMode::Export, "export"},
+        {RemoteSessionMode::On, "on"},
+    }
+)
+
 struct SessionConfig
 {
     std::optional<std::string> session_id;
@@ -1012,6 +1030,27 @@ struct SessionConfig
 
     /// Working directory for the session.
     std::optional<std::string> working_directory;
+
+    // ===== v0.1.49 additions =====
+
+    /// Client identifier reported to the CLI (PR #510).
+    std::optional<std::string> client_name;
+
+    /// Enable per-session telemetry events (PR #1224).
+    std::optional<bool> enable_session_telemetry;
+
+    /// Forward streaming events emitted by sub-agents (PR #1108).
+    std::optional<bool> include_sub_agent_streaming_events;
+
+    /// Allow the CLI to discover and apply config files in the working directory
+    /// (and ancestors). Default behavior is server-side; this opts in/out (PR #1044).
+    std::optional<bool> enable_config_discovery;
+
+    /// Per-session instruction directories merged with the global instruction set (PR #1190).
+    std::optional<std::vector<std::string>> instruction_directories;
+
+    /// Remote-session mode for Mission Control integration (PR #1295).
+    std::optional<RemoteSessionMode> remote_session;
 };
 
 /// Configuration for resuming an existing session
@@ -1067,6 +1106,15 @@ struct ResumeSessionConfig
 
     /// Hook handlers for session lifecycle events.
     std::optional<SessionHooks> hooks;
+
+    // ===== v0.1.49 additions (mirror SessionConfig) =====
+
+    std::optional<std::string> client_name;
+    std::optional<bool> enable_session_telemetry;
+    std::optional<bool> include_sub_agent_streaming_events;
+    std::optional<bool> enable_config_discovery;
+    std::optional<std::vector<std::string>> instruction_directories;
+    std::optional<RemoteSessionMode> remote_session;
 };
 
 /// Options for sending a message
