@@ -234,6 +234,65 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
 }
 
 // =============================================================================
+// CLI Process Launch Helpers (exposed for unit testing)
+// =============================================================================
+
+std::vector<std::string> build_cli_command_args(const ClientOptions& options)
+{
+    std::vector<std::string> args;
+    if (options.cli_args.has_value())
+        args.insert(args.end(), options.cli_args->begin(), options.cli_args->end());
+    args.push_back("--server");
+    args.push_back("--log-level");
+    args.push_back(json(options.log_level).get<std::string>());
+
+    if (options.use_stdio)
+    {
+        args.push_back("--stdio");
+    }
+    else if (options.port > 0)
+    {
+        args.push_back("--port");
+        args.push_back(std::to_string(options.port));
+    }
+
+    // Session idle timeout (forwarded as CLI flag; ignored by server when 0/absent).
+    if (options.session_idle_timeout_seconds.has_value() &&
+        *options.session_idle_timeout_seconds > 0)
+    {
+        args.push_back("--session-idle-timeout");
+        args.push_back(std::to_string(*options.session_idle_timeout_seconds));
+    }
+
+    // Remote session support (Mission Control integration).
+    if (options.remote)
+        args.push_back("--remote");
+
+    return args;
+}
+
+std::map<std::string, std::string> build_cli_environment(const ClientOptions& options)
+{
+    std::map<std::string, std::string> env;
+    if (options.environment.has_value())
+        env = *options.environment;
+
+    // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC.
+    env.erase("NODE_DEBUG");
+
+    if (options.github_token.has_value())
+        env["COPILOT_SDK_AUTH_TOKEN"] = *options.github_token;
+
+    if (options.tcp_connection_token.has_value())
+        env["COPILOT_CONNECTION_TOKEN"] = *options.tcp_connection_token;
+
+    if (options.copilot_home.has_value())
+        env["COPILOT_HOME"] = *options.copilot_home;
+
+    return env;
+}
+
+// =============================================================================
 // Constructor / Destructor
 // =============================================================================
 
@@ -540,37 +599,8 @@ void Client::start_cli_server()
 {
     std::string cli_path = options_.cli_path.value_or("copilot");
 
-    // Build arguments
-    std::vector<std::string> args;
-    if (options_.cli_args.has_value())
-        args.insert(args.end(), options_.cli_args->begin(), options_.cli_args->end());
-    args.push_back("--server");
-    args.push_back("--log-level");
-    args.push_back(json(options_.log_level).get<std::string>());
-
-    if (options_.use_stdio)
-    {
-        args.push_back("--stdio");
-    }
-    else if (options_.port > 0)
-    {
-        args.push_back("--port");
-        args.push_back(std::to_string(options_.port));
-    }
-
-    // Session idle timeout (forwarded as CLI flag; ignored by server when 0/absent).
-    if (options_.session_idle_timeout_seconds.has_value() &&
-        *options_.session_idle_timeout_seconds > 0)
-    {
-        args.push_back("--session-idle-timeout");
-        args.push_back(std::to_string(*options_.session_idle_timeout_seconds));
-    }
-
-    // Remote session support (Mission Control integration).
-    if (options_.remote)
-    {
-        args.push_back("--remote");
-    }
+    // Build arguments and environment via the testable free-function helpers.
+    std::vector<std::string> args = build_cli_command_args(options_);
 
     // Resolve command
     auto [executable, full_args] = resolve_cli_command(cli_path, args);
@@ -586,25 +616,9 @@ void Client::start_cli_server()
         proc_opts.working_directory = *options_.cwd;
 
     if (options_.environment.has_value())
-    {
         proc_opts.inherit_environment = false;
-        proc_opts.environment = *options_.environment;
-    }
 
-    // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC
-    proc_opts.environment.erase("NODE_DEBUG");
-
-    // Forward GitHub token as environment variable
-    if (options_.github_token.has_value())
-        proc_opts.environment["COPILOT_SDK_AUTH_TOKEN"] = *options_.github_token;
-
-    // Forward TCP connection token (auto-generated UUID in TCP+spawn mode if caller did not set one).
-    if (options_.tcp_connection_token.has_value())
-        proc_opts.environment["COPILOT_CONNECTION_TOKEN"] = *options_.tcp_connection_token;
-
-    // Configurable Copilot data directory.
-    if (options_.copilot_home.has_value())
-        proc_opts.environment["COPILOT_HOME"] = *options_.copilot_home;
+    proc_opts.environment = build_cli_environment(options_);
 
     // Spawn process
     process_ = std::make_unique<Process>();

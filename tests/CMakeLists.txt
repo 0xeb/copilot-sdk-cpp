@@ -133,6 +133,19 @@ target_link_libraries(test_v0149_features
 
 set_target_properties(test_v0149_features PROPERTIES FOLDER "Tests")
 
+# Offline conformance suite (in-process JSON-RPC peer; closes E2E gap)
+add_executable(test_conformance
+    test_conformance.cpp
+)
+
+target_link_libraries(test_conformance
+    PRIVATE
+        copilot_sdk_cpp
+        GTest::gtest_main
+)
+
+set_target_properties(test_conformance PROPERTIES FOLDER "Tests")
+
 include(GoogleTest)
 gtest_discover_tests(test_types)
 gtest_discover_tests(test_transport)
@@ -143,6 +156,7 @@ gtest_discover_tests(test_e2e)
 gtest_discover_tests(test_tool_builder)
 gtest_discover_tests(test_rpc_methods)
 gtest_discover_tests(test_v0149_features)
+gtest_discover_tests(test_conformance)
 
 # Snapshot conformance tests (optional, requires upstream snapshots + Python)
 if(COPILOT_BUILD_SNAPSHOT_TESTS)

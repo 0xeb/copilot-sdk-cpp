@@ -46,6 +46,24 @@ json build_session_create_request(const SessionConfig& config);
 /// @return JSON object ready to send to server
 json build_session_resume_request(const std::string& session_id, const ResumeSessionConfig& config);
 
+/// Build the CLI argument vector that {@link Client} will pass to the spawned
+/// Copilot CLI process, given a fully-populated {@link ClientOptions}.
+/// Exposed for conformance unit testing of process-launch behavior. Mirrors
+/// what `start_cli_server()` emits before command resolution (i.e. no Node /
+/// `cmd /c` wrapping is applied).
+/// @param options Client options
+/// @return Argument list (does not include the executable itself)
+std::vector<std::string> build_cli_command_args(const ClientOptions& options);
+
+/// Build the environment-variable map that {@link Client} will use when
+/// spawning the Copilot CLI process. The returned map reflects the SDK's
+/// additions and removals (COPILOT_HOME, COPILOT_CONNECTION_TOKEN,
+/// COPILOT_SDK_AUTH_TOKEN, NODE_DEBUG erase) layered on top of the explicit
+/// `options.environment`. Exposed for conformance unit testing.
+/// @param options Client options
+/// @return Environment map ready for ProcessOptions::environment
+std::map<std::string, std::string> build_cli_environment(const ClientOptions& options);
+
 // =============================================================================
 // CopilotClient - Main client class
 // =============================================================================
