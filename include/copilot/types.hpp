@@ -108,7 +108,8 @@ enum class ToolResultType
     Success,
     Failure,
     Rejected,
-    Denied
+    Denied,
+    Timeout, ///< Added upstream in v0.1.49 series.
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
@@ -118,6 +119,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {ToolResultType::Failure, "failure"},
         {ToolResultType::Rejected, "rejected"},
         {ToolResultType::Denied, "denied"},
+        {ToolResultType::Timeout, "timeout"},
     }
 )
 
@@ -906,6 +908,15 @@ struct Tool
     std::string description;
     json parameters_schema;
     ToolHandler handler;
+
+    /// When true, explicitly indicates this tool is intended to override a
+    /// built-in tool of the same name. If not set and the name clashes with
+    /// a built-in tool, the runtime returns an error. (Upstream v0.1.49+)
+    bool overrides_built_in_tool = false;
+
+    /// When true, the tool can execute without a permission prompt.
+    /// (Upstream v0.1.49+)
+    bool skip_permission = false;
 };
 
 // =============================================================================

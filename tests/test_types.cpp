@@ -1884,3 +1884,22 @@ TEST(SessionMetadataTest, ContextAbsentIsNullopt)
     auto m = input.get<SessionMetadata>();
     EXPECT_FALSE(m.context.has_value());
 }
+
+
+// =============================================================================
+// ToolResultType / Tool flags (v0.1.49)
+// =============================================================================
+
+TEST(ToolResultTypeTest, TimeoutEnumRoundTrip)
+{
+    json j = ToolResultType::Timeout;
+    EXPECT_EQ(j, "timeout");
+    EXPECT_EQ(j.get<ToolResultType>(), ToolResultType::Timeout);
+}
+
+TEST(ToolTest, DefaultFlagsFalse)
+{
+    Tool t;
+    EXPECT_FALSE(t.overrides_built_in_tool);
+    EXPECT_FALSE(t.skip_permission);
+}

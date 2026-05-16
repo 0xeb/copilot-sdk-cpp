@@ -58,6 +58,10 @@ json build_session_create_request(const SessionConfig& config)
             def["description"] = tool.description;
             if (!tool.parameters_schema.is_null())
                 def["parameters"] = tool.parameters_schema;
+            if (tool.overrides_built_in_tool)
+                def["overridesBuiltInTool"] = true;
+            if (tool.skip_permission)
+                def["skipPermission"] = true;
             tool_defs.push_back(def);
         }
         request["tools"] = tool_defs;
@@ -127,6 +131,10 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
             def["description"] = tool.description;
             if (!tool.parameters_schema.is_null())
                 def["parameters"] = tool.parameters_schema;
+            if (tool.overrides_built_in_tool)
+                def["overridesBuiltInTool"] = true;
+            if (tool.skip_permission)
+                def["skipPermission"] = true;
             tool_defs.push_back(def);
         }
         request["tools"] = tool_defs;
