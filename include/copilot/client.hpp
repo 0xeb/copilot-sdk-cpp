@@ -168,6 +168,14 @@ class Client
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
 
+    /// Provide a custom handler for listing available models (BYOK mode).
+    /// When set, Client::list_models() calls this handler instead of querying
+    /// the CLI server. Results are still cached after the first successful call;
+    /// pass nullptr to revert to default RPC-based behavior. Matches upstream
+    /// nodejs CopilotClientOptions.onListModels.
+    using ListModelsHandler = std::function<std::vector<ModelInfo>()>;
+    void set_on_list_models(ListModelsHandler handler);
+
     /// Get the negotiated protocol version (set after successful start()).
     /// Returns std::nullopt before connection is established.
     std::optional<int> negotiated_protocol_version() const;
@@ -255,6 +263,10 @@ class Client
     // Models cache
     mutable std::mutex models_cache_mutex_;
     std::optional<std::vector<ModelInfo>> models_cache_;
+
+    // BYOK: optional custom models handler (when set, takes precedence over RPC).
+    mutable std::mutex on_list_models_mutex_;
+    ListModelsHandler on_list_models_;
 
     // Lifecycle handlers
     mutable std::mutex lifecycle_mutex_;

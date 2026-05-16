@@ -1013,19 +1013,34 @@ std::future<std::vector<ModelInfo>> Client::list_models()
         std::launch::async,
         [this]()
         {
+            // Check cache first (applies to both BYOK and RPC paths).
+            {
+                std::lock_guard<std::mutex> lock(models_cache_mutex_);
+                if (models_cache_.has_value())
+                    return std::vector<ModelInfo>(*models_cache_);
+            }
+
+            // BYOK: if a custom handler is registered, use it instead of the CLI RPC.
+            ListModelsHandler handler_copy;
+            {
+                std::lock_guard<std::mutex> lock(on_list_models_mutex_);
+                handler_copy = on_list_models_;
+            }
+            if (handler_copy)
+            {
+                auto models = handler_copy();
+                std::lock_guard<std::mutex> lock(models_cache_mutex_);
+                models_cache_ = models;
+                return models;
+            }
+
+            // Default path: query the CLI server (requires a live connection).
             if (state_ != ConnectionState::Connected)
             {
                 if (options_.auto_start)
                     start().get();
                 else
                     throw std::runtime_error("Client not connected. Call start() first.");
-            }
-
-            // Check cache
-            {
-                std::lock_guard<std::mutex> lock(models_cache_mutex_);
-                if (models_cache_.has_value())
-                    return std::vector<ModelInfo>(*models_cache_);
             }
 
             auto response = rpc_->invoke("models.list", json::object()).get();
@@ -1040,6 +1055,15 @@ std::future<std::vector<ModelInfo>> Client::list_models()
             return models_response.models;
         }
     );
+}
+
+void Client::set_on_list_models(ListModelsHandler handler)
+{
+    std::lock_guard<std::mutex> lock(on_list_models_mutex_);
+    on_list_models_ = std::move(handler);
+    // Invalidate the cache so the next list_models() call observes the new source.
+    std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
+    models_cache_.reset();
 }
 
 std::shared_ptr<Session> Client::get_session(const std::string& session_id)
