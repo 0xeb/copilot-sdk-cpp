@@ -1994,3 +1994,521 @@ TEST(SessionSetModelOptionsTest, DefaultsEmpty)
     Session::SetModelOptions opts;
     EXPECT_FALSE(opts.reasoning_effort.has_value());
 }
+
+// =============================================================================
+// New Event Variants (v0.1.49 parity)
+// =============================================================================
+
+namespace
+{
+json make_event_envelope(const char* type, json data)
+{
+    return json{
+        {"id", "evt_test"},
+        {"timestamp", "2025-01-15T10:00:00Z"},
+        {"parentId", nullptr},
+        {"type", type},
+        {"data", std::move(data)},
+    };
+}
+} // namespace
+
+TEST(EventsTest, SessionRemoteSteerableChanged)
+{
+    auto input = make_event_envelope("session.remote_steerable_changed", {{"remoteSteerable", true}});
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionRemoteSteerableChanged);
+    EXPECT_TRUE(event.as<SessionRemoteSteerableChangedData>().remote_steerable);
+}
+
+TEST(EventsTest, SessionTitleChanged)
+{
+    auto input = make_event_envelope("session.title_changed", {{"title", "My session"}});
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionTitleChanged);
+    EXPECT_EQ(event.as<SessionTitleChangedData>().title, "My session");
+}
+
+TEST(EventsTest, SessionScheduleCreatedAndCancelled)
+{
+    auto created = make_event_envelope(
+        "session.schedule_created",
+        {{"id", 1}, {"intervalMs", 5000}, {"prompt", "ping"}, {"recurring", true}}
+    );
+    auto e1 = created.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::SessionScheduleCreated);
+    const auto& cd = e1.as<SessionScheduleCreatedData>();
+    EXPECT_EQ(cd.id, 1);
+    EXPECT_EQ(cd.prompt, "ping");
+    EXPECT_TRUE(cd.recurring.has_value() && *cd.recurring);
+
+    auto cancelled = make_event_envelope("session.schedule_cancelled", {{"id", 1}});
+    auto e2 = cancelled.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::SessionScheduleCancelled);
+    EXPECT_EQ(e2.as<SessionScheduleCancelledData>().id, 1);
+}
+
+TEST(EventsTest, SessionWarning)
+{
+    auto input = make_event_envelope(
+        "session.warning",
+        {{"warningType", "policy"}, {"message", "policy violation"}, {"url", "https://example/help"}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionWarning);
+    const auto& d = event.as<SessionWarningData>();
+    EXPECT_EQ(d.warning_type, "policy");
+    EXPECT_EQ(*d.url, "https://example/help");
+}
+
+TEST(EventsTest, SessionModeChanged)
+{
+    auto input = make_event_envelope(
+        "session.mode_changed", {{"previousMode", "interactive"}, {"newMode", "plan"}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionModeChanged);
+    const auto& d = event.as<SessionModeChangedData>();
+    EXPECT_EQ(d.previous_mode, "interactive");
+    EXPECT_EQ(d.new_mode, "plan");
+}
+
+TEST(EventsTest, SessionPlanAndWorkspaceFileChanged)
+{
+    auto plan = make_event_envelope("session.plan_changed", {{"operation", "update"}});
+    auto e1 = plan.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::SessionPlanChanged);
+    EXPECT_EQ(e1.as<SessionPlanChangedData>().operation, "update");
+
+    auto wf = make_event_envelope(
+        "session.workspace_file_changed", {{"operation", "create"}, {"path", "notes.md"}}
+    );
+    auto e2 = wf.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::SessionWorkspaceFileChanged);
+    EXPECT_EQ(e2.as<SessionWorkspaceFileChangedData>().path, "notes.md");
+}
+
+TEST(EventsTest, SessionContextChanged)
+{
+    auto input = make_event_envelope(
+        "session.context_changed",
+        {{"cwd", "/tmp/repo"}, {"branch", "main"}, {"repository", "owner/repo"}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionContextChanged);
+    const auto& d = event.as<SessionContextChangedData>();
+    EXPECT_EQ(d.context.cwd, "/tmp/repo");
+    EXPECT_EQ(*d.context.branch, "main");
+}
+
+TEST(EventsTest, SessionTaskComplete)
+{
+    auto input = make_event_envelope(
+        "session.task_complete", {{"success", true}, {"summary", "ok"}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionTaskComplete);
+    EXPECT_TRUE(*event.as<SessionTaskCompleteData>().success);
+}
+
+TEST(EventsTest, SessionCustomNotification)
+{
+    auto input = make_event_envelope(
+        "session.custom_notification",
+        {{"source", "ext.foo"}, {"name", "ping"}, {"payload", {{"k", 1}}}, {"version", 2}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionCustomNotification);
+    const auto& d = event.as<SessionCustomNotificationData>();
+    EXPECT_EQ(d.source, "ext.foo");
+    EXPECT_EQ(d.name, "ping");
+    EXPECT_EQ(d.payload["k"], 1);
+}
+
+TEST(EventsTest, SessionToolsUpdatedAndBackgroundTasks)
+{
+    auto tools = make_event_envelope("session.tools_updated", {{"model", "gpt-4"}});
+    auto e1 = tools.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::SessionToolsUpdated);
+    EXPECT_EQ(e1.as<SessionToolsUpdatedData>().model, "gpt-4");
+
+    auto bg = make_event_envelope("session.background_tasks_changed", json::object());
+    auto e2 = bg.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::SessionBackgroundTasksChanged);
+}
+
+TEST(EventsTest, SessionSkillsLoaded)
+{
+    json skill = {
+        {"name", "pdf"},
+        {"description", "PDF helper"},
+        {"enabled", true},
+        {"source", "plugin"},
+        {"userInvocable", true},
+        {"path", "/skills/pdf"},
+    };
+    auto input = make_event_envelope("session.skills_loaded", {{"skills", json::array({skill})}});
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionSkillsLoaded);
+    const auto& d = event.as<SessionSkillsLoadedData>();
+    ASSERT_EQ(d.skills.size(), 1u);
+    EXPECT_EQ(d.skills[0].name, "pdf");
+    EXPECT_TRUE(d.skills[0].enabled);
+}
+
+TEST(EventsTest, SessionCustomAgentsUpdated)
+{
+    json agent = {
+        {"id", "ag1"},
+        {"name", "reviewer"},
+        {"displayName", "Reviewer"},
+        {"description", "reviews code"},
+        {"source", "project"},
+        {"userInvocable", true},
+        {"tools", json::array({"read"})},
+    };
+    auto input = make_event_envelope(
+        "session.custom_agents_updated",
+        {{"agents", json::array({agent})}, {"errors", json::array()}, {"warnings", json::array()}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionCustomAgentsUpdated);
+    const auto& d = event.as<SessionCustomAgentsUpdatedData>();
+    ASSERT_EQ(d.agents.size(), 1u);
+    EXPECT_EQ(d.agents[0].id, "ag1");
+    ASSERT_TRUE(d.agents[0].tools.has_value());
+    EXPECT_EQ(d.agents[0].tools->at(0), "read");
+}
+
+TEST(EventsTest, SessionMcpServersAndStatus)
+{
+    json srv = {{"name", "github"}, {"status", "connected"}, {"source", "user"}};
+    auto loaded = make_event_envelope(
+        "session.mcp_servers_loaded", {{"servers", json::array({srv})}}
+    );
+    auto e1 = loaded.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::SessionMcpServersLoaded);
+    EXPECT_EQ(e1.as<SessionMcpServersLoadedData>().servers.at(0).status, "connected");
+
+    auto chg = make_event_envelope(
+        "session.mcp_server_status_changed", {{"serverName", "github"}, {"status", "needs-auth"}}
+    );
+    auto e2 = chg.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::SessionMcpServerStatusChanged);
+    EXPECT_EQ(e2.as<SessionMcpServerStatusChangedData>().status, "needs-auth");
+}
+
+TEST(EventsTest, SessionExtensionsLoaded)
+{
+    json ext = {{"id", "user:foo"}, {"name", "foo"}, {"source", "user"}, {"status", "running"}};
+    auto input = make_event_envelope(
+        "session.extensions_loaded", {{"extensions", json::array({ext})}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SessionExtensionsLoaded);
+    EXPECT_EQ(event.as<SessionExtensionsLoadedData>().extensions.at(0).status, "running");
+}
+
+TEST(EventsTest, AssistantStreamingDeltaAndMessageStart)
+{
+    auto sd = make_event_envelope("assistant.streaming_delta", {{"totalResponseSizeBytes", 1234}});
+    auto e1 = sd.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::AssistantStreamingDelta);
+    EXPECT_EQ(e1.as<AssistantStreamingDeltaData>().total_response_size_bytes, 1234);
+
+    auto ms = make_event_envelope(
+        "assistant.message_start", {{"messageId", "msg_1"}, {"phase", "response"}}
+    );
+    auto e2 = ms.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::AssistantMessageStart);
+    EXPECT_EQ(e2.as<AssistantMessageStartData>().message_id, "msg_1");
+    EXPECT_EQ(*e2.as<AssistantMessageStartData>().phase, "response");
+}
+
+TEST(EventsTest, ModelCallFailure)
+{
+    auto input = make_event_envelope(
+        "model.call_failure",
+        {{"source", "top_level"},
+         {"model", "gpt-4"},
+         {"statusCode", 500},
+         {"errorMessage", "boom"}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::ModelCallFailure);
+    const auto& d = event.as<ModelCallFailureData>();
+    EXPECT_EQ(d.source, "top_level");
+    EXPECT_EQ(*d.status_code, 500);
+    EXPECT_EQ(*d.error_message, "boom");
+}
+
+TEST(EventsTest, SubagentDeselected)
+{
+    auto input = make_event_envelope("subagent.deselected", json::object());
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SubagentDeselected);
+    EXPECT_TRUE(event.is<SubagentDeselectedData>());
+}
+
+TEST(EventsTest, PermissionRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "permission.requested",
+        {{"requestId", "p1"},
+         {"permissionRequest",
+          {{"kind", "shell"},
+           {"fullCommandText", "ls"},
+           {"intention", "list"},
+           {"canOfferSessionApproval", true},
+           {"commands", json::array()},
+           {"possiblePaths", json::array()},
+           {"possibleUrls", json::array()},
+           {"hasWriteFileRedirection", false}}}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::PermissionRequested);
+    EXPECT_EQ(e1.as<PermissionRequestedData>().request_id, "p1");
+    EXPECT_EQ(e1.as<PermissionRequestedData>().permission_request["kind"], "shell");
+
+    auto comp = make_event_envelope(
+        "permission.completed", {{"requestId", "p1"}, {"result", {{"kind", "approved"}}}}
+    );
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::PermissionCompleted);
+    EXPECT_EQ(e2.as<PermissionCompletedData>().result["kind"], "approved");
+}
+
+TEST(EventsTest, UserInputRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "user_input.requested",
+        {{"requestId", "u1"},
+         {"question", "Pick"},
+         {"choices", json::array({"a", "b"})},
+         {"allowFreeform", true}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::UserInputRequested);
+    EXPECT_EQ(e1.as<UserInputRequestedData>().question, "Pick");
+    EXPECT_TRUE(*e1.as<UserInputRequestedData>().allow_freeform);
+
+    auto comp = make_event_envelope(
+        "user_input.completed", {{"requestId", "u1"}, {"answer", "a"}, {"wasFreeform", false}}
+    );
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::UserInputCompleted);
+    EXPECT_EQ(*e2.as<UserInputCompletedData>().answer, "a");
+}
+
+TEST(EventsTest, ElicitationRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "elicitation.requested",
+        {{"requestId", "e1"},
+         {"message", "Need details"},
+         {"mode", "form"},
+         {"requestedSchema",
+          {{"type", "object"},
+           {"properties", {{"name", {{"type", "string"}}}}},
+           {"required", json::array({"name"})}}}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::ElicitationRequested);
+    const auto& d1 = e1.as<ElicitationRequestedData>();
+    EXPECT_EQ(d1.request_id, "e1");
+    EXPECT_EQ(*d1.mode, "form");
+    ASSERT_TRUE(d1.requested_schema.has_value());
+    EXPECT_EQ((*d1.requested_schema)["type"], "object");
+
+    auto comp = make_event_envelope(
+        "elicitation.completed",
+        {{"requestId", "e1"}, {"action", "accept"}, {"content", {{"name", "x"}}}}
+    );
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::ElicitationCompleted);
+    EXPECT_EQ(*e2.as<ElicitationCompletedData>().action, "accept");
+}
+
+TEST(EventsTest, SamplingRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "sampling.requested",
+        {{"requestId", "s1"}, {"serverName", "github"}, {"mcpRequestId", 42}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::SamplingRequested);
+    EXPECT_EQ(e1.as<SamplingRequestedData>().server_name, "github");
+
+    auto comp = make_event_envelope("sampling.completed", {{"requestId", "s1"}});
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::SamplingCompleted);
+    EXPECT_EQ(e2.as<SamplingCompletedData>().request_id, "s1");
+}
+
+TEST(EventsTest, McpOauthRequiredAndCompleted)
+{
+    auto req = make_event_envelope(
+        "mcp.oauth_required",
+        {{"requestId", "o1"},
+         {"serverName", "github"},
+         {"serverUrl", "https://example/mcp"},
+         {"staticClientConfig", {{"clientId", "cid"}, {"publicClient", true}}}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::McpOauthRequired);
+    const auto& d1 = e1.as<McpOauthRequiredData>();
+    EXPECT_EQ(d1.server_url, "https://example/mcp");
+    ASSERT_TRUE(d1.static_client_config.has_value());
+    EXPECT_EQ(d1.static_client_config->client_id, "cid");
+
+    auto comp = make_event_envelope("mcp.oauth_completed", {{"requestId", "o1"}});
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::McpOauthCompleted);
+}
+
+TEST(EventsTest, ExternalToolRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "external_tool.requested",
+        {{"requestId", "x1"},
+         {"sessionId", "sess"},
+         {"toolCallId", "tc1"},
+         {"toolName", "my_tool"},
+         {"arguments", {{"a", 1}}}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::ExternalToolRequested);
+    EXPECT_EQ(e1.as<ExternalToolRequestedData>().tool_name, "my_tool");
+
+    auto comp = make_event_envelope("external_tool.completed", {{"requestId", "x1"}});
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::ExternalToolCompleted);
+}
+
+TEST(EventsTest, CommandQueuedExecuteCompleted)
+{
+    auto q = make_event_envelope(
+        "command.queued", {{"requestId", "c1"}, {"command", "/help"}}
+    );
+    auto e1 = q.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::CommandQueued);
+    EXPECT_EQ(e1.as<CommandQueuedData>().command, "/help");
+
+    auto ex = make_event_envelope(
+        "command.execute",
+        {{"requestId", "c2"}, {"command", "/deploy prod"}, {"commandName", "deploy"}, {"args", "prod"}}
+    );
+    auto e2 = ex.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::CommandExecute);
+    EXPECT_EQ(e2.as<CommandExecuteData>().command_name, "deploy");
+
+    auto comp = make_event_envelope("command.completed", {{"requestId", "c1"}});
+    auto e3 = comp.get<SessionEvent>();
+    EXPECT_EQ(e3.type, SessionEventType::CommandCompleted);
+}
+
+TEST(EventsTest, AutoModeSwitchRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "auto_mode_switch.requested",
+        {{"requestId", "a1"}, {"errorCode", "rate_limited"}, {"retryAfterSeconds", 60}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::AutoModeSwitchRequested);
+    EXPECT_EQ(*e1.as<AutoModeSwitchRequestedData>().retry_after_seconds, 60);
+
+    auto comp = make_event_envelope(
+        "auto_mode_switch.completed", {{"requestId", "a1"}, {"response", "yes"}}
+    );
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::AutoModeSwitchCompleted);
+    EXPECT_EQ(e2.as<AutoModeSwitchCompletedData>().response, "yes");
+}
+
+TEST(EventsTest, CommandsChangedAndCapabilitiesChanged)
+{
+    auto cc = make_event_envelope(
+        "commands.changed",
+        {{"commands",
+          json::array({{{"name", "deploy"}, {"description", "Deploy"}}, {{"name", "rollback"}}})}}
+    );
+    auto e1 = cc.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::CommandsChanged);
+    const auto& d1 = e1.as<CommandsChangedData>();
+    ASSERT_EQ(d1.commands.size(), 2u);
+    EXPECT_EQ(d1.commands[0].name, "deploy");
+    EXPECT_FALSE(d1.commands[1].description.has_value());
+
+    auto caps = make_event_envelope(
+        "capabilities.changed", {{"ui", {{"elicitation", true}}}}
+    );
+    auto e2 = caps.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::CapabilitiesChanged);
+    ASSERT_TRUE(e2.as<CapabilitiesChangedData>().ui.has_value());
+    EXPECT_TRUE(*e2.as<CapabilitiesChangedData>().ui->elicitation);
+}
+
+TEST(EventsTest, ExitPlanModeRequestedAndCompleted)
+{
+    auto req = make_event_envelope(
+        "exit_plan_mode.requested",
+        {{"requestId", "pm1"},
+         {"planContent", "1. do it\n2. profit"},
+         {"summary", "Plan"},
+         {"recommendedAction", "approve"},
+         {"actions", json::array({"approve", "edit", "reject"})}}
+    );
+    auto e1 = req.get<SessionEvent>();
+    EXPECT_EQ(e1.type, SessionEventType::ExitPlanModeRequested);
+    EXPECT_EQ(e1.as<ExitPlanModeRequestedData>().actions.size(), 3u);
+
+    auto comp = make_event_envelope(
+        "exit_plan_mode.completed",
+        {{"requestId", "pm1"}, {"approved", true}, {"selectedAction", "autopilot"}}
+    );
+    auto e2 = comp.get<SessionEvent>();
+    EXPECT_EQ(e2.type, SessionEventType::ExitPlanModeCompleted);
+    EXPECT_TRUE(*e2.as<ExitPlanModeCompletedData>().approved);
+}
+
+TEST(EventsTest, SystemNotificationParsesKindRaw)
+{
+    auto input = make_event_envelope(
+        "system.notification",
+        {{"content", "<system_notification>...</system_notification>"},
+         {"kind",
+          {{"type", "agent_completed"},
+           {"agentId", "ag1"},
+           {"agentType", "task"},
+           {"status", "completed"}}}}
+    );
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::SystemNotification);
+    const auto& d = event.as<SystemNotificationData>();
+    EXPECT_EQ(d.kind["type"], "agent_completed");
+    EXPECT_EQ(d.kind["status"], "completed");
+}
+
+TEST(EventsTest, AgentIdParsedOnSessionEvent)
+{
+    json input = {
+        {"id", "evt_agent"},
+        {"timestamp", "2025-01-15T10:00:00Z"},
+        {"agentId", "subagent_42"},
+        {"type", "session.idle"},
+        {"data", json::object()},
+    };
+    auto event = input.get<SessionEvent>();
+    ASSERT_TRUE(event.agent_id.has_value());
+    EXPECT_EQ(*event.agent_id, "subagent_42");
+}
+
+TEST(EventsTest, UnknownEventStillFallsBack)
+{
+    auto input = make_event_envelope("totally.unknown_v999", {{"foo", "bar"}});
+    auto event = input.get<SessionEvent>();
+    EXPECT_EQ(event.type, SessionEventType::Unknown);
+    EXPECT_EQ(event.type_string, "totally.unknown_v999");
+    EXPECT_TRUE(event.is<json>());
+    EXPECT_EQ(event.as<json>()["foo"], "bar");
+}
