@@ -216,8 +216,28 @@ TEST(ClientOptionsTest, DefaultValues)
     EXPECT_FALSE(opts.cli_url.has_value());
     EXPECT_EQ(opts.log_level, LogLevel::Info);
     EXPECT_TRUE(opts.auto_start);
-    EXPECT_TRUE(opts.auto_restart);
+    // auto_restart is deprecated and now defaults to false (was true; never actually
+    // used in the C++ port and upstream nodejs SDK marks it deprecated/no-op).
+#if defined(__GNUC__) || defined(__clang__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable : 4996)
+#endif
+    EXPECT_FALSE(opts.auto_restart);
+#if defined(__GNUC__) || defined(__clang__)
+#    pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#    pragma warning(pop)
+#endif
     EXPECT_FALSE(opts.environment.has_value());
+
+    // New v0.1.49 fields - defaults
+    EXPECT_FALSE(opts.tcp_connection_token.has_value());
+    EXPECT_FALSE(opts.copilot_home.has_value());
+    EXPECT_FALSE(opts.session_idle_timeout_seconds.has_value());
+    EXPECT_FALSE(opts.remote);
 }
 
 // =============================================================================

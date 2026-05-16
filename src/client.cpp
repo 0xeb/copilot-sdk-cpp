@@ -4,6 +4,8 @@
 #include <chrono>
 #include <copilot/client.hpp>
 #include <copilot/session.hpp>
+#include <cstdio>
+#include <random>
 #include <regex>
 #include <thread>
 
@@ -217,9 +219,47 @@ Client::Client(ClientOptions options) : options_(std::move(options))
                 "(external server manages its own auth)");
     }
 
+    // Validate tcp_connection_token usage (matches upstream nodejs SDK v0.1.49):
+    // token requires TCP transport (stdio is pre-authenticated by pipes).
+    if (options_.tcp_connection_token.has_value())
+    {
+        if (options_.tcp_connection_token->empty())
+            throw std::invalid_argument("tcp_connection_token must be a non-empty string");
+        if (options_.use_stdio)
+            throw std::invalid_argument(
+                "tcp_connection_token cannot be used with use_stdio = true");
+    }
+
     // Smart default for use_logged_in_user (only when managing our own server)
     if (!options_.cli_url.has_value() && !options_.use_logged_in_user.has_value())
         options_.use_logged_in_user = !options_.github_token.has_value();
+
+    // Auto-generate a UUID for the TCP connection token when the SDK spawns its
+    // own CLI in TCP mode and no token was provided. Mirrors nodejs effective-
+    // ConnectionToken logic (so loopback listeners are safe by default).
+    if (!options_.cli_url.has_value() && !options_.use_stdio &&
+        !options_.tcp_connection_token.has_value())
+    {
+        // Simple UUID v4 generator (RFC 4122, 122 random bits).
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        std::uniform_int_distribution<uint64_t> dist;
+        uint64_t lo = dist(gen);
+        uint64_t hi = dist(gen);
+        // Set version (4) and variant (10xx) bits per RFC 4122.
+        hi = (hi & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
+        lo = (lo & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
+        char buf[37];
+        std::snprintf(
+            buf, sizeof(buf), "%08x-%04x-%04x-%04x-%012llx",
+            static_cast<unsigned>((hi >> 32) & 0xFFFFFFFFULL),
+            static_cast<unsigned>((hi >> 16) & 0xFFFFULL),
+            static_cast<unsigned>(hi & 0xFFFFULL),
+            static_cast<unsigned>((lo >> 48) & 0xFFFFULL),
+            static_cast<unsigned long long>(lo & 0xFFFFFFFFFFFFULL)
+        );
+        options_.tcp_connection_token = std::string(buf);
+    }
 
     // Parse CLI URL if provided
     if (options_.cli_url.has_value())
@@ -481,6 +521,20 @@ void Client::start_cli_server()
         args.push_back(std::to_string(options_.port));
     }
 
+    // Session idle timeout (forwarded as CLI flag; ignored by server when 0/absent).
+    if (options_.session_idle_timeout_seconds.has_value() &&
+        *options_.session_idle_timeout_seconds > 0)
+    {
+        args.push_back("--session-idle-timeout");
+        args.push_back(std::to_string(*options_.session_idle_timeout_seconds));
+    }
+
+    // Remote session support (Mission Control integration).
+    if (options_.remote)
+    {
+        args.push_back("--remote");
+    }
+
     // Resolve command
     auto [executable, full_args] = resolve_cli_command(cli_path, args);
 
@@ -506,6 +560,14 @@ void Client::start_cli_server()
     // Forward GitHub token as environment variable
     if (options_.github_token.has_value())
         proc_opts.environment["COPILOT_SDK_AUTH_TOKEN"] = *options_.github_token;
+
+    // Forward TCP connection token (auto-generated UUID in TCP+spawn mode if caller did not set one).
+    if (options_.tcp_connection_token.has_value())
+        proc_opts.environment["COPILOT_CONNECTION_TOKEN"] = *options_.tcp_connection_token;
+
+    // Configurable Copilot data directory.
+    if (options_.copilot_home.has_value())
+        proc_opts.environment["COPILOT_HOME"] = *options_.copilot_home;
 
     // Spawn process
     process_ = std::make_unique<Process>();

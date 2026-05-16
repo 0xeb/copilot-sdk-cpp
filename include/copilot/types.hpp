@@ -1090,15 +1090,48 @@ struct ClientOptions
     std::optional<std::string> cli_url;
     LogLevel log_level = LogLevel::Info;
     bool auto_start = true;
-    bool auto_restart = true;
+
+    /// @deprecated This option has no effect and will be removed in a future release.
+    /// Retained for source compatibility with v0.1.23 callers; the SDK no longer
+    /// auto-restarts the CLI on exit (matches upstream nodejs SDK semantics).
+    [[deprecated("auto_restart has no effect; will be removed in a future release")]]
+    bool auto_restart = false;
+
     std::optional<std::map<std::string, std::string>> environment;
 
     /// GitHub token for authentication. Cannot be used with cli_url.
+    /// On the wire to the CLI, this is forwarded via the COPILOT_SDK_AUTH_TOKEN
+    /// environment variable plus the --auth-token-env CLI flag.
     std::optional<std::string> github_token;
 
     /// Whether to use logged-in user for auth. Defaults to true when github_token is empty.
     /// Cannot be used with cli_url.
     std::optional<bool> use_logged_in_user;
+
+    /// Connection token for the headless CLI server (TCP only). When the SDK
+    /// spawns its own CLI in TCP mode and this is omitted, a UUID is generated
+    /// automatically so the loopback listener is safe by default. Rejected with
+    /// `use_stdio = true` (stdio is pre-authenticated by transport).
+    /// Forwarded to the CLI via the COPILOT_CONNECTION_TOKEN environment variable.
+    std::optional<std::string> tcp_connection_token;
+
+    /// Custom data directory for the Copilot CLI ($COPILOT_HOME). When omitted,
+    /// the CLI uses its default location (typically ~/.copilot).
+    std::optional<std::string> copilot_home;
+
+    /// Server-wide idle timeout for sessions in seconds.
+    /// Sessions without activity for this duration are automatically cleaned up.
+    /// Set to 0 or omit to disable (sessions live indefinitely).
+    /// Only used when the SDK spawns the CLI process; ignored when connecting to
+    /// an external server via {@link cli_url}.
+    std::optional<int> session_idle_timeout_seconds;
+
+    /// Enable remote session support (Mission Control integration).
+    /// When true, sessions in a GitHub repository working directory are accessible
+    /// from GitHub web and mobile.
+    /// Only used when the SDK spawns the CLI process; ignored when connecting to
+    /// an external server via {@link cli_url}.
+    bool remote = false;
 };
 
 // =============================================================================
