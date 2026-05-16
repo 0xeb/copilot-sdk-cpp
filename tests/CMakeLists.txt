@@ -120,6 +120,19 @@ target_link_libraries(test_rpc_methods
 
 set_target_properties(test_rpc_methods PROPERTIES FOLDER "Tests")
 
+# Focused tests for v0.1.49 parity additions (augments other suites)
+add_executable(test_v0149_features
+    test_v0149_features.cpp
+)
+
+target_link_libraries(test_v0149_features
+    PRIVATE
+        copilot_sdk_cpp
+        GTest::gtest_main
+)
+
+set_target_properties(test_v0149_features PROPERTIES FOLDER "Tests")
+
 include(GoogleTest)
 gtest_discover_tests(test_types)
 gtest_discover_tests(test_transport)
@@ -129,6 +142,7 @@ gtest_discover_tests(test_client_session)
 gtest_discover_tests(test_e2e)
 gtest_discover_tests(test_tool_builder)
 gtest_discover_tests(test_rpc_methods)
+gtest_discover_tests(test_v0149_features)
 
 # Snapshot conformance tests (optional, requires upstream snapshots + Python)
 if(COPILOT_BUILD_SNAPSHOT_TESTS)
