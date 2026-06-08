@@ -122,7 +122,9 @@ TEST(TypesTest, CustomAgentConfig)
         .description = "Reviews code for issues",
         .tools = std::vector<std::string>{"read_file", "grep"},
         .prompt = "You are a code reviewer...",
-        .infer = true
+        .infer = true,
+        .skills = std::vector<std::string>{"code-analysis", "security"},
+        .model = "claude-haiku-4.5"
     };
 
     json j = agent;
@@ -132,6 +134,27 @@ TEST(TypesTest, CustomAgentConfig)
     EXPECT_EQ(j["tools"], json::array({"read_file", "grep"}));
     EXPECT_EQ(j["prompt"], "You are a code reviewer...");
     EXPECT_EQ(j["infer"], true);
+    EXPECT_EQ(j["skills"], json::array({"code-analysis", "security"}));
+    EXPECT_EQ(j["model"], "claude-haiku-4.5");
+}
+
+TEST(TypesTest, CustomAgentConfigModelRoundTrip)
+{
+    CustomAgentConfig agent{.name = "model_agent", .prompt = "prompt", .model = "claude-haiku-4.5"};
+    json j = agent;
+    EXPECT_EQ(j["model"], "claude-haiku-4.5");
+
+    auto parsed = j.get<CustomAgentConfig>();
+    EXPECT_EQ(parsed.model.value(), "claude-haiku-4.5");
+    EXPECT_EQ(parsed.name, "model_agent");
+}
+
+TEST(TypesTest, CustomAgentConfigOmitsModelWhenUnset)
+{
+    CustomAgentConfig agent{.name = "no_model", .prompt = "prompt"};
+    json j = agent;
+    EXPECT_FALSE(j.contains("model"));
+    EXPECT_FALSE(j.contains("skills"));
 }
 
 TEST(TypesTest, MessageOptions)

@@ -825,6 +825,11 @@ struct CustomAgentConfig
     std::string prompt;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<bool> infer;
+    std::optional<std::vector<std::string>> skills;
+    /// Model identifier for this agent (e.g. "claude-haiku-4.5").
+    /// When set, the runtime will attempt to use this model for the agent,
+    /// falling back to the parent session model if unavailable.
+    std::optional<std::string> model;
 };
 
 inline void to_json(json& j, const CustomAgentConfig& c)
@@ -840,6 +845,10 @@ inline void to_json(json& j, const CustomAgentConfig& c)
         j["mcpServers"] = *c.mcp_servers;
     if (c.infer)
         j["infer"] = *c.infer;
+    if (c.skills)
+        j["skills"] = *c.skills;
+    if (c.model)
+        j["model"] = *c.model;
 }
 
 inline void from_json(const json& j, CustomAgentConfig& c)
@@ -856,6 +865,10 @@ inline void from_json(const json& j, CustomAgentConfig& c)
         c.mcp_servers = j.at("mcpServers").get<std::map<std::string, json>>();
     if (j.contains("infer"))
         c.infer = j.at("infer").get<bool>();
+    if (j.contains("skills"))
+        c.skills = j.at("skills").get<std::vector<std::string>>();
+    if (j.contains("model"))
+        c.model = j.at("model").get<std::string>();
 }
 
 // =============================================================================
