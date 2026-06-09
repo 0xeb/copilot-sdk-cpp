@@ -57,7 +57,25 @@ enum class ConnectionState
 enum class SystemMessageMode
 {
     Append,
-    Replace
+    Replace,
+    Customize
+};
+
+/// Section override action for system message customization
+enum class SectionOverrideAction
+{
+    Replace,
+    Remove,
+    Append,
+    Prepend,
+    Transform
+};
+
+/// OAuth grant type for an MCP HTTP server
+enum class McpHttpServerConfigOauthGrantType
+{
+    AuthorizationCode,
+    ClientCredentials
 };
 
 // JSON enum serialization
@@ -76,6 +94,26 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     {
         {SystemMessageMode::Append, "append"},
         {SystemMessageMode::Replace, "replace"},
+        {SystemMessageMode::Customize, "customize"},
+    }
+)
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SectionOverrideAction,
+    {
+        {SectionOverrideAction::Replace, "replace"},
+        {SectionOverrideAction::Remove, "remove"},
+        {SectionOverrideAction::Append, "append"},
+        {SectionOverrideAction::Prepend, "prepend"},
+        {SectionOverrideAction::Transform, "transform"},
+    }
+)
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    McpHttpServerConfigOauthGrantType,
+    {
+        {McpHttpServerConfigOauthGrantType::AuthorizationCode, "authorization_code"},
+        {McpHttpServerConfigOauthGrantType::ClientCredentials, "client_credentials"},
     }
 )
 
@@ -595,11 +633,34 @@ struct SessionHooks
 // Configuration Types
 // =============================================================================
 
+/// Override operation for a single system prompt section
+struct SectionOverride
+{
+    SectionOverrideAction action = SectionOverrideAction::Replace;
+    std::optional<std::string> content;
+};
+
+inline void to_json(json& j, const SectionOverride& c)
+{
+    j = json{{"action", c.action}};
+    if (c.content)
+        j["content"] = *c.content;
+}
+
+inline void from_json(const json& j, SectionOverride& c)
+{
+    if (j.contains("action"))
+        c.action = j.at("action").get<SectionOverrideAction>();
+    if (j.contains("content"))
+        c.content = j.at("content").get<std::string>();
+}
+
 /// System message configuration
 struct SystemMessageConfig
 {
     std::optional<SystemMessageMode> mode;
     std::optional<std::string> content;
+    std::optional<std::map<std::string, SectionOverride>> sections;
 };
 
 inline void to_json(json& j, const SystemMessageConfig& c)
@@ -609,6 +670,8 @@ inline void to_json(json& j, const SystemMessageConfig& c)
         j["mode"] = *c.mode;
     if (c.content)
         j["content"] = *c.content;
+    if (c.sections)
+        j["sections"] = *c.sections;
 }
 
 inline void from_json(const json& j, SystemMessageConfig& c)
@@ -617,6 +680,8 @@ inline void from_json(const json& j, SystemMessageConfig& c)
         c.mode = j.at("mode").get<SystemMessageMode>();
     if (j.contains("content"))
         c.content = j.at("content").get<std::string>();
+    if (j.contains("sections"))
+        c.sections = j.at("sections").get<std::map<std::string, SectionOverride>>();
 }
 
 /// Azure-specific provider options
@@ -647,6 +712,11 @@ struct ProviderConfig
     std::optional<std::string> api_key;
     std::optional<std::string> bearer_token;
     std::optional<AzureOptions> azure;
+    std::optional<std::map<std::string, std::string>> headers;
+    std::optional<std::string> model_id;
+    std::optional<std::string> wire_model;
+    std::optional<int> max_input_tokens;
+    std::optional<int> max_output_tokens;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Environment Variable Support
@@ -717,6 +787,16 @@ inline void to_json(json& j, const ProviderConfig& c)
         j["bearerToken"] = *c.bearer_token;
     if (c.azure)
         j["azure"] = *c.azure;
+    if (c.headers)
+        j["headers"] = *c.headers;
+    if (c.model_id)
+        j["modelId"] = *c.model_id;
+    if (c.wire_model)
+        j["wireModel"] = *c.wire_model;
+    if (c.max_input_tokens)
+        j["maxPromptTokens"] = *c.max_input_tokens;
+    if (c.max_output_tokens)
+        j["maxOutputTokens"] = *c.max_output_tokens;
 }
 
 inline void from_json(const json& j, ProviderConfig& c)
@@ -732,6 +812,16 @@ inline void from_json(const json& j, ProviderConfig& c)
         c.bearer_token = j.at("bearerToken").get<std::string>();
     if (j.contains("azure"))
         c.azure = j.at("azure").get<AzureOptions>();
+    if (j.contains("headers"))
+        c.headers = j.at("headers").get<std::map<std::string, std::string>>();
+    if (j.contains("modelId"))
+        c.model_id = j.at("modelId").get<std::string>();
+    if (j.contains("wireModel"))
+        c.wire_model = j.at("wireModel").get<std::string>();
+    if (j.contains("maxPromptTokens"))
+        c.max_input_tokens = j.at("maxPromptTokens").get<int>();
+    if (j.contains("maxOutputTokens"))
+        c.max_output_tokens = j.at("maxOutputTokens").get<int>();
 }
 
 // =============================================================================
@@ -871,6 +961,24 @@ inline void from_json(const json& j, CustomAgentConfig& c)
         c.model = j.at("model").get<std::string>();
 }
 
+struct DefaultAgentConfig
+{
+    std::optional<std::vector<std::string>> excluded_tools;
+};
+
+inline void to_json(json& j, const DefaultAgentConfig& c)
+{
+    j = json::object();
+    if (c.excluded_tools)
+        j["excludedTools"] = *c.excluded_tools;
+}
+
+inline void from_json(const json& j, DefaultAgentConfig& c)
+{
+    if (j.contains("excludedTools"))
+        c.excluded_tools = j.at("excludedTools").get<std::vector<std::string>>();
+}
+
 // =============================================================================
 // Attachment Types (for MessageOptions)
 // =============================================================================
@@ -1004,7 +1112,9 @@ struct SessionConfig
 {
     std::optional<std::string> session_id;
     std::optional<std::string> model;
+    std::optional<json> model_capabilities;
     std::vector<Tool> tools;
+    std::optional<std::vector<json>> commands;
     std::optional<SystemMessageConfig> system_message;
     std::optional<std::vector<std::string>> available_tools;
     std::optional<std::vector<std::string>> excluded_tools;
@@ -1013,6 +1123,8 @@ struct SessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+    std::optional<DefaultAgentConfig> default_agent;
+    std::optional<std::string> agent;
 
     /// Directories to load skills from.
     std::optional<std::vector<std::string>> skill_directories;
@@ -1043,6 +1155,9 @@ struct SessionConfig
 
     /// Working directory for the session.
     std::optional<std::string> working_directory;
+
+    /// GitHub token for per-session authentication.
+    std::optional<std::string> github_token;
 
     // ===== v0.1.49 additions =====
 
@@ -1075,6 +1190,8 @@ struct ResumeSessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+    std::optional<DefaultAgentConfig> default_agent;
+    std::optional<std::string> agent;
 
     /// Directories to load skills from.
     std::optional<std::vector<std::string>> skill_directories;
@@ -1092,9 +1209,12 @@ struct ResumeSessionConfig
 
     /// Model to use for this session. Can change the model when resuming.
     std::optional<std::string> model;
+    std::optional<json> model_capabilities;
 
     /// Reasoning effort level for models that support it.
     std::optional<ReasoningEffort> reasoning_effort;
+
+    std::optional<std::vector<json>> commands;
 
     /// System message configuration.
     std::optional<SystemMessageConfig> system_message;
@@ -1136,6 +1256,7 @@ struct MessageOptions
     std::string prompt;
     std::optional<std::vector<UserMessageAttachment>> attachments;
     std::optional<std::string> mode;
+    std::optional<std::map<std::string, std::string>> request_headers;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -1145,6 +1266,19 @@ inline void to_json(json& j, const MessageOptions& o)
         j["attachments"] = *o.attachments;
     if (o.mode)
         j["mode"] = *o.mode;
+    if (o.request_headers)
+        j["requestHeaders"] = *o.request_headers;
+}
+
+inline void from_json(const json& j, MessageOptions& o)
+{
+    j.at("prompt").get_to(o.prompt);
+    if (j.contains("attachments"))
+        o.attachments = j.at("attachments").get<std::vector<UserMessageAttachment>>();
+    if (j.contains("mode"))
+        o.mode = j.at("mode").get<std::string>();
+    if (j.contains("requestHeaders"))
+        o.request_headers = j.at("requestHeaders").get<std::map<std::string, std::string>>();
 }
 
 // =============================================================================

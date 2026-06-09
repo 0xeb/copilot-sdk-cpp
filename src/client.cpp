@@ -34,20 +34,12 @@ json build_session_create_request(const SessionConfig& config)
 
     if (config.session_id.has_value())
         request["sessionId"] = *config.session_id;
+    if (config.model_capabilities.has_value())
+        request["modelCapabilities"] = *config.model_capabilities;
     if (config.on_permission_request.has_value())
         request["requestPermission"] = true;
     if (config.system_message.has_value())
-    {
-        json sys_msg;
-        if (config.system_message->content.has_value())
-            sys_msg["content"] = *config.system_message->content;
-        if (config.system_message->mode.has_value())
-        {
-            sys_msg["mode"] =
-                (*config.system_message->mode == SystemMessageMode::Replace) ? "replace" : "append";
-        }
-        request["systemMessage"] = sys_msg;
-    }
+        request["systemMessage"] = *config.system_message;
     // Add custom tool definitions to the request
     if (!config.tools.empty())
     {
@@ -67,6 +59,8 @@ json build_session_create_request(const SessionConfig& config)
         }
         request["tools"] = tool_defs;
     }
+    if (config.commands.has_value())
+        request["commands"] = *config.commands;
     if (config.available_tools.has_value())
         request["availableTools"] = *config.available_tools;
     if (config.excluded_tools.has_value())
@@ -94,6 +88,10 @@ json build_session_create_request(const SessionConfig& config)
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.default_agent.has_value())
+        request["defaultAgent"] = *config.default_agent;
+    if (config.agent.has_value())
+        request["agent"] = *config.agent;
     if (config.skill_directories.has_value())
         request["skillDirectories"] = *config.skill_directories;
     if (config.disabled_skills.has_value())
@@ -110,6 +108,8 @@ json build_session_create_request(const SessionConfig& config)
         request["hooks"] = true;
     if (config.working_directory.has_value())
         request["workingDirectory"] = *config.working_directory;
+    if (config.github_token.has_value())
+        request["githubToken"] = *config.github_token;
 
     // v0.1.49 additions
     if (config.client_name.has_value())
@@ -154,6 +154,8 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
         }
         request["tools"] = tool_defs;
     }
+    if (config.commands.has_value())
+        request["commands"] = *config.commands;
     if (config.streaming)
         request["streaming"] = config.streaming;
 
@@ -177,6 +179,10 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.default_agent.has_value())
+        request["defaultAgent"] = *config.default_agent;
+    if (config.agent.has_value())
+        request["agent"] = *config.agent;
     if (config.skill_directories.has_value())
         request["skillDirectories"] = *config.skill_directories;
     if (config.disabled_skills.has_value())
@@ -187,20 +193,12 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
     // New fields for v0.1.23 parity
     if (config.model.has_value())
         request["model"] = *config.model;
+    if (config.model_capabilities.has_value())
+        request["modelCapabilities"] = *config.model_capabilities;
     if (config.reasoning_effort.has_value())
         request["reasoningEffort"] = *config.reasoning_effort;
     if (config.system_message.has_value())
-    {
-        json sys_msg;
-        if (config.system_message->content.has_value())
-            sys_msg["content"] = *config.system_message->content;
-        if (config.system_message->mode.has_value())
-        {
-            sys_msg["mode"] =
-                (*config.system_message->mode == SystemMessageMode::Replace) ? "replace" : "append";
-        }
-        request["systemMessage"] = sys_msg;
-    }
+        request["systemMessage"] = *config.system_message;
     if (config.available_tools.has_value())
         request["availableTools"] = *config.available_tools;
     if (config.excluded_tools.has_value())

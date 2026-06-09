@@ -26,6 +26,72 @@ TEST(TypesTest, SystemMessageModeEnum)
 
     j = SystemMessageMode::Replace;
     EXPECT_EQ(j, "replace");
+
+    j = SystemMessageMode::Customize;
+    EXPECT_EQ(j, "customize");
+    EXPECT_EQ(json("customize").get<SystemMessageMode>(), SystemMessageMode::Customize);
+}
+
+TEST(TypesTest, SectionOverrideActionEnumRoundTrip)
+{
+    struct EnumCase
+    {
+        SectionOverrideAction value;
+        const char* wire;
+    };
+
+    const std::vector<EnumCase> cases = {
+        {SectionOverrideAction::Replace, "replace"},
+        {SectionOverrideAction::Remove, "remove"},
+        {SectionOverrideAction::Append, "append"},
+        {SectionOverrideAction::Prepend, "prepend"},
+        {SectionOverrideAction::Transform, "transform"},
+    };
+
+    for (const auto& test_case : cases)
+    {
+        json j = test_case.value;
+        EXPECT_EQ(j, test_case.wire);
+        EXPECT_EQ(j.get<SectionOverrideAction>(), test_case.value);
+    }
+}
+
+TEST(TypesTest, McpHttpServerConfigOauthGrantTypeEnumRoundTrip)
+{
+    struct EnumCase
+    {
+        McpHttpServerConfigOauthGrantType value;
+        const char* wire;
+    };
+
+    const std::vector<EnumCase> cases = {
+        {McpHttpServerConfigOauthGrantType::AuthorizationCode, "authorization_code"},
+        {McpHttpServerConfigOauthGrantType::ClientCredentials, "client_credentials"},
+    };
+
+    for (const auto& test_case : cases)
+    {
+        json j = test_case.value;
+        EXPECT_EQ(j, test_case.wire);
+        EXPECT_EQ(j.get<McpHttpServerConfigOauthGrantType>(), test_case.value);
+    }
+}
+
+TEST(TypesTest, SectionOverrideStructRoundTrip)
+{
+    SectionOverride original{
+        .action = SectionOverrideAction::Prepend,
+        .content = "prepend this"
+    };
+
+    json j = original;
+    EXPECT_EQ(j["action"], "prepend");
+    EXPECT_EQ(j["content"], "prepend this");
+
+    auto parsed = j.get<SectionOverride>();
+    EXPECT_EQ(parsed.action, SectionOverrideAction::Prepend);
+    ASSERT_TRUE(parsed.content.has_value());
+    EXPECT_EQ(*parsed.content, "prepend this");
 }
 
 TEST(TypesTest, ToolBinaryResultRoundTrip)
@@ -93,6 +159,37 @@ TEST(TypesTest, ProviderConfig)
     EXPECT_EQ(j["azure"]["apiVersion"], "2024-02-01");
 }
 
+TEST(TypesTest, ProviderConfigNewFieldsRoundTrip)
+{
+    ProviderConfig config{
+        .type = "azure",
+        .wire_api = "responses",
+        .base_url = "https://example.invalid/v1",
+        .api_key = "api-key",
+        .bearer_token = "bearer-token",
+        .headers = std::map<std::string, std::string>{{"X-Test", "value"}},
+        .model_id = "gpt-4.1",
+        .wire_model = "deployment-name",
+        .max_input_tokens = 64000,
+        .max_output_tokens = 4096
+    };
+
+    json j = config;
+    EXPECT_EQ(j["headers"]["X-Test"], "value");
+    EXPECT_EQ(j["modelId"], "gpt-4.1");
+    EXPECT_EQ(j["wireModel"], "deployment-name");
+    EXPECT_EQ(j["maxPromptTokens"], 64000);
+    EXPECT_EQ(j["maxOutputTokens"], 4096);
+
+    auto parsed = j.get<ProviderConfig>();
+    ASSERT_TRUE(parsed.headers.has_value());
+    EXPECT_EQ(parsed.headers->at("X-Test"), "value");
+    EXPECT_EQ(parsed.model_id, std::optional<std::string>("gpt-4.1"));
+    EXPECT_EQ(parsed.wire_model, std::optional<std::string>("deployment-name"));
+    EXPECT_EQ(parsed.max_input_tokens, std::optional<int>(64000));
+    EXPECT_EQ(parsed.max_output_tokens, std::optional<int>(4096));
+}
+
 TEST(TypesTest, McpLocalServerConfig)
 {
     McpLocalServerConfig config;
@@ -157,6 +254,18 @@ TEST(TypesTest, CustomAgentConfigOmitsModelWhenUnset)
     EXPECT_FALSE(j.contains("skills"));
 }
 
+TEST(TypesTest, DefaultAgentConfigRoundTrip)
+{
+    DefaultAgentConfig config{.excluded_tools = std::vector<std::string>{"bash", "write_file"}};
+
+    json j = config;
+    EXPECT_EQ(j["excludedTools"], json::array({"bash", "write_file"}));
+
+    auto parsed = j.get<DefaultAgentConfig>();
+    ASSERT_TRUE(parsed.excluded_tools.has_value());
+    EXPECT_EQ(*parsed.excluded_tools, (std::vector<std::string>{"bash", "write_file"}));
+}
+
 TEST(TypesTest, MessageOptions)
 {
     MessageOptions opts{
@@ -172,6 +281,21 @@ TEST(TypesTest, MessageOptions)
     EXPECT_EQ(j["attachments"][0]["type"], "file");
     EXPECT_EQ(j["attachments"][0]["path"], "/path/to/file.cpp");
     EXPECT_EQ(j["mode"], "chat");
+}
+
+TEST(TypesTest, MessageOptionsRequestHeadersRoundTrip)
+{
+    MessageOptions opts{
+        .prompt = "Hello with headers",
+        .request_headers = std::map<std::string, std::string>{{"X-Trace-Id", "trace-123"}}
+    };
+
+    json j = opts;
+    EXPECT_EQ(j["requestHeaders"]["X-Trace-Id"], "trace-123");
+
+    auto parsed = j.get<MessageOptions>();
+    ASSERT_TRUE(parsed.request_headers.has_value());
+    EXPECT_EQ(parsed.request_headers->at("X-Trace-Id"), "trace-123");
 }
 
 TEST(TypesTest, PingResponse)
@@ -1588,6 +1712,34 @@ TEST(RequestBuilderTest, CreateSessionWithoutHooksOmitsField)
     EXPECT_FALSE(request.contains("reasoningEffort"));
 }
 
+TEST(RequestBuilderTest, SessionConfigNewDataFieldsSerialize)
+{
+    SessionConfig config;
+    config.model_capabilities = json{{"supports", {{"vision", true}}}};
+    config.commands = std::vector<json>{json{{"name", "deploy"}, {"description", "Deploy app"}}};
+    config.system_message = SystemMessageConfig{
+        .mode = SystemMessageMode::Customize,
+        .content = "after sections",
+        .sections = std::map<std::string, SectionOverride>{
+            {"tone", SectionOverride{.action = SectionOverrideAction::Replace, .content = "Be terse."}}
+        }
+    };
+    config.default_agent = DefaultAgentConfig{.excluded_tools = std::vector<std::string>{"bash"}};
+    config.agent = "reviewer";
+    config.github_token = "ghs_test";
+
+    auto request = build_session_create_request(config);
+    EXPECT_EQ(request["modelCapabilities"]["supports"]["vision"], true);
+    ASSERT_TRUE(request["commands"].is_array());
+    EXPECT_EQ(request["commands"][0]["name"], "deploy");
+    EXPECT_EQ(request["systemMessage"]["mode"], "customize");
+    EXPECT_EQ(request["systemMessage"]["sections"]["tone"]["action"], "replace");
+    EXPECT_EQ(request["systemMessage"]["sections"]["tone"]["content"], "Be terse.");
+    EXPECT_EQ(request["defaultAgent"]["excludedTools"][0], "bash");
+    EXPECT_EQ(request["agent"], "reviewer");
+    EXPECT_EQ(request["githubToken"], "ghs_test");
+}
+
 TEST(RequestBuilderTest, ResumeSessionAllNewFields)
 {
     ResumeSessionConfig config;
@@ -1619,6 +1771,29 @@ TEST(RequestBuilderTest, ResumeSessionAllNewFields)
     EXPECT_TRUE(request.contains("infiniteSessions"));
     EXPECT_TRUE(request["requestUserInput"].get<bool>());
     EXPECT_TRUE(request["hooks"].get<bool>());
+}
+
+TEST(RequestBuilderTest, ResumeSessionConfigNewDataFieldsSerialize)
+{
+    ResumeSessionConfig config;
+    config.model_capabilities = json{{"supports", {{"reasoningEffort", true}}}};
+    config.commands = std::vector<json>{json{{"name", "summarize"}}};
+    config.default_agent = DefaultAgentConfig{.excluded_tools = std::vector<std::string>{"web_search"}};
+    config.agent = "planner";
+    config.system_message = SystemMessageConfig{
+        .mode = SystemMessageMode::Customize,
+        .sections = std::map<std::string, SectionOverride>{
+            {"identity", SectionOverride{.action = SectionOverrideAction::Append, .content = "Stay in role."}}
+        }
+    };
+
+    auto request = build_session_resume_request("sess-1", config);
+    EXPECT_EQ(request["modelCapabilities"]["supports"]["reasoningEffort"], true);
+    EXPECT_EQ(request["commands"][0]["name"], "summarize");
+    EXPECT_EQ(request["defaultAgent"]["excludedTools"][0], "web_search");
+    EXPECT_EQ(request["agent"], "planner");
+    EXPECT_EQ(request["systemMessage"]["mode"], "customize");
+    EXPECT_EQ(request["systemMessage"]["sections"]["identity"]["action"], "append");
 }
 
 TEST(RequestBuilderTest, EmptyHooksNotSent)

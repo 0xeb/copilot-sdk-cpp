@@ -36,14 +36,8 @@ std::future<std::string> Session::send(MessageOptions options)
         std::launch::async,
         [this, options = std::move(options)]()
         {
-            json params;
+            json params = options;
             params["sessionId"] = session_id_;
-            params["prompt"] = options.prompt;
-
-            if (options.attachments.has_value())
-                params["attachments"] = *options.attachments;
-            if (options.mode.has_value())
-                params["mode"] = *options.mode;
 
             auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionSend, params).get();
             return response["messageId"].get<std::string>();
