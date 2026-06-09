@@ -174,6 +174,13 @@ Subscription Session::on(EventHandler handler)
     );
 }
 
+void Session::register_persistent_event_handler(EventHandler handler)
+{
+    auto subscription = on(std::move(handler));
+    std::lock_guard<std::mutex> lock(owned_event_subscriptions_mutex_);
+    owned_event_subscriptions_.push_back(std::move(subscription));
+}
+
 void Session::dispatch_event(const SessionEvent& event)
 {
     std::vector<EventHandler> handlers_copy;
@@ -265,6 +272,82 @@ UserInputResponse Session::handle_user_input_request(const UserInputRequest& req
         throw std::runtime_error("No user input handler registered");
 
     UserInputInvocation invocation;
+    invocation.session_id = session_id_;
+    return handler(request, invocation);
+}
+
+// =============================================================================
+// Elicitation Handling
+// =============================================================================
+
+void Session::register_elicitation_handler(ElicitationHandler handler)
+{
+    std::lock_guard<std::mutex> lock(elicitation_mutex_);
+    elicitation_handler_ = std::move(handler);
+}
+
+ElicitationResult Session::handle_elicitation_request(const ElicitationContext& context)
+{
+    ElicitationHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(elicitation_mutex_);
+        handler = elicitation_handler_;
+    }
+
+    if (!handler)
+        return ElicitationResult{ElicitationAction::Cancel};
+
+    return handler(context);
+}
+
+// =============================================================================
+// Exit Plan Mode Handling
+// =============================================================================
+
+void Session::register_exit_plan_mode_handler(ExitPlanModeHandler handler)
+{
+    std::lock_guard<std::mutex> lock(exit_plan_mode_mutex_);
+    exit_plan_mode_handler_ = std::move(handler);
+}
+
+ExitPlanModeResult Session::handle_exit_plan_mode_request(const ExitPlanModeRequest& request)
+{
+    ExitPlanModeHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(exit_plan_mode_mutex_);
+        handler = exit_plan_mode_handler_;
+    }
+
+    if (!handler)
+        return ExitPlanModeResult{};
+
+    ExitPlanModeInvocation invocation;
+    invocation.session_id = session_id_;
+    return handler(request, invocation);
+}
+
+// =============================================================================
+// Auto Mode Switch Handling
+// =============================================================================
+
+void Session::register_auto_mode_switch_handler(AutoModeSwitchHandler handler)
+{
+    std::lock_guard<std::mutex> lock(auto_mode_switch_mutex_);
+    auto_mode_switch_handler_ = std::move(handler);
+}
+
+AutoModeSwitchResponse Session::handle_auto_mode_switch_request(const AutoModeSwitchRequest& request)
+{
+    AutoModeSwitchHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(auto_mode_switch_mutex_);
+        handler = auto_mode_switch_handler_;
+    }
+
+    if (!handler)
+        return AutoModeSwitchResponse::No;
+
+    AutoModeSwitchInvocation invocation;
     invocation.session_id = session_id_;
     return handler(request, invocation);
 }

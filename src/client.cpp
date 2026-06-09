@@ -708,6 +708,12 @@ void Client::connect_to_server()
                 return handle_permission_request(params);
             else if (method == "userInput.request")
                 return handle_user_input_request(params);
+            else if (method == "elicitation.request")
+                return handle_elicitation_request(params);
+            else if (method == "exitPlanMode.request")
+                return handle_exit_plan_mode_request(params);
+            else if (method == "autoModeSwitch.request")
+                return handle_auto_mode_switch_request(params);
             else if (method == "hooks.invoke")
                 return handle_hooks_invoke(params);
             throw JsonRpcError(JsonRpcErrorCode::MethodNotFound, "Unknown method: " + method);
@@ -794,6 +800,15 @@ std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig confi
             if (config.on_user_input_request.has_value())
                 session->register_user_input_handler(*config.on_user_input_request);
 
+            if (config.on_elicitation_request.has_value())
+                session->register_elicitation_handler(*config.on_elicitation_request);
+            if (config.on_exit_plan_mode.has_value())
+                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
+            if (config.on_auto_mode_switch.has_value())
+                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
+            if (config.on_event.has_value())
+                session->register_persistent_event_handler(*config.on_event);
+
             // Register hooks locally (server will call hooks.invoke)
             if (config.hooks.has_value())
                 session->register_hooks(*config.hooks);
@@ -845,6 +860,15 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
             // Register user input handler locally (server will call userInput.request)
             if (config.on_user_input_request.has_value())
                 session->register_user_input_handler(*config.on_user_input_request);
+
+            if (config.on_elicitation_request.has_value())
+                session->register_elicitation_handler(*config.on_elicitation_request);
+            if (config.on_exit_plan_mode.has_value())
+                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
+            if (config.on_auto_mode_switch.has_value())
+                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
+            if (config.on_event.has_value())
+                session->register_persistent_event_handler(*config.on_event);
 
             // Register hooks locally (server will call hooks.invoke)
             if (config.hooks.has_value())
@@ -1257,6 +1281,63 @@ json Client::handle_user_input_request(const json& params)
         response["answer"] = result.answer;
         response["wasFreeform"] = result.was_freeform;
         return response;
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
+json Client::handle_elicitation_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto context = params.get<ElicitationContext>();
+        return json(session->handle_elicitation_request(context));
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
+json Client::handle_exit_plan_mode_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto request = params.get<ExitPlanModeRequest>();
+        return json(session->handle_exit_plan_mode_request(request));
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
+json Client::handle_auto_mode_switch_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto request = params.get<AutoModeSwitchRequest>();
+        return json(session->handle_auto_mode_switch_request(request));
     }
     catch (const std::exception& e)
     {

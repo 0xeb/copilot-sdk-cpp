@@ -27,6 +27,7 @@ using json = nlohmann::json;
 // Forward declarations
 class Session;
 struct SessionEvent;
+using EventHandler = std::function<void(const SessionEvent&)>;
 
 // =============================================================================
 // Protocol Version
@@ -379,6 +380,258 @@ struct UserInputInvocation
 
 /// Handler for user input requests from the agent
 using UserInputHandler = std::function<UserInputResponse(const UserInputRequest&, const UserInputInvocation&)>;
+
+// =============================================================================
+// Elicitation Types
+// =============================================================================
+
+/// Elicitation display mode
+enum class ElicitationRequestedMode
+{
+    Form,
+    Url
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ElicitationRequestedMode,
+    {
+        {ElicitationRequestedMode::Form, "form"},
+        {ElicitationRequestedMode::Url, "url"},
+    }
+)
+
+/// JSON Schema for elicitation form fields
+struct ElicitationSchema
+{
+    std::string type = "object";
+    std::optional<std::map<std::string, json>> properties;
+    std::optional<std::vector<std::string>> required;
+};
+
+inline void to_json(json& j, const ElicitationSchema& s)
+{
+    j = json{{"type", s.type}};
+    if (s.properties)
+        j["properties"] = *s.properties;
+    if (s.required)
+        j["required"] = *s.required;
+}
+
+inline void from_json(const json& j, ElicitationSchema& s)
+{
+    if (j.contains("type"))
+        j.at("type").get_to(s.type);
+    if (j.contains("properties"))
+        s.properties = j.at("properties").get<std::map<std::string, json>>();
+    if (j.contains("required"))
+        s.required = j.at("required").get<std::vector<std::string>>();
+}
+
+/// User action for elicitation response
+enum class ElicitationAction
+{
+    Accept,
+    Decline,
+    Cancel
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ElicitationAction,
+    {
+        {ElicitationAction::Accept, "accept"},
+        {ElicitationAction::Decline, "decline"},
+        {ElicitationAction::Cancel, "cancel"},
+    }
+)
+
+/// Context for an elicitation request from the server
+struct ElicitationContext
+{
+    std::string session_id;
+    std::string message;
+    std::optional<ElicitationSchema> requested_schema;
+    std::optional<ElicitationRequestedMode> mode;
+    std::optional<std::string> elicitation_source;
+    std::optional<std::string> url;
+};
+
+inline void from_json(const json& j, ElicitationContext& c)
+{
+    if (j.contains("sessionId"))
+        j.at("sessionId").get_to(c.session_id);
+    j.at("message").get_to(c.message);
+    if (j.contains("requestedSchema") && !j["requestedSchema"].is_null())
+        c.requested_schema = j.at("requestedSchema").get<ElicitationSchema>();
+    if (j.contains("mode") && !j["mode"].is_null())
+        c.mode = j.at("mode").get<ElicitationRequestedMode>();
+    if (j.contains("elicitationSource") && !j["elicitationSource"].is_null())
+        c.elicitation_source = j.at("elicitationSource").get<std::string>();
+    if (j.contains("url") && !j["url"].is_null())
+        c.url = j.at("url").get<std::string>();
+}
+
+inline void to_json(json& j, const ElicitationContext& c)
+{
+    j = json{{"message", c.message}};
+    if (!c.session_id.empty())
+        j["sessionId"] = c.session_id;
+    if (c.requested_schema)
+        j["requestedSchema"] = *c.requested_schema;
+    if (c.mode)
+        j["mode"] = *c.mode;
+    if (c.elicitation_source)
+        j["elicitationSource"] = *c.elicitation_source;
+    if (c.url)
+        j["url"] = *c.url;
+}
+
+/// Result returned from an elicitation dialog
+struct ElicitationResult
+{
+    ElicitationAction action = ElicitationAction::Cancel;
+    std::optional<std::map<std::string, json>> content;
+};
+
+inline void to_json(json& j, const ElicitationResult& r)
+{
+    j = json{{"action", r.action}};
+    if (r.content)
+        j["content"] = *r.content;
+}
+
+inline void from_json(const json& j, ElicitationResult& r)
+{
+    j.at("action").get_to(r.action);
+    if (j.contains("content") && !j["content"].is_null())
+        r.content = j.at("content").get<std::map<std::string, json>>();
+}
+
+/// Elicitation handler function type
+using ElicitationHandler = std::function<ElicitationResult(const ElicitationContext&)>;
+
+// =============================================================================
+// Exit Plan Mode Types
+// =============================================================================
+
+/// Request to exit plan mode
+struct ExitPlanModeRequest
+{
+    std::string summary;
+    std::optional<std::string> plan_content;
+    std::vector<std::string> actions;
+    std::string recommended_action = "autopilot";
+};
+
+inline void from_json(const json& j, ExitPlanModeRequest& r)
+{
+    j.at("summary").get_to(r.summary);
+    if (j.contains("planContent") && !j["planContent"].is_null())
+        r.plan_content = j.at("planContent").get<std::string>();
+    if (j.contains("actions"))
+        r.actions = j.at("actions").get<std::vector<std::string>>();
+    if (j.contains("recommendedAction"))
+        j.at("recommendedAction").get_to(r.recommended_action);
+}
+
+inline void to_json(json& j, const ExitPlanModeRequest& r)
+{
+    j = json{{"summary", r.summary}, {"recommendedAction", r.recommended_action}};
+    if (r.plan_content)
+        j["planContent"] = *r.plan_content;
+    if (!r.actions.empty())
+        j["actions"] = r.actions;
+}
+
+/// Response to an exit-plan-mode request
+struct ExitPlanModeResult
+{
+    bool approved = true;
+    std::optional<std::string> selected_action;
+    std::optional<std::string> feedback;
+};
+
+inline void to_json(json& j, const ExitPlanModeResult& r)
+{
+    j = json{{"approved", r.approved}};
+    if (r.selected_action)
+        j["selectedAction"] = *r.selected_action;
+    if (r.feedback)
+        j["feedback"] = *r.feedback;
+}
+
+inline void from_json(const json& j, ExitPlanModeResult& r)
+{
+    j.at("approved").get_to(r.approved);
+    if (j.contains("selectedAction") && !j["selectedAction"].is_null())
+        r.selected_action = j.at("selectedAction").get<std::string>();
+    if (j.contains("feedback") && !j["feedback"].is_null())
+        r.feedback = j.at("feedback").get<std::string>();
+}
+
+/// Context for exit-plan-mode invocation
+struct ExitPlanModeInvocation
+{
+    std::string session_id;
+};
+
+/// Exit plan mode handler function type
+using ExitPlanModeHandler =
+    std::function<ExitPlanModeResult(const ExitPlanModeRequest&, const ExitPlanModeInvocation&)>;
+
+// =============================================================================
+// Auto Mode Switch Types
+// =============================================================================
+
+/// Request to switch to auto mode after a rate limit
+struct AutoModeSwitchRequest
+{
+    std::optional<std::string> error_code;
+    std::optional<double> retry_after_seconds;
+};
+
+inline void from_json(const json& j, AutoModeSwitchRequest& r)
+{
+    if (j.contains("errorCode") && !j["errorCode"].is_null())
+        r.error_code = j.at("errorCode").get<std::string>();
+    if (j.contains("retryAfterSeconds") && !j["retryAfterSeconds"].is_null())
+        r.retry_after_seconds = j.at("retryAfterSeconds").get<double>();
+}
+
+inline void to_json(json& j, const AutoModeSwitchRequest& r)
+{
+    j = json::object();
+    if (r.error_code)
+        j["errorCode"] = *r.error_code;
+    if (r.retry_after_seconds)
+        j["retryAfterSeconds"] = *r.retry_after_seconds;
+}
+
+/// Response to auto-mode-switch request
+enum class AutoModeSwitchResponse
+{
+    Yes,
+    YesAlways,
+    No
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    AutoModeSwitchResponse,
+    {
+        {AutoModeSwitchResponse::Yes, "yes"},
+        {AutoModeSwitchResponse::YesAlways, "yes_always"},
+        {AutoModeSwitchResponse::No, "no"},
+    }
+)
+
+/// Context for auto-mode-switch invocation
+struct AutoModeSwitchInvocation
+{
+    std::string session_id;
+};
+
+/// Auto mode switch handler function type
+using AutoModeSwitchHandler =
+    std::function<AutoModeSwitchResponse(const AutoModeSwitchRequest&, const AutoModeSwitchInvocation&)>;
 
 // =============================================================================
 // Hook Handler Types
@@ -1150,6 +1403,18 @@ struct SessionConfig
     /// Handler for user input requests from the agent (enables ask_user tool).
     std::optional<UserInputHandler> on_user_input_request;
 
+    /// Handler for elicitation requests from the server.
+    std::optional<ElicitationHandler> on_elicitation_request;
+
+    /// Handler for exit-plan-mode requests from the agent.
+    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
+
+    /// Handler for auto-mode-switch requests.
+    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
+
+    /// Pre-registered event handler - wired up when session is created.
+    std::optional<EventHandler> on_event;
+
     /// Hook handlers for session lifecycle events.
     std::optional<SessionHooks> hooks;
 
@@ -1236,6 +1501,18 @@ struct ResumeSessionConfig
 
     /// Handler for user input requests from the agent (enables ask_user tool).
     std::optional<UserInputHandler> on_user_input_request;
+
+    /// Handler for elicitation requests from the server.
+    std::optional<ElicitationHandler> on_elicitation_request;
+
+    /// Handler for exit-plan-mode requests from the agent.
+    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
+
+    /// Handler for auto-mode-switch requests.
+    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
+
+    /// Pre-registered event handler - wired up when session is created.
+    std::optional<EventHandler> on_event;
 
     /// Hook handlers for session lifecycle events.
     std::optional<SessionHooks> hooks;

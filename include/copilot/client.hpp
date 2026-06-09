@@ -258,6 +258,10 @@ class Client
     /// Handle incoming user input requests
     json handle_user_input_request(const json& params);
 
+    json handle_elicitation_request(const json& params);
+    json handle_exit_plan_mode_request(const json& params);
+    json handle_auto_mode_switch_request(const json& params);
+
     /// Handle incoming hook invocations
     json handle_hooks_invoke(const json& params);
 

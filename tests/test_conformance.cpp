@@ -19,7 +19,8 @@
 ///   * Omission tests for v0.1.49 SessionConfig / ResumeSessionConfig fields
 ///     (no field on the wire when the option is not set).
 ///   * Pending lifecycle: server-side `tool.call`, `permission.request`,
-///     `userInput.request` requests dispatched through a stub RPC peer, with
+///     `userInput.request`, `elicitation.request`, `exitPlanMode.request`,
+///     and `autoModeSwitch.request` dispatched through a stub RPC peer, with
 ///     reply payload assertions.
 ///   * Session-event fixture parsing through `parse_session_event` /
 ///     `json::get<SessionEvent>()` for major event families.
@@ -573,7 +574,326 @@ TEST(ConformanceSessionPayload, ResumeRequestOmitsAllV0149FieldsByDefault)
 }
 
 // =============================================================================
-// Section C. Pending lifecycle: tool.call / permission.request / userInput.request
+// Section C. Callback + parity type serialization
+// =============================================================================
+
+TEST(ConformanceTypes, ElicitationRequestedModeEnumRoundTrip)
+{
+    const std::vector<std::pair<ElicitationRequestedMode, const char*>> cases = {
+        {ElicitationRequestedMode::Form, "form"},
+        {ElicitationRequestedMode::Url, "url"},
+    };
+
+    for (const auto& [value, wire] : cases)
+    {
+        json j = value;
+        EXPECT_EQ(j, wire);
+        EXPECT_EQ(j.get<ElicitationRequestedMode>(), value);
+    }
+}
+
+TEST(ConformanceTypes, ElicitationActionEnumRoundTrip)
+{
+    const std::vector<std::pair<ElicitationAction, const char*>> cases = {
+        {ElicitationAction::Accept, "accept"},
+        {ElicitationAction::Decline, "decline"},
+        {ElicitationAction::Cancel, "cancel"},
+    };
+
+    for (const auto& [value, wire] : cases)
+    {
+        json j = value;
+        EXPECT_EQ(j, wire);
+        EXPECT_EQ(j.get<ElicitationAction>(), value);
+    }
+}
+
+TEST(ConformanceTypes, AutoModeSwitchResponseEnumRoundTrip)
+{
+    const std::vector<std::pair<AutoModeSwitchResponse, const char*>> cases = {
+        {AutoModeSwitchResponse::Yes, "yes"},
+        {AutoModeSwitchResponse::YesAlways, "yes_always"},
+        {AutoModeSwitchResponse::No, "no"},
+    };
+
+    for (const auto& [value, wire] : cases)
+    {
+        json j = value;
+        EXPECT_EQ(j, wire);
+        EXPECT_EQ(j.get<AutoModeSwitchResponse>(), value);
+    }
+}
+
+TEST(ConformanceTypes, ElicitationSchemaRoundTrip)
+{
+    ElicitationSchema schema;
+    schema.properties = std::map<std::string, json>{
+        {"name", json{{"type", "string"}}},
+        {"age", json{{"type", "number"}, {"minimum", 0}}},
+    };
+    schema.required = std::vector<std::string>{"name"};
+
+    json j = schema;
+    EXPECT_EQ(j["type"], "object");
+    EXPECT_EQ(j["properties"]["name"]["type"], "string");
+    EXPECT_EQ(j["required"][0], "name");
+
+    auto parsed = j.get<ElicitationSchema>();
+    EXPECT_EQ(parsed.type, "object");
+    ASSERT_TRUE(parsed.properties.has_value());
+    ASSERT_TRUE(parsed.required.has_value());
+    EXPECT_EQ(parsed.properties->at("age")["minimum"], 0);
+    EXPECT_EQ((*parsed.required)[0], "name");
+}
+
+TEST(ConformanceTypes, ElicitationContextFromJsonAllFields)
+{
+    json input = {
+        {"sessionId", "sess-elicit"},
+        {"message", "Need more info"},
+        {"requestedSchema",
+         {{"type", "object"},
+          {"properties", {{"email", {{"type", "string"}, {"format", "email"}}}}},
+          {"required", json::array({"email"})}}},
+        {"mode", "form"},
+        {"elicitationSource", "tool"},
+        {"url", "https://example.invalid/form"},
+    };
+
+    auto context = input.get<ElicitationContext>();
+    EXPECT_EQ(context.session_id, "sess-elicit");
+    EXPECT_EQ(context.message, "Need more info");
+    ASSERT_TRUE(context.requested_schema.has_value());
+    ASSERT_TRUE(context.requested_schema->properties.has_value());
+    EXPECT_EQ(context.requested_schema->properties->at("email")["format"], "email");
+    EXPECT_EQ(context.mode, std::optional<ElicitationRequestedMode>(ElicitationRequestedMode::Form));
+    EXPECT_EQ(context.elicitation_source, std::optional<std::string>("tool"));
+    EXPECT_EQ(context.url, std::optional<std::string>("https://example.invalid/form"));
+}
+
+TEST(ConformanceTypes, ElicitationResultRoundTripVariants)
+{
+    ElicitationResult accepted;
+    accepted.action = ElicitationAction::Accept;
+    accepted.content = std::map<std::string, json>{
+        {"choice", "allow"},
+        {"confidence", 0.9},
+    };
+
+    json accepted_json = accepted;
+    EXPECT_EQ(accepted_json["action"], "accept");
+    EXPECT_EQ(accepted_json["content"]["choice"], "allow");
+
+    auto accepted_back = accepted_json.get<ElicitationResult>();
+    EXPECT_EQ(accepted_back.action, ElicitationAction::Accept);
+    ASSERT_TRUE(accepted_back.content.has_value());
+    EXPECT_EQ(accepted_back.content->at("confidence"), 0.9);
+
+    ElicitationResult cancelled;
+    cancelled.action = ElicitationAction::Cancel;
+    json cancelled_json = cancelled;
+    EXPECT_EQ(cancelled_json, (json{{"action", "cancel"}}));
+
+    auto cancelled_back = cancelled_json.get<ElicitationResult>();
+    EXPECT_EQ(cancelled_back.action, ElicitationAction::Cancel);
+    EXPECT_FALSE(cancelled_back.content.has_value());
+}
+
+TEST(ConformanceTypes, ExitPlanModeRequestRoundTrip)
+{
+    ExitPlanModeRequest request;
+    request.summary = "Plan complete";
+    request.plan_content = "1. Build\n2. Test";
+    request.actions = {"autopilot", "stay_in_plan", "cancel"};
+    request.recommended_action = "stay_in_plan";
+
+    json j = request;
+    EXPECT_EQ(j["summary"], "Plan complete");
+    EXPECT_EQ(j["planContent"], "1. Build\n2. Test");
+    EXPECT_EQ(j["actions"][1], "stay_in_plan");
+    EXPECT_EQ(j["recommendedAction"], "stay_in_plan");
+
+    auto parsed = j.get<ExitPlanModeRequest>();
+    EXPECT_EQ(parsed.summary, request.summary);
+    EXPECT_EQ(parsed.plan_content, request.plan_content);
+    EXPECT_EQ(parsed.actions, request.actions);
+    EXPECT_EQ(parsed.recommended_action, request.recommended_action);
+}
+
+TEST(ConformanceTypes, ExitPlanModeResultRoundTripVariants)
+{
+    ExitPlanModeResult approved;
+    approved.approved = true;
+    approved.selected_action = "autopilot";
+    approved.feedback = "Proceed";
+
+    json approved_json = approved;
+    EXPECT_TRUE(approved_json["approved"].get<bool>());
+    EXPECT_EQ(approved_json["selectedAction"], "autopilot");
+    EXPECT_EQ(approved_json["feedback"], "Proceed");
+
+    auto approved_back = approved_json.get<ExitPlanModeResult>();
+    EXPECT_TRUE(approved_back.approved);
+    EXPECT_EQ(approved_back.selected_action, std::optional<std::string>("autopilot"));
+    EXPECT_EQ(approved_back.feedback, std::optional<std::string>("Proceed"));
+
+    ExitPlanModeResult defaults;
+    json default_json = defaults;
+    EXPECT_EQ(default_json, (json{{"approved", true}}));
+
+    auto defaults_back = default_json.get<ExitPlanModeResult>();
+    EXPECT_TRUE(defaults_back.approved);
+    EXPECT_FALSE(defaults_back.selected_action.has_value());
+    EXPECT_FALSE(defaults_back.feedback.has_value());
+}
+
+TEST(ConformanceTypes, AutoModeSwitchRequestRoundTrip)
+{
+    AutoModeSwitchRequest request;
+    request.error_code = "rate_limit";
+    request.retry_after_seconds = 12.5;
+
+    json j = request;
+    EXPECT_EQ(j["errorCode"], "rate_limit");
+    EXPECT_DOUBLE_EQ(j["retryAfterSeconds"].get<double>(), 12.5);
+
+    auto parsed = j.get<AutoModeSwitchRequest>();
+    EXPECT_EQ(parsed.error_code, std::optional<std::string>("rate_limit"));
+    ASSERT_TRUE(parsed.retry_after_seconds.has_value());
+    EXPECT_DOUBLE_EQ(*parsed.retry_after_seconds, 12.5);
+}
+
+TEST(ConformanceSessionPayload, CreateRequestOmitsClientOnlyHandlerFields)
+{
+    SessionConfig cfg;
+    cfg.on_permission_request = [](const PermissionRequest&) { return PermissionRequestResult{}; };
+    cfg.on_user_input_request = [](const UserInputRequest&, const UserInputInvocation&) {
+        return UserInputResponse{.answer = "ok"};
+    };
+    cfg.on_elicitation_request = [](const ElicitationContext&) {
+        return ElicitationResult{.action = ElicitationAction::Accept};
+    };
+    cfg.on_exit_plan_mode = [](const ExitPlanModeRequest&, const ExitPlanModeInvocation&) {
+        return ExitPlanModeResult{};
+    };
+    cfg.on_auto_mode_switch = [](const AutoModeSwitchRequest&, const AutoModeSwitchInvocation&) {
+        return AutoModeSwitchResponse::Yes;
+    };
+    cfg.on_event = [](const SessionEvent&) {};
+
+    auto req = build_session_create_request(cfg);
+    EXPECT_TRUE(req["requestPermission"].get<bool>());
+    EXPECT_TRUE(req["requestUserInput"].get<bool>());
+
+    for (const char* key : {"onPermissionRequest",
+                            "onUserInputRequest",
+                            "onElicitationRequest",
+                            "onExitPlanMode",
+                            "onAutoModeSwitch",
+                            "onEvent",
+                            "requestElicitation",
+                            "requestExitPlanMode",
+                            "requestAutoModeSwitch"})
+    {
+        EXPECT_FALSE(req.contains(key)) << key;
+    }
+}
+
+TEST(ConformanceTypes, SectionOverrideActionEnumRoundTrip)
+{
+    const std::vector<std::pair<SectionOverrideAction, const char*>> cases = {
+        {SectionOverrideAction::Replace, "replace"},
+        {SectionOverrideAction::Remove, "remove"},
+        {SectionOverrideAction::Append, "append"},
+        {SectionOverrideAction::Prepend, "prepend"},
+        {SectionOverrideAction::Transform, "transform"},
+    };
+
+    for (const auto& [value, wire] : cases)
+    {
+        json j = value;
+        EXPECT_EQ(j, wire);
+        EXPECT_EQ(j.get<SectionOverrideAction>(), value);
+    }
+}
+
+TEST(ConformanceSessionPayload, SessionConfigDefaultAgentUsesExpectedWireShape)
+{
+    SessionConfig cfg;
+    cfg.default_agent = DefaultAgentConfig{.excluded_tools = std::vector<std::string>{"bash", "write_file"}};
+
+    auto req = build_session_create_request(cfg);
+    ASSERT_TRUE(req.contains("defaultAgent"));
+    EXPECT_EQ(req["defaultAgent"]["excludedTools"], json::array({"bash", "write_file"}));
+}
+
+TEST(ConformanceTypes, ProviderConfigRoundTripWithNewFields)
+{
+    ProviderConfig config{
+        .type = "azure",
+        .headers = std::map<std::string, std::string>{{"X-Test", "value"}},
+        .model_id = "gpt-4.1",
+        .wire_model = "deployment-name",
+        .max_input_tokens = 12345,
+        .max_output_tokens = 678,
+    };
+
+    json j = config;
+    EXPECT_EQ(j["headers"]["X-Test"], "value");
+    EXPECT_EQ(j["modelId"], "gpt-4.1");
+    EXPECT_EQ(j["wireModel"], "deployment-name");
+    EXPECT_EQ(j["maxPromptTokens"], 12345);
+    EXPECT_EQ(j["maxOutputTokens"], 678);
+
+    auto parsed = j.get<ProviderConfig>();
+    ASSERT_TRUE(parsed.headers.has_value());
+    EXPECT_EQ(parsed.headers->at("X-Test"), "value");
+    EXPECT_EQ(parsed.model_id, std::optional<std::string>("gpt-4.1"));
+    EXPECT_EQ(parsed.wire_model, std::optional<std::string>("deployment-name"));
+    EXPECT_EQ(parsed.max_input_tokens, std::optional<int>(12345));
+    EXPECT_EQ(parsed.max_output_tokens, std::optional<int>(678));
+}
+
+TEST(ConformanceTypes, SystemMessageModeCustomizeSerializes)
+{
+    json j = SystemMessageMode::Customize;
+    EXPECT_EQ(j, "customize");
+    EXPECT_EQ(j.get<SystemMessageMode>(), SystemMessageMode::Customize);
+}
+
+TEST(ConformanceTypes, McpHttpServerConfigOauthGrantTypeEnumRoundTrip)
+{
+    const std::vector<std::pair<McpHttpServerConfigOauthGrantType, const char*>> cases = {
+        {McpHttpServerConfigOauthGrantType::AuthorizationCode, "authorization_code"},
+        {McpHttpServerConfigOauthGrantType::ClientCredentials, "client_credentials"},
+    };
+
+    for (const auto& [value, wire] : cases)
+    {
+        json j = value;
+        EXPECT_EQ(j, wire);
+        EXPECT_EQ(j.get<McpHttpServerConfigOauthGrantType>(), value);
+    }
+}
+
+TEST(ConformanceDefaults, SessionCallbackDefaultsAreSafe)
+{
+    auto session = std::make_shared<Session>("sess-defaults", nullptr);
+
+    auto elicitation = session->handle_elicitation_request(ElicitationContext{.message = "Need input"});
+    EXPECT_EQ(elicitation.action, ElicitationAction::Cancel);
+    EXPECT_FALSE(elicitation.content.has_value());
+
+    auto exit_plan = session->handle_exit_plan_mode_request(ExitPlanModeRequest{.summary = "done"});
+    EXPECT_TRUE(exit_plan.approved);
+    EXPECT_FALSE(exit_plan.selected_action.has_value());
+    EXPECT_FALSE(exit_plan.feedback.has_value());
+
+    EXPECT_EQ(session->handle_auto_mode_switch_request(AutoModeSwitchRequest{}), AutoModeSwitchResponse::No);
+}
+
+// =============================================================================
+// Section D. Pending lifecycle: tool.call / permission.request / userInput.request
 // =============================================================================
 
 TEST(ConformancePending, ToolCallInvokesHandlerAndReturnsResultPayload)
@@ -694,7 +1014,138 @@ TEST(ConformancePending, UserInputRequestDispatchesToHandlerAndReturnsAnswer)
 }
 
 // =============================================================================
-// Section D. Session-event fixture parsing
+// Section E. New pending callback handlers
+// =============================================================================
+
+TEST(ConformancePending, ElicitationRequestDispatchesToConfiguredHandler)
+{
+    ConnectedHarness h;
+    SessionConfig cfg;
+    cfg.on_elicitation_request = [](const ElicitationContext& context) -> ElicitationResult
+    {
+        EXPECT_EQ(context.session_id, "sess-conf-1");
+        EXPECT_EQ(context.message, "Need approval");
+        EXPECT_EQ(context.mode, std::optional<ElicitationRequestedMode>(ElicitationRequestedMode::Form));
+
+        ElicitationResult result;
+        result.action = ElicitationAction::Accept;
+        result.content = std::map<std::string, json>{{"approved", true}, {"reason", "looks good"}};
+        return result;
+    };
+
+    auto session = h.client->create_session(cfg).get();
+    auto fut = h.peer->inject_request(
+        "elicitation.request",
+        json{
+            {"sessionId", session->session_id()},
+            {"message", "Need approval"},
+            {"requestedSchema",
+             {{"type", "object"},
+              {"properties", {{"approved", {{"type", "boolean"}}}}},
+              {"required", json::array({"approved"})}}},
+            {"mode", "form"},
+            {"elicitationSource", "tool"},
+        });
+
+    ASSERT_EQ(fut.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    json reply = fut.get();
+    EXPECT_EQ(reply["action"], "accept");
+    EXPECT_TRUE(reply["content"]["approved"].get<bool>());
+    EXPECT_EQ(reply["content"]["reason"], "looks good");
+}
+
+TEST(ConformancePending, ExitPlanModeRequestDispatchesToConfiguredHandler)
+{
+    ConnectedHarness h;
+    SessionConfig cfg;
+    cfg.on_exit_plan_mode =
+        [](const ExitPlanModeRequest& request, const ExitPlanModeInvocation& invocation) -> ExitPlanModeResult
+    {
+        EXPECT_EQ(invocation.session_id, "sess-conf-1");
+        EXPECT_EQ(request.summary, "Plan ready");
+        EXPECT_EQ(request.recommended_action, "autopilot");
+
+        ExitPlanModeResult result;
+        result.approved = false;
+        result.selected_action = "stay_in_plan";
+        result.feedback = "Need another review";
+        return result;
+    };
+
+    auto session = h.client->create_session(cfg).get();
+    auto fut = h.peer->inject_request(
+        "exitPlanMode.request",
+        json{
+            {"sessionId", session->session_id()},
+            {"summary", "Plan ready"},
+            {"planContent", "1. Do the work"},
+            {"actions", json::array({"autopilot", "stay_in_plan"})},
+            {"recommendedAction", "autopilot"},
+        });
+
+    ASSERT_EQ(fut.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    json reply = fut.get();
+    EXPECT_FALSE(reply["approved"].get<bool>());
+    EXPECT_EQ(reply["selectedAction"], "stay_in_plan");
+    EXPECT_EQ(reply["feedback"], "Need another review");
+}
+
+TEST(ConformancePending, AutoModeSwitchRequestDispatchesToConfiguredHandler)
+{
+    ConnectedHarness h;
+    SessionConfig cfg;
+    cfg.on_auto_mode_switch =
+        [](const AutoModeSwitchRequest& request, const AutoModeSwitchInvocation& invocation) {
+            EXPECT_EQ(invocation.session_id, "sess-conf-1");
+            EXPECT_EQ(request.error_code, std::optional<std::string>("rate_limit"));
+            EXPECT_TRUE(request.retry_after_seconds.has_value());
+            if (!request.retry_after_seconds.has_value())
+                return AutoModeSwitchResponse::No;
+            EXPECT_DOUBLE_EQ(*request.retry_after_seconds, 30.0);
+            return AutoModeSwitchResponse::YesAlways;
+        };
+
+    auto session = h.client->create_session(cfg).get();
+    auto fut = h.peer->inject_request(
+        "autoModeSwitch.request",
+        json{
+            {"sessionId", session->session_id()},
+            {"errorCode", "rate_limit"},
+            {"retryAfterSeconds", 30.0},
+        });
+
+    ASSERT_EQ(fut.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    EXPECT_EQ(fut.get(), "yes_always");
+}
+
+TEST(ConformancePending, ResumeSessionPreRegistersOnEventHandler)
+{
+    ConnectedHarness h;
+    ResumeSessionConfig cfg;
+    auto ready = std::make_shared<std::promise<SessionEventType>>();
+    auto seen = std::make_shared<std::atomic<bool>>(false);
+    auto ready_future = ready->get_future();
+
+    cfg.on_event = [ready, seen](const SessionEvent& event)
+    {
+        if (!seen->exchange(true))
+            ready->set_value(event.type);
+    };
+
+    auto session = h.client->resume_session("sess-resume-on-event", cfg).get();
+    ASSERT_TRUE(h.peer->send_notification(
+        "session.event",
+        json{
+            {"sessionId", session->session_id()},
+            {"event", envelope("session.idle", json::object())},
+        }));
+
+    ASSERT_EQ(ready_future.wait_for(std::chrono::seconds(5)), std::future_status::ready);
+    EXPECT_EQ(ready_future.get(), SessionEventType::SessionIdle);
+}
+
+// =============================================================================
+// Section F. Session-event fixture parsing
 // =============================================================================
 
 TEST(ConformanceEvents, ParsesSessionIdleFromWireEnvelope)
