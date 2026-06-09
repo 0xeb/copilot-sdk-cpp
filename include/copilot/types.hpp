@@ -1291,6 +1291,14 @@ struct Tool
     /// When true, the tool can execute without a permission prompt.
     /// (Upstream v0.1.49+)
     bool skip_permission = false;
+
+    /// Fluent setter — mark this tool as not requiring permission prompts.
+    Tool& with_skip_permission(bool value = true) & { skip_permission = value; return *this; }
+    Tool  with_skip_permission(bool value = true) && { skip_permission = value; return std::move(*this); }
+
+    /// Fluent setter — mark this tool as replacing a built-in CLI tool.
+    Tool& with_overrides_built_in_tool(bool value = true) & { overrides_built_in_tool = value; return *this; }
+    Tool  with_overrides_built_in_tool(bool value = true) && { overrides_built_in_tool = value; return std::move(*this); }
 };
 
 // =============================================================================
