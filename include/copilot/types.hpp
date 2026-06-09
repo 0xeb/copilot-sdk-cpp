@@ -27,13 +27,19 @@ using json = nlohmann::json;
 // Forward declarations
 class Session;
 struct SessionEvent;
+using EventHandler = std::function<void(const SessionEvent&)>;
 
 // =============================================================================
 // Protocol Version
 // =============================================================================
 
-/// SDK protocol version - must match copilot-agent-runtime server
-inline constexpr int kSdkProtocolVersion = 2;
+/// Maximum SDK protocol version supported (matches copilot-agent-runtime server).
+/// Upstream nodejs SDK_PROTOCOL_VERSION = 3 since v0.1.24-series.
+inline constexpr int kSdkProtocolVersion = 3;
+
+/// Minimum SDK protocol version this SDK can communicate with.
+/// Older servers (reporting < kMinProtocolVersion) are rejected.
+inline constexpr int kMinProtocolVersion = 2;
 
 // =============================================================================
 // Enums
@@ -52,7 +58,25 @@ enum class ConnectionState
 enum class SystemMessageMode
 {
     Append,
-    Replace
+    Replace,
+    Customize
+};
+
+/// Section override action for system message customization
+enum class SectionOverrideAction
+{
+    Replace,
+    Remove,
+    Append,
+    Prepend,
+    Transform
+};
+
+/// OAuth grant type for an MCP HTTP server
+enum class McpHttpServerConfigOauthGrantType
+{
+    AuthorizationCode,
+    ClientCredentials
 };
 
 // JSON enum serialization
@@ -71,6 +95,26 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     {
         {SystemMessageMode::Append, "append"},
         {SystemMessageMode::Replace, "replace"},
+        {SystemMessageMode::Customize, "customize"},
+    }
+)
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SectionOverrideAction,
+    {
+        {SectionOverrideAction::Replace, "replace"},
+        {SectionOverrideAction::Remove, "remove"},
+        {SectionOverrideAction::Append, "append"},
+        {SectionOverrideAction::Prepend, "prepend"},
+        {SectionOverrideAction::Transform, "transform"},
+    }
+)
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    McpHttpServerConfigOauthGrantType,
+    {
+        {McpHttpServerConfigOauthGrantType::AuthorizationCode, "authorization_code"},
+        {McpHttpServerConfigOauthGrantType::ClientCredentials, "client_credentials"},
     }
 )
 
@@ -103,7 +147,8 @@ enum class ToolResultType
     Success,
     Failure,
     Rejected,
-    Denied
+    Denied,
+    Timeout, ///< Added upstream in v0.1.49 series.
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
@@ -113,6 +158,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {ToolResultType::Failure, "failure"},
         {ToolResultType::Rejected, "rejected"},
         {ToolResultType::Denied, "denied"},
+        {ToolResultType::Timeout, "timeout"},
     }
 )
 
@@ -334,6 +380,258 @@ struct UserInputInvocation
 
 /// Handler for user input requests from the agent
 using UserInputHandler = std::function<UserInputResponse(const UserInputRequest&, const UserInputInvocation&)>;
+
+// =============================================================================
+// Elicitation Types
+// =============================================================================
+
+/// Elicitation display mode
+enum class ElicitationRequestedMode
+{
+    Form,
+    Url
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ElicitationRequestedMode,
+    {
+        {ElicitationRequestedMode::Form, "form"},
+        {ElicitationRequestedMode::Url, "url"},
+    }
+)
+
+/// JSON Schema for elicitation form fields
+struct ElicitationSchema
+{
+    std::string type = "object";
+    std::optional<std::map<std::string, json>> properties;
+    std::optional<std::vector<std::string>> required;
+};
+
+inline void to_json(json& j, const ElicitationSchema& s)
+{
+    j = json{{"type", s.type}};
+    if (s.properties)
+        j["properties"] = *s.properties;
+    if (s.required)
+        j["required"] = *s.required;
+}
+
+inline void from_json(const json& j, ElicitationSchema& s)
+{
+    if (j.contains("type"))
+        j.at("type").get_to(s.type);
+    if (j.contains("properties"))
+        s.properties = j.at("properties").get<std::map<std::string, json>>();
+    if (j.contains("required"))
+        s.required = j.at("required").get<std::vector<std::string>>();
+}
+
+/// User action for elicitation response
+enum class ElicitationAction
+{
+    Accept,
+    Decline,
+    Cancel
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ElicitationAction,
+    {
+        {ElicitationAction::Accept, "accept"},
+        {ElicitationAction::Decline, "decline"},
+        {ElicitationAction::Cancel, "cancel"},
+    }
+)
+
+/// Context for an elicitation request from the server
+struct ElicitationContext
+{
+    std::string session_id;
+    std::string message;
+    std::optional<ElicitationSchema> requested_schema;
+    std::optional<ElicitationRequestedMode> mode;
+    std::optional<std::string> elicitation_source;
+    std::optional<std::string> url;
+};
+
+inline void from_json(const json& j, ElicitationContext& c)
+{
+    if (j.contains("sessionId"))
+        j.at("sessionId").get_to(c.session_id);
+    j.at("message").get_to(c.message);
+    if (j.contains("requestedSchema") && !j["requestedSchema"].is_null())
+        c.requested_schema = j.at("requestedSchema").get<ElicitationSchema>();
+    if (j.contains("mode") && !j["mode"].is_null())
+        c.mode = j.at("mode").get<ElicitationRequestedMode>();
+    if (j.contains("elicitationSource") && !j["elicitationSource"].is_null())
+        c.elicitation_source = j.at("elicitationSource").get<std::string>();
+    if (j.contains("url") && !j["url"].is_null())
+        c.url = j.at("url").get<std::string>();
+}
+
+inline void to_json(json& j, const ElicitationContext& c)
+{
+    j = json{{"message", c.message}};
+    if (!c.session_id.empty())
+        j["sessionId"] = c.session_id;
+    if (c.requested_schema)
+        j["requestedSchema"] = *c.requested_schema;
+    if (c.mode)
+        j["mode"] = *c.mode;
+    if (c.elicitation_source)
+        j["elicitationSource"] = *c.elicitation_source;
+    if (c.url)
+        j["url"] = *c.url;
+}
+
+/// Result returned from an elicitation dialog
+struct ElicitationResult
+{
+    ElicitationAction action = ElicitationAction::Cancel;
+    std::optional<std::map<std::string, json>> content;
+};
+
+inline void to_json(json& j, const ElicitationResult& r)
+{
+    j = json{{"action", r.action}};
+    if (r.content)
+        j["content"] = *r.content;
+}
+
+inline void from_json(const json& j, ElicitationResult& r)
+{
+    j.at("action").get_to(r.action);
+    if (j.contains("content") && !j["content"].is_null())
+        r.content = j.at("content").get<std::map<std::string, json>>();
+}
+
+/// Elicitation handler function type
+using ElicitationHandler = std::function<ElicitationResult(const ElicitationContext&)>;
+
+// =============================================================================
+// Exit Plan Mode Types
+// =============================================================================
+
+/// Request to exit plan mode
+struct ExitPlanModeRequest
+{
+    std::string summary;
+    std::optional<std::string> plan_content;
+    std::vector<std::string> actions;
+    std::string recommended_action = "autopilot";
+};
+
+inline void from_json(const json& j, ExitPlanModeRequest& r)
+{
+    j.at("summary").get_to(r.summary);
+    if (j.contains("planContent") && !j["planContent"].is_null())
+        r.plan_content = j.at("planContent").get<std::string>();
+    if (j.contains("actions"))
+        r.actions = j.at("actions").get<std::vector<std::string>>();
+    if (j.contains("recommendedAction"))
+        j.at("recommendedAction").get_to(r.recommended_action);
+}
+
+inline void to_json(json& j, const ExitPlanModeRequest& r)
+{
+    j = json{{"summary", r.summary}, {"recommendedAction", r.recommended_action}};
+    if (r.plan_content)
+        j["planContent"] = *r.plan_content;
+    if (!r.actions.empty())
+        j["actions"] = r.actions;
+}
+
+/// Response to an exit-plan-mode request
+struct ExitPlanModeResult
+{
+    bool approved = true;
+    std::optional<std::string> selected_action;
+    std::optional<std::string> feedback;
+};
+
+inline void to_json(json& j, const ExitPlanModeResult& r)
+{
+    j = json{{"approved", r.approved}};
+    if (r.selected_action)
+        j["selectedAction"] = *r.selected_action;
+    if (r.feedback)
+        j["feedback"] = *r.feedback;
+}
+
+inline void from_json(const json& j, ExitPlanModeResult& r)
+{
+    j.at("approved").get_to(r.approved);
+    if (j.contains("selectedAction") && !j["selectedAction"].is_null())
+        r.selected_action = j.at("selectedAction").get<std::string>();
+    if (j.contains("feedback") && !j["feedback"].is_null())
+        r.feedback = j.at("feedback").get<std::string>();
+}
+
+/// Context for exit-plan-mode invocation
+struct ExitPlanModeInvocation
+{
+    std::string session_id;
+};
+
+/// Exit plan mode handler function type
+using ExitPlanModeHandler =
+    std::function<ExitPlanModeResult(const ExitPlanModeRequest&, const ExitPlanModeInvocation&)>;
+
+// =============================================================================
+// Auto Mode Switch Types
+// =============================================================================
+
+/// Request to switch to auto mode after a rate limit
+struct AutoModeSwitchRequest
+{
+    std::optional<std::string> error_code;
+    std::optional<double> retry_after_seconds;
+};
+
+inline void from_json(const json& j, AutoModeSwitchRequest& r)
+{
+    if (j.contains("errorCode") && !j["errorCode"].is_null())
+        r.error_code = j.at("errorCode").get<std::string>();
+    if (j.contains("retryAfterSeconds") && !j["retryAfterSeconds"].is_null())
+        r.retry_after_seconds = j.at("retryAfterSeconds").get<double>();
+}
+
+inline void to_json(json& j, const AutoModeSwitchRequest& r)
+{
+    j = json::object();
+    if (r.error_code)
+        j["errorCode"] = *r.error_code;
+    if (r.retry_after_seconds)
+        j["retryAfterSeconds"] = *r.retry_after_seconds;
+}
+
+/// Response to auto-mode-switch request
+enum class AutoModeSwitchResponse
+{
+    Yes,
+    YesAlways,
+    No
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    AutoModeSwitchResponse,
+    {
+        {AutoModeSwitchResponse::Yes, "yes"},
+        {AutoModeSwitchResponse::YesAlways, "yes_always"},
+        {AutoModeSwitchResponse::No, "no"},
+    }
+)
+
+/// Context for auto-mode-switch invocation
+struct AutoModeSwitchInvocation
+{
+    std::string session_id;
+};
+
+/// Auto mode switch handler function type
+using AutoModeSwitchHandler =
+    std::function<AutoModeSwitchResponse(const AutoModeSwitchRequest&, const AutoModeSwitchInvocation&)>;
 
 // =============================================================================
 // Hook Handler Types
@@ -588,11 +886,34 @@ struct SessionHooks
 // Configuration Types
 // =============================================================================
 
+/// Override operation for a single system prompt section
+struct SectionOverride
+{
+    SectionOverrideAction action = SectionOverrideAction::Replace;
+    std::optional<std::string> content;
+};
+
+inline void to_json(json& j, const SectionOverride& c)
+{
+    j = json{{"action", c.action}};
+    if (c.content)
+        j["content"] = *c.content;
+}
+
+inline void from_json(const json& j, SectionOverride& c)
+{
+    if (j.contains("action"))
+        c.action = j.at("action").get<SectionOverrideAction>();
+    if (j.contains("content"))
+        c.content = j.at("content").get<std::string>();
+}
+
 /// System message configuration
 struct SystemMessageConfig
 {
     std::optional<SystemMessageMode> mode;
     std::optional<std::string> content;
+    std::optional<std::map<std::string, SectionOverride>> sections;
 };
 
 inline void to_json(json& j, const SystemMessageConfig& c)
@@ -602,6 +923,8 @@ inline void to_json(json& j, const SystemMessageConfig& c)
         j["mode"] = *c.mode;
     if (c.content)
         j["content"] = *c.content;
+    if (c.sections)
+        j["sections"] = *c.sections;
 }
 
 inline void from_json(const json& j, SystemMessageConfig& c)
@@ -610,6 +933,8 @@ inline void from_json(const json& j, SystemMessageConfig& c)
         c.mode = j.at("mode").get<SystemMessageMode>();
     if (j.contains("content"))
         c.content = j.at("content").get<std::string>();
+    if (j.contains("sections"))
+        c.sections = j.at("sections").get<std::map<std::string, SectionOverride>>();
 }
 
 /// Azure-specific provider options
@@ -640,6 +965,11 @@ struct ProviderConfig
     std::optional<std::string> api_key;
     std::optional<std::string> bearer_token;
     std::optional<AzureOptions> azure;
+    std::optional<std::map<std::string, std::string>> headers;
+    std::optional<std::string> model_id;
+    std::optional<std::string> wire_model;
+    std::optional<int> max_input_tokens;
+    std::optional<int> max_output_tokens;
 
     // ─────────────────────────────────────────────────────────────────────────
     // Environment Variable Support
@@ -710,6 +1040,16 @@ inline void to_json(json& j, const ProviderConfig& c)
         j["bearerToken"] = *c.bearer_token;
     if (c.azure)
         j["azure"] = *c.azure;
+    if (c.headers)
+        j["headers"] = *c.headers;
+    if (c.model_id)
+        j["modelId"] = *c.model_id;
+    if (c.wire_model)
+        j["wireModel"] = *c.wire_model;
+    if (c.max_input_tokens)
+        j["maxPromptTokens"] = *c.max_input_tokens;
+    if (c.max_output_tokens)
+        j["maxOutputTokens"] = *c.max_output_tokens;
 }
 
 inline void from_json(const json& j, ProviderConfig& c)
@@ -725,6 +1065,16 @@ inline void from_json(const json& j, ProviderConfig& c)
         c.bearer_token = j.at("bearerToken").get<std::string>();
     if (j.contains("azure"))
         c.azure = j.at("azure").get<AzureOptions>();
+    if (j.contains("headers"))
+        c.headers = j.at("headers").get<std::map<std::string, std::string>>();
+    if (j.contains("modelId"))
+        c.model_id = j.at("modelId").get<std::string>();
+    if (j.contains("wireModel"))
+        c.wire_model = j.at("wireModel").get<std::string>();
+    if (j.contains("maxPromptTokens"))
+        c.max_input_tokens = j.at("maxPromptTokens").get<int>();
+    if (j.contains("maxOutputTokens"))
+        c.max_output_tokens = j.at("maxOutputTokens").get<int>();
 }
 
 // =============================================================================
@@ -818,6 +1168,11 @@ struct CustomAgentConfig
     std::string prompt;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<bool> infer;
+    std::optional<std::vector<std::string>> skills;
+    /// Model identifier for this agent (e.g. "claude-haiku-4.5").
+    /// When set, the runtime will attempt to use this model for the agent,
+    /// falling back to the parent session model if unavailable.
+    std::optional<std::string> model;
 };
 
 inline void to_json(json& j, const CustomAgentConfig& c)
@@ -833,6 +1188,10 @@ inline void to_json(json& j, const CustomAgentConfig& c)
         j["mcpServers"] = *c.mcp_servers;
     if (c.infer)
         j["infer"] = *c.infer;
+    if (c.skills)
+        j["skills"] = *c.skills;
+    if (c.model)
+        j["model"] = *c.model;
 }
 
 inline void from_json(const json& j, CustomAgentConfig& c)
@@ -849,6 +1208,28 @@ inline void from_json(const json& j, CustomAgentConfig& c)
         c.mcp_servers = j.at("mcpServers").get<std::map<std::string, json>>();
     if (j.contains("infer"))
         c.infer = j.at("infer").get<bool>();
+    if (j.contains("skills"))
+        c.skills = j.at("skills").get<std::vector<std::string>>();
+    if (j.contains("model"))
+        c.model = j.at("model").get<std::string>();
+}
+
+struct DefaultAgentConfig
+{
+    std::optional<std::vector<std::string>> excluded_tools;
+};
+
+inline void to_json(json& j, const DefaultAgentConfig& c)
+{
+    j = json::object();
+    if (c.excluded_tools)
+        j["excludedTools"] = *c.excluded_tools;
+}
+
+inline void from_json(const json& j, DefaultAgentConfig& c)
+{
+    if (j.contains("excludedTools"))
+        c.excluded_tools = j.at("excludedTools").get<std::vector<std::string>>();
 }
 
 // =============================================================================
@@ -901,6 +1282,23 @@ struct Tool
     std::string description;
     json parameters_schema;
     ToolHandler handler;
+
+    /// When true, explicitly indicates this tool is intended to override a
+    /// built-in tool of the same name. If not set and the name clashes with
+    /// a built-in tool, the runtime returns an error. (Upstream v0.1.49+)
+    bool overrides_built_in_tool = false;
+
+    /// When true, the tool can execute without a permission prompt.
+    /// (Upstream v0.1.49+)
+    bool skip_permission = false;
+
+    /// Fluent setter — mark this tool as not requiring permission prompts.
+    Tool& with_skip_permission(bool value = true) & { skip_permission = value; return *this; }
+    Tool  with_skip_permission(bool value = true) && { skip_permission = value; return std::move(*this); }
+
+    /// Fluent setter — mark this tool as replacing a built-in CLI tool.
+    Tool& with_overrides_built_in_tool(bool value = true) & { overrides_built_in_tool = value; return *this; }
+    Tool  with_overrides_built_in_tool(bool value = true) && { overrides_built_in_tool = value; return std::move(*this); }
 };
 
 // =============================================================================
@@ -953,11 +1351,31 @@ inline void from_json(const json& j, InfiniteSessionConfig& c)
 // =============================================================================
 
 /// Configuration for creating a new session
+/// Remote session mode (matches upstream nodejs RemoteSessionMode).
+/// Controls how the session is exposed to remote consumers (Mission Control).
+enum class RemoteSessionMode
+{
+    Off,
+    Export,
+    On,
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    RemoteSessionMode,
+    {
+        {RemoteSessionMode::Off, "off"},
+        {RemoteSessionMode::Export, "export"},
+        {RemoteSessionMode::On, "on"},
+    }
+)
+
 struct SessionConfig
 {
     std::optional<std::string> session_id;
     std::optional<std::string> model;
+    std::optional<json> model_capabilities;
     std::vector<Tool> tools;
+    std::optional<std::vector<json>> commands;
     std::optional<SystemMessageConfig> system_message;
     std::optional<std::vector<std::string>> available_tools;
     std::optional<std::vector<std::string>> excluded_tools;
@@ -966,6 +1384,8 @@ struct SessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+    std::optional<DefaultAgentConfig> default_agent;
+    std::optional<std::string> agent;
 
     /// Directories to load skills from.
     std::optional<std::vector<std::string>> skill_directories;
@@ -991,11 +1411,47 @@ struct SessionConfig
     /// Handler for user input requests from the agent (enables ask_user tool).
     std::optional<UserInputHandler> on_user_input_request;
 
+    /// Handler for elicitation requests from the server.
+    std::optional<ElicitationHandler> on_elicitation_request;
+
+    /// Handler for exit-plan-mode requests from the agent.
+    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
+
+    /// Handler for auto-mode-switch requests.
+    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
+
+    /// Pre-registered event handler - wired up when session is created.
+    std::optional<EventHandler> on_event;
+
     /// Hook handlers for session lifecycle events.
     std::optional<SessionHooks> hooks;
 
     /// Working directory for the session.
     std::optional<std::string> working_directory;
+
+    /// GitHub token for per-session authentication.
+    std::optional<std::string> github_token;
+
+    // ===== v0.1.49 additions =====
+
+    /// Client identifier reported to the CLI (PR #510).
+    std::optional<std::string> client_name;
+
+    /// Enable per-session telemetry events (PR #1224).
+    std::optional<bool> enable_session_telemetry;
+
+    /// Forward streaming events emitted by sub-agents (PR #1108).
+    std::optional<bool> include_sub_agent_streaming_events;
+
+    /// Allow the CLI to discover and apply config files in the working directory
+    /// (and ancestors). Default behavior is server-side; this opts in/out (PR #1044).
+    std::optional<bool> enable_config_discovery;
+
+    /// Per-session instruction directories merged with the global instruction set (PR #1190).
+    std::optional<std::vector<std::string>> instruction_directories;
+
+    /// Remote-session mode for Mission Control integration (PR #1295).
+    std::optional<RemoteSessionMode> remote_session;
 };
 
 /// Configuration for resuming an existing session
@@ -1007,6 +1463,8 @@ struct ResumeSessionConfig
     bool streaming = false;
     std::optional<std::map<std::string, json>> mcp_servers;
     std::optional<std::vector<CustomAgentConfig>> custom_agents;
+    std::optional<DefaultAgentConfig> default_agent;
+    std::optional<std::string> agent;
 
     /// Directories to load skills from.
     std::optional<std::vector<std::string>> skill_directories;
@@ -1024,9 +1482,12 @@ struct ResumeSessionConfig
 
     /// Model to use for this session. Can change the model when resuming.
     std::optional<std::string> model;
+    std::optional<json> model_capabilities;
 
     /// Reasoning effort level for models that support it.
     std::optional<ReasoningEffort> reasoning_effort;
+
+    std::optional<std::vector<json>> commands;
 
     /// System message configuration.
     std::optional<SystemMessageConfig> system_message;
@@ -1049,8 +1510,29 @@ struct ResumeSessionConfig
     /// Handler for user input requests from the agent (enables ask_user tool).
     std::optional<UserInputHandler> on_user_input_request;
 
+    /// Handler for elicitation requests from the server.
+    std::optional<ElicitationHandler> on_elicitation_request;
+
+    /// Handler for exit-plan-mode requests from the agent.
+    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
+
+    /// Handler for auto-mode-switch requests.
+    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
+
+    /// Pre-registered event handler - wired up when session is created.
+    std::optional<EventHandler> on_event;
+
     /// Hook handlers for session lifecycle events.
     std::optional<SessionHooks> hooks;
+
+    // ===== v0.1.49 additions (mirror SessionConfig) =====
+
+    std::optional<std::string> client_name;
+    std::optional<bool> enable_session_telemetry;
+    std::optional<bool> include_sub_agent_streaming_events;
+    std::optional<bool> enable_config_discovery;
+    std::optional<std::vector<std::string>> instruction_directories;
+    std::optional<RemoteSessionMode> remote_session;
 };
 
 /// Options for sending a message
@@ -1059,6 +1541,7 @@ struct MessageOptions
     std::string prompt;
     std::optional<std::vector<UserMessageAttachment>> attachments;
     std::optional<std::string> mode;
+    std::optional<std::map<std::string, std::string>> request_headers;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -1068,6 +1551,19 @@ inline void to_json(json& j, const MessageOptions& o)
         j["attachments"] = *o.attachments;
     if (o.mode)
         j["mode"] = *o.mode;
+    if (o.request_headers)
+        j["requestHeaders"] = *o.request_headers;
+}
+
+inline void from_json(const json& j, MessageOptions& o)
+{
+    j.at("prompt").get_to(o.prompt);
+    if (j.contains("attachments"))
+        o.attachments = j.at("attachments").get<std::vector<UserMessageAttachment>>();
+    if (j.contains("mode"))
+        o.mode = j.at("mode").get<std::string>();
+    if (j.contains("requestHeaders"))
+        o.request_headers = j.at("requestHeaders").get<std::map<std::string, std::string>>();
 }
 
 // =============================================================================
@@ -1085,20 +1581,108 @@ struct ClientOptions
     std::optional<std::string> cli_url;
     LogLevel log_level = LogLevel::Info;
     bool auto_start = true;
-    bool auto_restart = true;
+
+    /// @deprecated This option has no effect and will be removed in a future release.
+    /// Retained for source compatibility with v0.1.23 callers; the SDK no longer
+    /// auto-restarts the CLI on exit (matches upstream nodejs SDK semantics).
+    [[deprecated("auto_restart has no effect; will be removed in a future release")]]
+    bool auto_restart = false;
+
     std::optional<std::map<std::string, std::string>> environment;
 
     /// GitHub token for authentication. Cannot be used with cli_url.
+    /// On the wire to the CLI, this is forwarded via the COPILOT_SDK_AUTH_TOKEN
+    /// environment variable plus the --auth-token-env CLI flag.
     std::optional<std::string> github_token;
 
     /// Whether to use logged-in user for auth. Defaults to true when github_token is empty.
     /// Cannot be used with cli_url.
     std::optional<bool> use_logged_in_user;
+
+    /// Connection token for the headless CLI server (TCP only). When the SDK
+    /// spawns its own CLI in TCP mode and this is omitted, a UUID is generated
+    /// automatically so the loopback listener is safe by default. Rejected with
+    /// `use_stdio = true` (stdio is pre-authenticated by transport).
+    /// Forwarded to the CLI via the COPILOT_CONNECTION_TOKEN environment variable.
+    std::optional<std::string> tcp_connection_token;
+
+    /// Custom data directory for the Copilot CLI ($COPILOT_HOME). When omitted,
+    /// the CLI uses its default location (typically ~/.copilot).
+    std::optional<std::string> copilot_home;
+
+    /// Server-wide idle timeout for sessions in seconds.
+    /// Sessions without activity for this duration are automatically cleaned up.
+    /// Set to 0 or omit to disable (sessions live indefinitely).
+    /// Only used when the SDK spawns the CLI process; ignored when connecting to
+    /// an external server via {@link cli_url}.
+    std::optional<int> session_idle_timeout_seconds;
+
+    /// Enable remote session support (Mission Control integration).
+    /// When true, sessions in a GitHub repository working directory are accessible
+    /// from GitHub web and mobile.
+    /// Only used when the SDK spawns the CLI process; ignored when connecting to
+    /// an external server via {@link cli_url}.
+    bool remote = false;
 };
 
 // =============================================================================
 // Response Types
 // =============================================================================
+
+/// Working directory context (cwd, git info) from session creation
+struct SessionContext
+{
+    std::string cwd;
+    std::optional<std::string> git_root;
+    std::optional<std::string> repository; ///< owner/repo
+    std::optional<std::string> branch;
+};
+
+inline void from_json(const json& j, SessionContext& c)
+{
+    if (j.contains("cwd") && !j.at("cwd").is_null())
+        j.at("cwd").get_to(c.cwd);
+    if (j.contains("gitRoot") && !j.at("gitRoot").is_null())
+        c.git_root = j.at("gitRoot").get<std::string>();
+    if (j.contains("repository") && !j.at("repository").is_null())
+        c.repository = j.at("repository").get<std::string>();
+    if (j.contains("branch") && !j.at("branch").is_null())
+        c.branch = j.at("branch").get<std::string>();
+}
+
+inline void to_json(json& j, const SessionContext& c)
+{
+    j = json{{"cwd", c.cwd}};
+    if (c.git_root)
+        j["gitRoot"] = *c.git_root;
+    if (c.repository)
+        j["repository"] = *c.repository;
+    if (c.branch)
+        j["branch"] = *c.branch;
+}
+
+/// Filter for Client::list_sessions(). All fields are optional; only matching
+/// sessions are returned. Matches upstream nodejs SessionListFilter.
+struct SessionListFilter
+{
+    std::optional<std::string> cwd;        ///< exact cwd match
+    std::optional<std::string> git_root;   ///< exact git root match
+    std::optional<std::string> repository; ///< owner/repo
+    std::optional<std::string> branch;
+};
+
+inline void to_json(json& j, const SessionListFilter& f)
+{
+    j = json::object();
+    if (f.cwd)
+        j["cwd"] = *f.cwd;
+    if (f.git_root)
+        j["gitRoot"] = *f.git_root;
+    if (f.repository)
+        j["repository"] = *f.repository;
+    if (f.branch)
+        j["branch"] = *f.branch;
+}
 
 /// Metadata about a session
 struct SessionMetadata
@@ -1108,6 +1692,7 @@ struct SessionMetadata
     std::chrono::system_clock::time_point modified_time;
     std::optional<std::string> summary;
     bool is_remote = false;
+    std::optional<SessionContext> context;
 };
 
 namespace detail
@@ -1256,6 +1841,8 @@ inline void from_json(const json& j, SessionMetadata& m)
         m.summary = j.at("summary").get<std::string>();
     if (j.contains("isRemote"))
         j.at("isRemote").get_to(m.is_remote);
+    if (j.contains("context") && !j.at("context").is_null())
+        m.context = j.at("context").get<SessionContext>();
 }
 
 /// Error reported during client stop/cleanup

@@ -169,6 +169,9 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Subscription handle (unsubscribes on destruction)
     Subscription on(EventHandler handler);
 
+    /// Register an event handler that remains active for the session lifetime.
+    void register_persistent_event_handler(EventHandler handler);
+
     /// Dispatch an event to all subscribers (called by Client)
     void dispatch_event(const SessionEvent& event);
 
@@ -211,6 +214,36 @@ class Session : public std::enable_shared_from_this<Session>
     UserInputResponse handle_user_input_request(const UserInputRequest& request);
 
     // =========================================================================
+    // Elicitation Handling
+    // =========================================================================
+
+    /// Register a handler for elicitation requests
+    void register_elicitation_handler(ElicitationHandler handler);
+
+    /// Handle an elicitation request (called by Client)
+    ElicitationResult handle_elicitation_request(const ElicitationContext& context);
+
+    // =========================================================================
+    // Exit Plan Mode Handling
+    // =========================================================================
+
+    /// Register a handler for exit-plan-mode requests
+    void register_exit_plan_mode_handler(ExitPlanModeHandler handler);
+
+    /// Handle an exit-plan-mode request (called by Client)
+    ExitPlanModeResult handle_exit_plan_mode_request(const ExitPlanModeRequest& request);
+
+    // =========================================================================
+    // Auto Mode Switch Handling
+    // =========================================================================
+
+    /// Register a handler for auto-mode-switch requests
+    void register_auto_mode_switch_handler(AutoModeSwitchHandler handler);
+
+    /// Handle an auto-mode-switch request (called by Client)
+    AutoModeSwitchResponse handle_auto_mode_switch_request(const AutoModeSwitchRequest& request);
+
+    // =========================================================================
     // Hooks
     // =========================================================================
 
@@ -232,6 +265,47 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future that completes when destroyed
     std::future<void> destroy();
 
+    // =========================================================================
+    // Model & Mode (v0.1.49 additions)
+    // =========================================================================
+
+    /// Options for set_model() mirroring upstream session.model.switchTo params.
+    struct SetModelOptions
+    {
+        std::optional<ReasoningEffort> reasoning_effort;
+    };
+
+    /// Switch the session to a different model mid-conversation.
+    /// Calls the v3 session.model.switchTo RPC.
+    /// @param model_id Identifier of the target model
+    /// @param options Optional reasoning effort override
+    /// @return Future that completes when the switch is acknowledged
+    std::future<void> set_model(const std::string& model_id, SetModelOptions options = {});
+
+    /// Get the currently selected model for the session.
+    /// Calls the v3 session.model.getCurrent RPC.
+    /// @return Future resolving to the model identifier (or nullopt if none)
+    std::future<std::optional<std::string>> get_current_model();
+
+    /// Agent interaction mode. Matches upstream nodejs SessionMode union.
+    enum class Mode
+    {
+        Interactive,
+        Plan,
+        Autopilot,
+    };
+
+    /// Set the agent interaction mode.
+    /// Calls the v3 session.mode.set RPC.
+    /// @param mode New mode to apply
+    /// @return Future that completes when the mode change is acknowledged
+    std::future<void> set_mode(Mode mode);
+
+    /// Get the current agent interaction mode.
+    /// Calls the v3 session.mode.get RPC.
+    /// @return Future resolving to the current mode
+    std::future<Mode> get_mode();
+
   private:
     std::string session_id_;
     Client* client_;
@@ -241,6 +315,8 @@ class Session : public std::enable_shared_from_this<Session>
     mutable std::mutex handlers_mutex_;
     std::vector<std::pair<int, EventHandler>> event_handlers_;
     int next_handler_id_ = 0;
+    std::mutex owned_event_subscriptions_mutex_;
+    std::vector<Subscription> owned_event_subscriptions_;
 
     // Tools
     mutable std::mutex tools_mutex_;
@@ -252,6 +328,18 @@ class Session : public std::enable_shared_from_this<Session>
     // User input handler
     std::mutex user_input_mutex_;
     UserInputHandler user_input_handler_;
+
+    // Elicitation handler
+    std::mutex elicitation_mutex_;
+    ElicitationHandler elicitation_handler_;
+
+    // Exit plan mode handler
+    std::mutex exit_plan_mode_mutex_;
+    ExitPlanModeHandler exit_plan_mode_handler_;
+
+    // Auto mode switch handler
+    std::mutex auto_mode_switch_mutex_;
+    AutoModeSwitchHandler auto_mode_switch_handler_;
 
     // Hooks
     std::mutex hooks_mutex_;

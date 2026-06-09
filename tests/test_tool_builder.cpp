@@ -440,3 +440,62 @@ TEST(MakeToolTest, IntAndBoolParams)
     auto result = tool.handler(inv);
     EXPECT_EQ(result.text_result_for_llm, "port=8080,enabled=true");
 }
+
+// =============================================================================
+// Fluent Setter Tests (PR #11 contribution by @tilakpatell)
+// =============================================================================
+
+TEST(ToolFluentSetterTest, SkipPermissionOnLvalue)
+{
+    Tool tool;
+    tool.name = "safe_read";
+    tool.description = "Read-only lookup";
+    EXPECT_FALSE(tool.skip_permission);
+
+    tool.with_skip_permission();
+    EXPECT_TRUE(tool.skip_permission);
+
+    tool.with_skip_permission(false);
+    EXPECT_FALSE(tool.skip_permission);
+}
+
+TEST(ToolFluentSetterTest, OverridesBuiltInOnLvalue)
+{
+    Tool tool;
+    tool.name = "edit_file";
+    tool.description = "Custom editor";
+    EXPECT_FALSE(tool.overrides_built_in_tool);
+
+    tool.with_overrides_built_in_tool();
+    EXPECT_TRUE(tool.overrides_built_in_tool);
+
+    tool.with_overrides_built_in_tool(false);
+    EXPECT_FALSE(tool.overrides_built_in_tool);
+}
+
+TEST(ToolFluentSetterTest, ChainingOnMakeToolResult)
+{
+    auto tool = copilot::make_tool(
+        "safe_lookup", "Read-only lookup",
+        [](std::string query) { return "result: " + query; },
+        {"query"})
+        .with_skip_permission()
+        .with_overrides_built_in_tool();
+
+    EXPECT_EQ(tool.name, "safe_lookup");
+    EXPECT_TRUE(tool.skip_permission);
+    EXPECT_TRUE(tool.overrides_built_in_tool);
+}
+
+TEST(ToolFluentSetterTest, ChainingOnToolBuilder)
+{
+    auto tool = ToolBuilder("my_tool", "A tool")
+        .param<std::string>("input", "Input text")
+        .handler([](const std::string& s) { return s; })
+        .with_skip_permission()
+        .with_overrides_built_in_tool();
+
+    EXPECT_TRUE(tool.skip_permission);
+    EXPECT_TRUE(tool.overrides_built_in_tool);
+    EXPECT_EQ(tool.name, "my_tool");
+}

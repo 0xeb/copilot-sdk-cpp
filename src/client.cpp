@@ -3,7 +3,10 @@
 
 #include <chrono>
 #include <copilot/client.hpp>
+#include <copilot/rpc_methods.hpp>
 #include <copilot/session.hpp>
+#include <cstdio>
+#include <random>
 #include <regex>
 #include <thread>
 
@@ -31,20 +34,12 @@ json build_session_create_request(const SessionConfig& config)
 
     if (config.session_id.has_value())
         request["sessionId"] = *config.session_id;
+    if (config.model_capabilities.has_value())
+        request["modelCapabilities"] = *config.model_capabilities;
     if (config.on_permission_request.has_value())
         request["requestPermission"] = true;
     if (config.system_message.has_value())
-    {
-        json sys_msg;
-        if (config.system_message->content.has_value())
-            sys_msg["content"] = *config.system_message->content;
-        if (config.system_message->mode.has_value())
-        {
-            sys_msg["mode"] =
-                (*config.system_message->mode == SystemMessageMode::Replace) ? "replace" : "append";
-        }
-        request["systemMessage"] = sys_msg;
-    }
+        request["systemMessage"] = *config.system_message;
     // Add custom tool definitions to the request
     if (!config.tools.empty())
     {
@@ -56,10 +51,16 @@ json build_session_create_request(const SessionConfig& config)
             def["description"] = tool.description;
             if (!tool.parameters_schema.is_null())
                 def["parameters"] = tool.parameters_schema;
+            if (tool.overrides_built_in_tool)
+                def["overridesBuiltInTool"] = true;
+            if (tool.skip_permission)
+                def["skipPermission"] = true;
             tool_defs.push_back(def);
         }
         request["tools"] = tool_defs;
     }
+    if (config.commands.has_value())
+        request["commands"] = *config.commands;
     if (config.available_tools.has_value())
         request["availableTools"] = *config.available_tools;
     if (config.excluded_tools.has_value())
@@ -87,6 +88,10 @@ json build_session_create_request(const SessionConfig& config)
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.default_agent.has_value())
+        request["defaultAgent"] = *config.default_agent;
+    if (config.agent.has_value())
+        request["agent"] = *config.agent;
     if (config.skill_directories.has_value())
         request["skillDirectories"] = *config.skill_directories;
     if (config.disabled_skills.has_value())
@@ -103,6 +108,22 @@ json build_session_create_request(const SessionConfig& config)
         request["hooks"] = true;
     if (config.working_directory.has_value())
         request["workingDirectory"] = *config.working_directory;
+    if (config.github_token.has_value())
+        request["githubToken"] = *config.github_token;
+
+    // v0.1.49 additions
+    if (config.client_name.has_value())
+        request["clientName"] = *config.client_name;
+    if (config.enable_session_telemetry.has_value())
+        request["enableSessionTelemetry"] = *config.enable_session_telemetry;
+    if (config.include_sub_agent_streaming_events.has_value())
+        request["includeSubAgentStreamingEvents"] = *config.include_sub_agent_streaming_events;
+    if (config.enable_config_discovery.has_value())
+        request["enableConfigDiscovery"] = *config.enable_config_discovery;
+    if (config.instruction_directories.has_value())
+        request["instructionDirectories"] = *config.instruction_directories;
+    if (config.remote_session.has_value())
+        request["remoteSession"] = *config.remote_session;
 
     return request;
 }
@@ -125,10 +146,16 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
             def["description"] = tool.description;
             if (!tool.parameters_schema.is_null())
                 def["parameters"] = tool.parameters_schema;
+            if (tool.overrides_built_in_tool)
+                def["overridesBuiltInTool"] = true;
+            if (tool.skip_permission)
+                def["skipPermission"] = true;
             tool_defs.push_back(def);
         }
         request["tools"] = tool_defs;
     }
+    if (config.commands.has_value())
+        request["commands"] = *config.commands;
     if (config.streaming)
         request["streaming"] = config.streaming;
 
@@ -152,6 +179,10 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
             agents.push_back(agent);
         request["customAgents"] = agents;
     }
+    if (config.default_agent.has_value())
+        request["defaultAgent"] = *config.default_agent;
+    if (config.agent.has_value())
+        request["agent"] = *config.agent;
     if (config.skill_directories.has_value())
         request["skillDirectories"] = *config.skill_directories;
     if (config.disabled_skills.has_value())
@@ -162,20 +193,12 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
     // New fields for v0.1.23 parity
     if (config.model.has_value())
         request["model"] = *config.model;
+    if (config.model_capabilities.has_value())
+        request["modelCapabilities"] = *config.model_capabilities;
     if (config.reasoning_effort.has_value())
         request["reasoningEffort"] = *config.reasoning_effort;
     if (config.system_message.has_value())
-    {
-        json sys_msg;
-        if (config.system_message->content.has_value())
-            sys_msg["content"] = *config.system_message->content;
-        if (config.system_message->mode.has_value())
-        {
-            sys_msg["mode"] =
-                (*config.system_message->mode == SystemMessageMode::Replace) ? "replace" : "append";
-        }
-        request["systemMessage"] = sys_msg;
-    }
+        request["systemMessage"] = *config.system_message;
     if (config.available_tools.has_value())
         request["availableTools"] = *config.available_tools;
     if (config.excluded_tools.has_value())
@@ -191,7 +214,80 @@ json build_session_resume_request(const std::string& session_id, const ResumeSes
     if (config.hooks.has_value() && config.hooks->has_any())
         request["hooks"] = true;
 
+    // v0.1.49 additions (mirror SessionConfig)
+    if (config.client_name.has_value())
+        request["clientName"] = *config.client_name;
+    if (config.enable_session_telemetry.has_value())
+        request["enableSessionTelemetry"] = *config.enable_session_telemetry;
+    if (config.include_sub_agent_streaming_events.has_value())
+        request["includeSubAgentStreamingEvents"] = *config.include_sub_agent_streaming_events;
+    if (config.enable_config_discovery.has_value())
+        request["enableConfigDiscovery"] = *config.enable_config_discovery;
+    if (config.instruction_directories.has_value())
+        request["instructionDirectories"] = *config.instruction_directories;
+    if (config.remote_session.has_value())
+        request["remoteSession"] = *config.remote_session;
+
     return request;
+}
+
+// =============================================================================
+// CLI Process Launch Helpers (exposed for unit testing)
+// =============================================================================
+
+std::vector<std::string> build_cli_command_args(const ClientOptions& options)
+{
+    std::vector<std::string> args;
+    if (options.cli_args.has_value())
+        args.insert(args.end(), options.cli_args->begin(), options.cli_args->end());
+    args.push_back("--server");
+    args.push_back("--log-level");
+    args.push_back(json(options.log_level).get<std::string>());
+
+    if (options.use_stdio)
+    {
+        args.push_back("--stdio");
+    }
+    else if (options.port > 0)
+    {
+        args.push_back("--port");
+        args.push_back(std::to_string(options.port));
+    }
+
+    // Session idle timeout (forwarded as CLI flag; ignored by server when 0/absent).
+    if (options.session_idle_timeout_seconds.has_value() &&
+        *options.session_idle_timeout_seconds > 0)
+    {
+        args.push_back("--session-idle-timeout");
+        args.push_back(std::to_string(*options.session_idle_timeout_seconds));
+    }
+
+    // Remote session support (Mission Control integration).
+    if (options.remote)
+        args.push_back("--remote");
+
+    return args;
+}
+
+std::map<std::string, std::string> build_cli_environment(const ClientOptions& options)
+{
+    std::map<std::string, std::string> env;
+    if (options.environment.has_value())
+        env = *options.environment;
+
+    // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC.
+    env.erase("NODE_DEBUG");
+
+    if (options.github_token.has_value())
+        env["COPILOT_SDK_AUTH_TOKEN"] = *options.github_token;
+
+    if (options.tcp_connection_token.has_value())
+        env["COPILOT_CONNECTION_TOKEN"] = *options.tcp_connection_token;
+
+    if (options.copilot_home.has_value())
+        env["COPILOT_HOME"] = *options.copilot_home;
+
+    return env;
 }
 
 // =============================================================================
@@ -217,9 +313,47 @@ Client::Client(ClientOptions options) : options_(std::move(options))
                 "(external server manages its own auth)");
     }
 
+    // Validate tcp_connection_token usage (matches upstream nodejs SDK v0.1.49):
+    // token requires TCP transport (stdio is pre-authenticated by pipes).
+    if (options_.tcp_connection_token.has_value())
+    {
+        if (options_.tcp_connection_token->empty())
+            throw std::invalid_argument("tcp_connection_token must be a non-empty string");
+        if (options_.use_stdio)
+            throw std::invalid_argument(
+                "tcp_connection_token cannot be used with use_stdio = true");
+    }
+
     // Smart default for use_logged_in_user (only when managing our own server)
     if (!options_.cli_url.has_value() && !options_.use_logged_in_user.has_value())
         options_.use_logged_in_user = !options_.github_token.has_value();
+
+    // Auto-generate a UUID for the TCP connection token when the SDK spawns its
+    // own CLI in TCP mode and no token was provided. Mirrors nodejs effective-
+    // ConnectionToken logic (so loopback listeners are safe by default).
+    if (!options_.cli_url.has_value() && !options_.use_stdio &&
+        !options_.tcp_connection_token.has_value())
+    {
+        // Simple UUID v4 generator (RFC 4122, 122 random bits).
+        std::random_device rd;
+        std::mt19937_64 gen(rd());
+        std::uniform_int_distribution<uint64_t> dist;
+        uint64_t lo = dist(gen);
+        uint64_t hi = dist(gen);
+        // Set version (4) and variant (10xx) bits per RFC 4122.
+        hi = (hi & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
+        lo = (lo & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
+        char buf[37];
+        std::snprintf(
+            buf, sizeof(buf), "%08x-%04x-%04x-%04x-%012llx",
+            static_cast<unsigned>((hi >> 32) & 0xFFFFFFFFULL),
+            static_cast<unsigned>((hi >> 16) & 0xFFFFULL),
+            static_cast<unsigned>(hi & 0xFFFFULL),
+            static_cast<unsigned>((lo >> 48) & 0xFFFFULL),
+            static_cast<unsigned long long>(lo & 0xFFFFFFFFFFFFULL)
+        );
+        options_.tcp_connection_token = std::string(buf);
+    }
 
     // Parse CLI URL if provided
     if (options_.cli_url.has_value())
@@ -463,23 +597,8 @@ void Client::start_cli_server()
 {
     std::string cli_path = options_.cli_path.value_or("copilot");
 
-    // Build arguments
-    std::vector<std::string> args;
-    if (options_.cli_args.has_value())
-        args.insert(args.end(), options_.cli_args->begin(), options_.cli_args->end());
-    args.push_back("--server");
-    args.push_back("--log-level");
-    args.push_back(json(options_.log_level).get<std::string>());
-
-    if (options_.use_stdio)
-    {
-        args.push_back("--stdio");
-    }
-    else if (options_.port > 0)
-    {
-        args.push_back("--port");
-        args.push_back(std::to_string(options_.port));
-    }
+    // Build arguments and environment via the testable free-function helpers.
+    std::vector<std::string> args = build_cli_command_args(options_);
 
     // Resolve command
     auto [executable, full_args] = resolve_cli_command(cli_path, args);
@@ -495,17 +614,9 @@ void Client::start_cli_server()
         proc_opts.working_directory = *options_.cwd;
 
     if (options_.environment.has_value())
-    {
         proc_opts.inherit_environment = false;
-        proc_opts.environment = *options_.environment;
-    }
 
-    // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC
-    proc_opts.environment.erase("NODE_DEBUG");
-
-    // Forward GitHub token as environment variable
-    if (options_.github_token.has_value())
-        proc_opts.environment["COPILOT_SDK_AUTH_TOKEN"] = *options_.github_token;
+    proc_opts.environment = build_cli_environment(options_);
 
     // Spawn process
     process_ = std::make_unique<Process>();
@@ -597,6 +708,12 @@ void Client::connect_to_server()
                 return handle_permission_request(params);
             else if (method == "userInput.request")
                 return handle_user_input_request(params);
+            else if (method == "elicitation.request")
+                return handle_elicitation_request(params);
+            else if (method == "exitPlanMode.request")
+                return handle_exit_plan_mode_request(params);
+            else if (method == "autoModeSwitch.request")
+                return handle_auto_mode_switch_request(params);
             else if (method == "hooks.invoke")
                 return handle_hooks_invoke(params);
             throw JsonRpcError(JsonRpcErrorCode::MethodNotFound, "Unknown method: " + method);
@@ -608,7 +725,7 @@ void Client::connect_to_server()
 
 void Client::verify_protocol_version()
 {
-    auto response = rpc_->invoke("ping", json{{"message", nullptr}}).get();
+    auto response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
 
     if (!response.contains("protocolVersion") || response["protocolVersion"].is_null())
     {
@@ -619,14 +736,25 @@ void Client::verify_protocol_version()
     }
 
     int server_version = response["protocolVersion"].get<int>();
-    if (server_version != kSdkProtocolVersion)
+    if (server_version < kMinProtocolVersion || server_version > kSdkProtocolVersion)
     {
         throw std::runtime_error(
-            "SDK protocol version mismatch: SDK expects version " +
-            std::to_string(kSdkProtocolVersion) + ", but server reports version " +
-            std::to_string(server_version)
+            "SDK protocol version mismatch: SDK supports versions [" +
+            std::to_string(kMinProtocolVersion) + ".." + std::to_string(kSdkProtocolVersion) +
+            "], but server reports version " + std::to_string(server_version)
         );
     }
+
+    {
+        std::lock_guard<std::mutex> lock(protocol_version_mutex_);
+        negotiated_protocol_version_ = server_version;
+    }
+}
+
+std::optional<int> Client::negotiated_protocol_version() const
+{
+    std::lock_guard<std::mutex> lock(protocol_version_mutex_);
+    return negotiated_protocol_version_;
 }
 
 // =============================================================================
@@ -650,7 +778,7 @@ std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig confi
 
             // Build and send request
             json request = build_session_create_request(config);
-            auto response = rpc_->invoke("session.create", request).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionCreate, request).get();
             std::string session_id = response["sessionId"].get<std::string>();
 
             // Capture workspace path for infinite sessions
@@ -671,6 +799,15 @@ std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig confi
             // Register user input handler locally (server will call userInput.request)
             if (config.on_user_input_request.has_value())
                 session->register_user_input_handler(*config.on_user_input_request);
+
+            if (config.on_elicitation_request.has_value())
+                session->register_elicitation_handler(*config.on_elicitation_request);
+            if (config.on_exit_plan_mode.has_value())
+                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
+            if (config.on_auto_mode_switch.has_value())
+                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
+            if (config.on_event.has_value())
+                session->register_persistent_event_handler(*config.on_event);
 
             // Register hooks locally (server will call hooks.invoke)
             if (config.hooks.has_value())
@@ -702,7 +839,7 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
 
             // Build and send request
             json request = build_session_resume_request(session_id, config);
-            auto response = rpc_->invoke("session.resume", request).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionResume, request).get();
             std::string returned_session_id = response["sessionId"].get<std::string>();
 
             // Capture workspace_path if present (for infinite sessions)
@@ -724,6 +861,15 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
             if (config.on_user_input_request.has_value())
                 session->register_user_input_handler(*config.on_user_input_request);
 
+            if (config.on_elicitation_request.has_value())
+                session->register_elicitation_handler(*config.on_elicitation_request);
+            if (config.on_exit_plan_mode.has_value())
+                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
+            if (config.on_auto_mode_switch.has_value())
+                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
+            if (config.on_event.has_value())
+                session->register_persistent_event_handler(*config.on_event);
+
             // Register hooks locally (server will call hooks.invoke)
             if (config.hooks.has_value())
                 session->register_hooks(*config.hooks);
@@ -738,9 +884,14 @@ Client::resume_session(const std::string& session_id, ResumeSessionConfig config
 
 std::future<std::vector<SessionMetadata>> Client::list_sessions()
 {
+    return list_sessions(SessionListFilter{});
+}
+
+std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilter filter)
+{
     return std::async(
         std::launch::async,
-        [this]()
+        [this, filter = std::move(filter)]()
         {
             if (state_ != ConnectionState::Connected)
             {
@@ -750,19 +901,50 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("session.list", json::object()).get();
+            // session.list takes an optional 'filter' param (matches nodejs SDK shape).
+            json params = json::object();
+            json filter_json = filter; // uses to_json(SessionListFilter)
+            if (!filter_json.empty())
+                params["filter"] = std::move(filter_json);
+
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionList, params).get();
             std::vector<SessionMetadata> sessions;
 
-            for (const auto& item : response["sessions"])
+            if (response.contains("sessions") && response["sessions"].is_array())
             {
-                SessionMetadata meta;
-                meta.session_id = item["sessionId"].get<std::string>();
-                if (item.contains("summary") && !item["summary"].is_null())
-                    meta.summary = item["summary"].get<std::string>();
-                sessions.push_back(std::move(meta));
+                for (const auto& item : response["sessions"])
+                {
+                    sessions.push_back(item.get<SessionMetadata>());
+                }
             }
 
             return sessions;
+        }
+    );
+}
+
+std::future<std::optional<SessionMetadata>>
+Client::get_session_metadata(const std::string& session_id)
+{
+    return std::async(
+        std::launch::async,
+        [this, session_id]() -> std::optional<SessionMetadata>
+        {
+            if (state_ != ConnectionState::Connected)
+            {
+                if (options_.auto_start)
+                    start().get();
+                else
+                    throw std::runtime_error("Client not connected. Call start() first.");
+            }
+
+            auto response =
+                rpc_->invoke(copilot::rpc::methods::kSessionGetMetadata, json{{"sessionId", session_id}}).get();
+
+            if (!response.contains("session") || response["session"].is_null())
+                return std::nullopt;
+
+            return response["session"].get<SessionMetadata>();
         }
     );
 }
@@ -777,7 +959,7 @@ std::future<void> Client::delete_session(const std::string& session_id)
                 throw std::runtime_error("Client not connected");
 
             auto response =
-                rpc_->invoke("session.delete", json{{"sessionId", session_id}}).get();
+                rpc_->invoke(copilot::rpc::methods::kSessionDelete, json{{"sessionId", session_id}}).get();
 
             if (response.contains("success") && !response["success"].get<bool>())
             {
@@ -807,7 +989,7 @@ std::future<std::optional<std::string>> Client::get_last_session_id()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("session.getLastId", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kSessionGetLastId, json::object()).get();
 
             if (response.contains("sessionId") && !response["sessionId"].is_null())
                 return response["sessionId"].get<std::string>();
@@ -836,7 +1018,7 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
             else
                 params["message"] = nullptr;
 
-            auto response = rpc_->invoke("ping", params).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kPing, params).get();
 
             PingResponse result;
             if (response.contains("message") && !response["message"].is_null())
@@ -864,7 +1046,7 @@ std::future<GetStatusResponse> Client::get_status()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("status.get", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kStatusGet, json::object()).get();
             return response.get<GetStatusResponse>();
         }
     );
@@ -884,7 +1066,7 @@ std::future<GetAuthStatusResponse> Client::get_auth_status()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            auto response = rpc_->invoke("auth.getStatus", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kAuthGetStatus, json::object()).get();
             return response.get<GetAuthStatusResponse>();
         }
     );
@@ -896,6 +1078,28 @@ std::future<std::vector<ModelInfo>> Client::list_models()
         std::launch::async,
         [this]()
         {
+            // Check cache first (applies to both BYOK and RPC paths).
+            {
+                std::lock_guard<std::mutex> lock(models_cache_mutex_);
+                if (models_cache_.has_value())
+                    return std::vector<ModelInfo>(*models_cache_);
+            }
+
+            // BYOK: if a custom handler is registered, use it instead of the CLI RPC.
+            ListModelsHandler handler_copy;
+            {
+                std::lock_guard<std::mutex> lock(on_list_models_mutex_);
+                handler_copy = on_list_models_;
+            }
+            if (handler_copy)
+            {
+                auto models = handler_copy();
+                std::lock_guard<std::mutex> lock(models_cache_mutex_);
+                models_cache_ = models;
+                return models;
+            }
+
+            // Default path: query the CLI server (requires a live connection).
             if (state_ != ConnectionState::Connected)
             {
                 if (options_.auto_start)
@@ -904,14 +1108,7 @@ std::future<std::vector<ModelInfo>> Client::list_models()
                     throw std::runtime_error("Client not connected. Call start() first.");
             }
 
-            // Check cache
-            {
-                std::lock_guard<std::mutex> lock(models_cache_mutex_);
-                if (models_cache_.has_value())
-                    return std::vector<ModelInfo>(*models_cache_);
-            }
-
-            auto response = rpc_->invoke("models.list", json::object()).get();
+            auto response = rpc_->invoke(copilot::rpc::methods::kModelsList, json::object()).get();
             auto models_response = response.get<GetModelsResponse>();
 
             // Store in cache
@@ -923,6 +1120,15 @@ std::future<std::vector<ModelInfo>> Client::list_models()
             return models_response.models;
         }
     );
+}
+
+void Client::set_on_list_models(ListModelsHandler handler)
+{
+    std::lock_guard<std::mutex> lock(on_list_models_mutex_);
+    on_list_models_ = std::move(handler);
+    // Invalidate the cache so the next list_models() call observes the new source.
+    std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
+    models_cache_.reset();
 }
 
 std::shared_ptr<Session> Client::get_session(const std::string& session_id)
@@ -1082,6 +1288,63 @@ json Client::handle_user_input_request(const json& params)
     }
 }
 
+json Client::handle_elicitation_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto context = params.get<ElicitationContext>();
+        return json(session->handle_elicitation_request(context));
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
+json Client::handle_exit_plan_mode_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto request = params.get<ExitPlanModeRequest>();
+        return json(session->handle_exit_plan_mode_request(request));
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
+json Client::handle_auto_mode_switch_request(const json& params)
+{
+    std::string session_id = params["sessionId"].get<std::string>();
+
+    auto session = get_session(session_id);
+    if (!session)
+        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
+
+    try
+    {
+        auto request = params.get<AutoModeSwitchRequest>();
+        return json(session->handle_auto_mode_switch_request(request));
+    }
+    catch (const std::exception& e)
+    {
+        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
+    }
+}
+
 json Client::handle_hooks_invoke(const json& params)
 {
     std::string session_id = params["sessionId"].get<std::string>();
@@ -1133,7 +1396,7 @@ std::future<std::optional<std::string>> Client::get_foreground_session_id()
         std::launch::async,
         [this]() -> std::optional<std::string>
         {
-            auto response = rpc_client()->invoke("session.getForeground", json::object()).get();
+            auto response = rpc_client()->invoke(copilot::rpc::methods::kSessionGetForeground, json::object()).get();
             auto parsed = response.get<GetForegroundSessionResponse>();
             return parsed.session_id;
         }
@@ -1146,7 +1409,7 @@ std::future<void> Client::set_foreground_session_id(const std::string& session_i
         std::launch::async,
         [this, session_id]()
         {
-            rpc_client()->invoke("session.setForeground", json{{"sessionId", session_id}}).get();
+            rpc_client()->invoke(copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}).get();
         }
     );
 }

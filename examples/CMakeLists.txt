@@ -84,3 +84,13 @@ set_target_properties(user_input PROPERTIES FOLDER "Examples")
 add_executable(reasoning_effort reasoning_effort.cpp)
 target_link_libraries(reasoning_effort PRIVATE copilot_sdk_cpp)
 set_target_properties(reasoning_effort PROPERTIES FOLDER "Examples")
+
+# Instruction directories example (v0.1.49 - PR #1190)
+add_executable(instruction_directories instruction_directories.cpp)
+target_link_libraries(instruction_directories PRIVATE copilot_sdk_cpp)
+set_target_properties(instruction_directories PROPERTIES FOLDER "Examples")
+
+# Remote session example (v0.1.49 - PR #1295, Mission Control integration)
+add_executable(remote_session remote_session.cpp)
+target_link_libraries(remote_session PRIVATE copilot_sdk_cpp)
+set_target_properties(remote_session PROPERTIES FOLDER "Examples")

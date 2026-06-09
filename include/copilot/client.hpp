@@ -46,6 +46,24 @@ json build_session_create_request(const SessionConfig& config);
 /// @return JSON object ready to send to server
 json build_session_resume_request(const std::string& session_id, const ResumeSessionConfig& config);
 
+/// Build the CLI argument vector that {@link Client} will pass to the spawned
+/// Copilot CLI process, given a fully-populated {@link ClientOptions}.
+/// Exposed for conformance unit testing of process-launch behavior. Mirrors
+/// what `start_cli_server()` emits before command resolution (i.e. no Node /
+/// `cmd /c` wrapping is applied).
+/// @param options Client options
+/// @return Argument list (does not include the executable itself)
+std::vector<std::string> build_cli_command_args(const ClientOptions& options);
+
+/// Build the environment-variable map that {@link Client} will use when
+/// spawning the Copilot CLI process. The returned map reflects the SDK's
+/// additions and removals (COPILOT_HOME, COPILOT_CONNECTION_TOKEN,
+/// COPILOT_SDK_AUTH_TOKEN, NODE_DEBUG erase) layered on top of the explicit
+/// `options.environment`. Exposed for conformance unit testing.
+/// @param options Client options
+/// @return Environment map ready for ProcessOptions::environment
+std::map<std::string, std::string> build_cli_environment(const ClientOptions& options);
+
 // =============================================================================
 // CopilotClient - Main client class
 // =============================================================================
@@ -126,6 +144,17 @@ class Client
     /// @return Future that resolves to list of session metadata
     std::future<std::vector<SessionMetadata>> list_sessions();
 
+    /// List sessions matching a filter (matches upstream nodejs SDK).
+    /// @param filter Filter criteria (cwd / git_root / repository / branch)
+    /// @return Future that resolves to list of matching session metadata
+    std::future<std::vector<SessionMetadata>> list_sessions(SessionListFilter filter);
+
+    /// Get metadata for a specific session by ID (O(1) lookup).
+    /// @param session_id ID of the session
+    /// @return Future that resolves to metadata, or nullopt if not found
+    std::future<std::optional<SessionMetadata>>
+    get_session_metadata(const std::string& session_id);
+
     /// Delete a session
     /// @param session_id ID of the session to delete
     /// @return Future that completes when deleted
@@ -156,6 +185,18 @@ class Client
     /// @return Future that resolves to list of model info
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
+
+    /// Provide a custom handler for listing available models (BYOK mode).
+    /// When set, Client::list_models() calls this handler instead of querying
+    /// the CLI server. Results are still cached after the first successful call;
+    /// pass nullptr to revert to default RPC-based behavior. Matches upstream
+    /// nodejs CopilotClientOptions.onListModels.
+    using ListModelsHandler = std::function<std::vector<ModelInfo>()>;
+    void set_on_list_models(ListModelsHandler handler);
+
+    /// Get the negotiated protocol version (set after successful start()).
+    /// Returns std::nullopt before connection is established.
+    std::optional<int> negotiated_protocol_version() const;
 
     // =========================================================================
     // Lifecycle Events
@@ -217,6 +258,10 @@ class Client
     /// Handle incoming user input requests
     json handle_user_input_request(const json& params);
 
+    json handle_elicitation_request(const json& params);
+    json handle_exit_plan_mode_request(const json& params);
+    json handle_auto_mode_switch_request(const json& params);
+
     /// Handle incoming hook invocations
     json handle_hooks_invoke(const json& params);
 
@@ -241,9 +286,17 @@ class Client
     mutable std::mutex models_cache_mutex_;
     std::optional<std::vector<ModelInfo>> models_cache_;
 
+    // BYOK: optional custom models handler (when set, takes precedence over RPC).
+    mutable std::mutex on_list_models_mutex_;
+    ListModelsHandler on_list_models_;
+
     // Lifecycle handlers
     mutable std::mutex lifecycle_mutex_;
     std::vector<LifecycleHandler> lifecycle_handlers_;
+
+    // Protocol version negotiation result (set after verify_protocol_version()).
+    mutable std::mutex protocol_version_mutex_;
+    std::optional<int> negotiated_protocol_version_;
 };
 
 } // namespace copilot

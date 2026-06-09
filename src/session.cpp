@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <copilot/client.hpp>
+#include <copilot/rpc_methods.hpp>
 #include <copilot/session.hpp>
 #include <condition_variable>
 
@@ -35,16 +36,10 @@ std::future<std::string> Session::send(MessageOptions options)
         std::launch::async,
         [this, options = std::move(options)]()
         {
-            json params;
+            json params = options;
             params["sessionId"] = session_id_;
-            params["prompt"] = options.prompt;
 
-            if (options.attachments.has_value())
-                params["attachments"] = *options.attachments;
-            if (options.mode.has_value())
-                params["mode"] = *options.mode;
-
-            auto response = client_->rpc_client()->invoke("session.send", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionSend, params).get();
             return response["messageId"].get<std::string>();
         }
     );
@@ -59,7 +54,7 @@ std::future<void> Session::abort()
             json params;
             params["sessionId"] = session_id_;
 
-            client_->rpc_client()->invoke("session.abort", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionAbort, params).get();
         }
     );
 }
@@ -73,7 +68,7 @@ std::future<std::vector<SessionEvent>> Session::get_messages()
             json params;
             params["sessionId"] = session_id_;
 
-            auto response = client_->rpc_client()->invoke("session.getMessages", params).get();
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionGetMessages, params).get();
 
             std::vector<SessionEvent> events;
             if (response.contains("events") && response["events"].is_array())
@@ -179,6 +174,13 @@ Subscription Session::on(EventHandler handler)
     );
 }
 
+void Session::register_persistent_event_handler(EventHandler handler)
+{
+    auto subscription = on(std::move(handler));
+    std::lock_guard<std::mutex> lock(owned_event_subscriptions_mutex_);
+    owned_event_subscriptions_.push_back(std::move(subscription));
+}
+
 void Session::dispatch_event(const SessionEvent& event)
 {
     std::vector<EventHandler> handlers_copy;
@@ -270,6 +272,82 @@ UserInputResponse Session::handle_user_input_request(const UserInputRequest& req
         throw std::runtime_error("No user input handler registered");
 
     UserInputInvocation invocation;
+    invocation.session_id = session_id_;
+    return handler(request, invocation);
+}
+
+// =============================================================================
+// Elicitation Handling
+// =============================================================================
+
+void Session::register_elicitation_handler(ElicitationHandler handler)
+{
+    std::lock_guard<std::mutex> lock(elicitation_mutex_);
+    elicitation_handler_ = std::move(handler);
+}
+
+ElicitationResult Session::handle_elicitation_request(const ElicitationContext& context)
+{
+    ElicitationHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(elicitation_mutex_);
+        handler = elicitation_handler_;
+    }
+
+    if (!handler)
+        return ElicitationResult{ElicitationAction::Cancel};
+
+    return handler(context);
+}
+
+// =============================================================================
+// Exit Plan Mode Handling
+// =============================================================================
+
+void Session::register_exit_plan_mode_handler(ExitPlanModeHandler handler)
+{
+    std::lock_guard<std::mutex> lock(exit_plan_mode_mutex_);
+    exit_plan_mode_handler_ = std::move(handler);
+}
+
+ExitPlanModeResult Session::handle_exit_plan_mode_request(const ExitPlanModeRequest& request)
+{
+    ExitPlanModeHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(exit_plan_mode_mutex_);
+        handler = exit_plan_mode_handler_;
+    }
+
+    if (!handler)
+        return ExitPlanModeResult{};
+
+    ExitPlanModeInvocation invocation;
+    invocation.session_id = session_id_;
+    return handler(request, invocation);
+}
+
+// =============================================================================
+// Auto Mode Switch Handling
+// =============================================================================
+
+void Session::register_auto_mode_switch_handler(AutoModeSwitchHandler handler)
+{
+    std::lock_guard<std::mutex> lock(auto_mode_switch_mutex_);
+    auto_mode_switch_handler_ = std::move(handler);
+}
+
+AutoModeSwitchResponse Session::handle_auto_mode_switch_request(const AutoModeSwitchRequest& request)
+{
+    AutoModeSwitchHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(auto_mode_switch_mutex_);
+        handler = auto_mode_switch_handler_;
+    }
+
+    if (!handler)
+        return AutoModeSwitchResponse::No;
+
+    AutoModeSwitchInvocation invocation;
     invocation.session_id = session_id_;
     return handler(request, invocation);
 }
@@ -381,7 +459,100 @@ std::future<void> Session::destroy()
             json params;
             params["sessionId"] = session_id_;
 
-            client_->rpc_client()->invoke("session.destroy", params).get();
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionDestroy, params).get();
+        }
+    );
+}
+
+// =============================================================================
+// Model & Mode (v0.1.49 additions)
+// =============================================================================
+
+std::future<void> Session::set_model(const std::string& model_id, SetModelOptions options)
+{
+    return std::async(
+        std::launch::async,
+        [this, model_id, options]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            params["modelId"] = model_id;
+            if (options.reasoning_effort.has_value())
+                params["reasoningEffort"] = *options.reasoning_effort;
+
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModelSwitchTo, params).get();
+        }
+    );
+}
+
+std::future<std::optional<std::string>> Session::get_current_model()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> std::optional<std::string>
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModelGetCurrent, params).get();
+            // Response: { modelId?: string } per nodejs CurrentModel shape.
+            if (response.contains("modelId") && !response["modelId"].is_null())
+                return response["modelId"].get<std::string>();
+            return std::nullopt;
+        }
+    );
+}
+
+namespace
+{
+const char* mode_to_wire(Session::Mode m)
+{
+    switch (m)
+    {
+    case Session::Mode::Interactive: return "interactive";
+    case Session::Mode::Plan:        return "plan";
+    case Session::Mode::Autopilot:   return "autopilot";
+    }
+    return "interactive";
+}
+
+std::optional<Session::Mode> mode_from_wire(const std::string& s)
+{
+    if (s == "interactive") return Session::Mode::Interactive;
+    if (s == "plan")        return Session::Mode::Plan;
+    if (s == "autopilot")   return Session::Mode::Autopilot;
+    return std::nullopt;
+}
+} // namespace
+
+std::future<void> Session::set_mode(Mode mode)
+{
+    return std::async(
+        std::launch::async,
+        [this, mode]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            params["mode"] = mode_to_wire(mode);
+            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModeSet, params).get();
+        }
+    );
+}
+
+std::future<Session::Mode> Session::get_mode()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> Mode
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionModeGet, params).get();
+            // Response shape: { mode: "interactive" | "plan" | "autopilot" }
+            std::string wire = response.contains("mode") && response["mode"].is_string()
+                                   ? response["mode"].get<std::string>()
+                                   : std::string{"interactive"};
+            auto parsed = mode_from_wire(wire);
+            return parsed.value_or(Mode::Interactive);
         }
     );
 }
