@@ -378,7 +378,7 @@ Process::~Process()
     if (is_running())
     {
         kill();
-        wait();
+        wait_for(std::chrono::seconds(5));
     }
 }
 
@@ -615,6 +615,23 @@ int Process::wait()
     return handle_->exit_code;
 }
 
+std::optional<int> Process::wait_for(std::chrono::milliseconds timeout)
+{
+    if (!handle_ || handle_->process_handle == INVALID_HANDLE_VALUE)
+        return handle_ ? std::optional<int>(handle_->exit_code) : std::nullopt;
+
+    const auto bounded = static_cast<DWORD>(
+        std::min<int64_t>(timeout.count(), static_cast<int64_t>(MAXDWORD - 1)));
+    if (WaitForSingleObject(handle_->process_handle, bounded) != WAIT_OBJECT_0)
+        return std::nullopt;
+
+    DWORD exit_code;
+    GetExitCodeProcess(handle_->process_handle, &exit_code);
+    handle_->running = false;
+    handle_->exit_code = static_cast<int>(exit_code);
+    return handle_->exit_code;
+}
+
 void Process::terminate()
 {
     if (handle_ && handle_->process_handle != INVALID_HANDLE_VALUE)
@@ -636,6 +653,16 @@ void Process::kill()
 {
     if (handle_ && handle_->process_handle != INVALID_HANDLE_VALUE)
         TerminateProcess(handle_->process_handle, 1);
+}
+
+void Process::close_pipes()
+{
+    if (stdin_)
+        stdin_->close();
+    if (stdout_)
+        stdout_->close();
+    if (stderr_)
+        stderr_->close();
 }
 
 int Process::pid() const

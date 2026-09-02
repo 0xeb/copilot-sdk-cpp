@@ -30,6 +30,7 @@ namespace copilot
 // Forward declaration
 class Session;
 class Subscription;
+class CopilotRequestHandlerBridge;
 
 // =============================================================================
 // Request Builder Helpers (for unit testing request JSON shape)
@@ -38,13 +39,18 @@ class Subscription;
 /// Build the JSON request for session.create RPC
 /// @param config Session configuration
 /// @return JSON object ready to send to server
-json build_session_create_request(const SessionConfig& config);
+json build_session_create_request(
+    const SessionConfig& config,
+    ClientMode mode = ClientMode::CopilotCli);
 
 /// Build the JSON request for session.resume RPC
 /// @param session_id ID of the session to resume
 /// @param config Resume configuration
 /// @return JSON object ready to send to server
-json build_session_resume_request(const std::string& session_id, const ResumeSessionConfig& config);
+json build_session_resume_request(
+    const std::string& session_id,
+    const ResumeSessionConfig& config,
+    ClientMode mode = ClientMode::CopilotCli);
 
 /// Build the CLI argument vector that {@link Client} will pass to the spawned
 /// Copilot CLI process, given a fully-populated {@link ClientOptions}.
@@ -186,6 +192,19 @@ class Client
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
 
+    /// Invoke a low-level global RPC method.
+    std::future<json> invoke(const std::string& method, json params = json::object());
+
+    /// Current W3C trace context for request propagation.
+    json trace_context() const;
+
+    /// Opaque registration id identifying this client's GitHub token callback.
+    ///
+    /// Empty unless ClientOptions::github_token_provider is set. Pass it to the runtime in a
+    /// `token-provider` AuthInfo (`{"type":"token-provider","host":…,"registrationId":…}`) so
+    /// server-initiated `gitHubToken.getToken` requests route back to the provider.
+    const std::string& github_token_registration_id() const;
+
     /// Provide a custom handler for listing available models (BYOK mode).
     /// When set, Client::list_models() calls this handler instead of querying
     /// the CLI server. Results are still cached after the first successful call;
@@ -232,6 +251,7 @@ class Client
   private:
     /// Start the CLI server process
     void start_cli_server();
+    void start_in_process_runtime();
 
     /// Connect to the server (stdio or TCP)
     void connect_to_server();
@@ -262,6 +282,9 @@ class Client
     json handle_exit_plan_mode_request(const json& params);
     json handle_auto_mode_switch_request(const json& params);
 
+    /// Handle incoming `gitHubToken.getToken` requests
+    json handle_github_token_request(const json& params);
+
     /// Handle incoming hook invocations
     json handle_hooks_invoke(const json& params);
 
@@ -278,6 +301,7 @@ class Client
     std::unique_ptr<Process> process_;
     std::unique_ptr<ITransport> transport_;
     std::unique_ptr<JsonRpcClient> rpc_;
+    std::shared_ptr<CopilotRequestHandlerBridge> request_handler_bridge_;
 
     // Sessions
     std::map<std::string, std::shared_ptr<Session>> sessions_;
@@ -297,6 +321,10 @@ class Client
     // Protocol version negotiation result (set after verify_protocol_version()).
     mutable std::mutex protocol_version_mutex_;
     std::optional<int> negotiated_protocol_version_;
+
+    /// Registration id for the GitHub token callback; empty when no provider is configured.
+    std::string github_token_registration_id_;
+    std::optional<std::string> server_version_;
 };
 
 } // namespace copilot

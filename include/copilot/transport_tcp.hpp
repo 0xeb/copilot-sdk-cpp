@@ -234,7 +234,15 @@ inline void TcpTransport::connect(const std::string& host, int port, int timeout
 #endif
     }
 
-    // Try each address until we connect
+    // Try each address until we connect.
+    //
+    // The timeout is a budget for the whole resolution list, not per address. A host such as
+    // "localhost" commonly resolves to ::1 before 127.0.0.1; if the peer listens on IPv4 only,
+    // the first candidate is refused and we must fall through to the next one promptly rather
+    // than spending the caller's entire timeout on each dead address in turn.
+    const auto connect_deadline = std::chrono::steady_clock::now() +
+                                  std::chrono::milliseconds(timeout_ms > 0 ? timeout_ms : 0);
+
     Socket sock = kInvalidSocket;
     for (auto* rp = result; rp != nullptr; rp = rp->ai_next)
     {
@@ -262,26 +270,38 @@ inline void TcpTransport::connect(const std::string& host, int port, int timeout
 
         if (would_block && timeout_ms > 0)
         {
-            // Wait for connection with timeout
+            // Wait for connection, bounded by whatever remains of the overall budget.
+            const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
+                connect_deadline - std::chrono::steady_clock::now());
+            const auto remaining_us = remaining.count() > 0 ? remaining.count() : 0;
+
             fd_set write_fds;
             FD_ZERO(&write_fds);
             FD_SET(sock, &write_fds);
 
+            // A refused connection is reported through exceptfds on Windows (writefds stays
+            // clear), so it must be monitored or the select below waits out the full timeout
+            // on an address that already failed.
+            fd_set except_fds;
+            FD_ZERO(&except_fds);
+            FD_SET(sock, &except_fds);
+
             struct timeval tv;
-            tv.tv_sec = timeout_ms / 1000;
-            tv.tv_usec = (timeout_ms % 1000) * 1000;
+            tv.tv_sec = static_cast<long>(remaining_us / 1000000);
+            tv.tv_usec = static_cast<long>(remaining_us % 1000000);
 
             int select_result =
-                select(static_cast<int>(sock) + 1, nullptr, &write_fds, nullptr, &tv);
+                select(static_cast<int>(sock) + 1, nullptr, &write_fds, &except_fds, &tv);
 
             if (select_result > 0)
             {
-                // Check if connection succeeded
+                // SO_ERROR is authoritative for both outcomes: it is 0 only when the
+                // connection actually completed.
                 int error = 0;
                 socklen_t len = sizeof(error);
                 getsockopt(sock, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&error), &len);
 
-                if (error == 0)
+                if (error == 0 && !FD_ISSET(sock, &except_fds))
                 {
                     // Connected successfully
                     break;

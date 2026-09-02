@@ -29,6 +29,9 @@ target_link_libraries(test_types
 
 set_target_properties(test_types PROPERTIES FOLDER "Tests")
 
+# Note: the generated-protocol, public/advanced parity and FFI transport suites are maintained
+# out of tree. The codegen_check test below still guards the generated surface from this repo.
+
 # Test for transport layer
 add_executable(test_transport
     test_transport.cpp
@@ -157,6 +160,16 @@ gtest_discover_tests(test_tool_builder)
 gtest_discover_tests(test_rpc_methods)
 gtest_discover_tests(test_v0149_features)
 gtest_discover_tests(test_conformance)
+
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME codegen_check
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/../tools/generate_protocol_types.py --check
+    )
+    set_tests_properties(codegen_check PROPERTIES
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
+    )
+endif()
 
 # Snapshot conformance tests (optional, requires upstream snapshots + Python)
 if(COPILOT_BUILD_SNAPSHOT_TESTS)

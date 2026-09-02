@@ -177,6 +177,9 @@ inline constexpr const char* kSessionGetMessages  = "session.getMessages";
 inline constexpr const char* kSessionGetForeground = "session.getForeground";
 inline constexpr const char* kSessionSetForeground = "session.setForeground";
 
+// Server-to-client: the runtime asks the SDK host for a GitHub credential.
+inline constexpr const char* kGitHubTokenGetToken = "gitHubToken.getToken";
+
 } // namespace copilot::rpc::methods
 
 namespace copilot::rpc

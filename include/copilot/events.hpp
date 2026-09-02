@@ -88,6 +88,58 @@ struct ElicitationRequestedData;
 struct ElicitationCompletedData;
 struct SamplingRequestedData;
 struct SamplingCompletedData;
+
+// --- Protocol surface additions: wire types present in the generated catalog ---
+struct ScheduleRearmedData;
+struct AutopilotObjectiveChangedData;
+struct SessionLimitsChangedData;
+struct PermissionsChangedData;
+struct TodosChangedData;
+struct MemoryChangedData;
+struct UsageCheckpointData;
+struct ContextClearedData;
+struct FusionRouteStartedData;
+struct FusionRouteFailedData;
+struct FusionResolvedData;
+struct FusionHandoffData;
+struct FusionCommitStartedData;
+struct FusionCompletedData;
+struct AssistantTurnRetryData;
+struct AgentInterruptedData;
+struct FusionPhaseStartedData;
+struct FusionPhaseCompletedData;
+struct FusionPhaseFailedData;
+struct AssistantServerToolProgressData;
+struct AssistantToolCallDeltaData;
+struct AssistantIdleData;
+struct PromptCacheBreakData;
+struct ModelCallFinishedData;
+struct ModelCallStartData;
+struct ToolSearchActivatedData;
+struct SandboxDecisionData;
+struct SubagentConfiguredData;
+struct HookProgressData;
+struct BinaryAssetData;
+struct McpHeadersRefreshRequiredData;
+struct McpHeadersRefreshCompletedData;
+struct UIEphemeralQueryData;
+struct SessionLimitsExhaustedRequestedData;
+struct SessionLimitsExhaustedCompletedData;
+struct AutoModeResolvedData;
+struct ManagedSettingsResolvedData;
+struct ManagedSettingsEnforcedData;
+struct FactoryRunUpdatedData;
+struct FactoryRunStartedData;
+struct FactoryRunSettledData;
+struct McpListChangedData;
+struct CanvasOpenedData;
+struct CanvasRegistryChangedData;
+struct CanvasClosedData;
+struct CanvasUnavailableData;
+struct CanvasRecordedData;
+struct CanvasRemovedData;
+struct ExtensionsAttachmentsPushedData;
+struct McpAppToolCallCompleteData;
 struct McpOauthRequiredData;
 struct McpOauthCompletedData;
 struct ExternalToolRequestedData;
@@ -1585,6 +1637,7 @@ inline void from_json(const json& j, SamplingCompletedData& d)
 struct McpOauthRequiredStaticClientConfig
 {
     std::string client_id;
+    std::optional<std::string> client_secret;
     std::optional<std::string> grant_type;
     std::optional<bool> public_client;
 };
@@ -1592,6 +1645,8 @@ struct McpOauthRequiredStaticClientConfig
 inline void from_json(const json& j, McpOauthRequiredStaticClientConfig& d)
 {
     j.at("clientId").get_to(d.client_id);
+    if (j.contains("clientSecret") && !j["clientSecret"].is_null())
+        d.client_secret = j.at("clientSecret").get<std::string>();
     if (j.contains("grantType") && !j["grantType"].is_null())
         d.grant_type = j.at("grantType").get<std::string>();
     if (j.contains("publicClient") && !j["publicClient"].is_null())
@@ -1604,6 +1659,9 @@ struct McpOauthRequiredData
     std::string request_id;
     std::string server_name;
     std::string server_url;
+    std::optional<std::string> reason;
+    std::optional<json> www_authenticate_params;
+    std::optional<std::string> resource_metadata;
     std::optional<McpOauthRequiredStaticClientConfig> static_client_config;
 };
 
@@ -1612,6 +1670,12 @@ inline void from_json(const json& j, McpOauthRequiredData& d)
     j.at("requestId").get_to(d.request_id);
     j.at("serverName").get_to(d.server_name);
     j.at("serverUrl").get_to(d.server_url);
+    if (j.contains("reason") && !j["reason"].is_null())
+        d.reason = j.at("reason").get<std::string>();
+    if (j.contains("wwwAuthenticateParams") && !j["wwwAuthenticateParams"].is_null())
+        d.www_authenticate_params = j.at("wwwAuthenticateParams");
+    if (j.contains("resourceMetadata") && !j["resourceMetadata"].is_null())
+        d.resource_metadata = j.at("resourceMetadata").get<std::string>();
     if (j.contains("staticClientConfig") && !j["staticClientConfig"].is_null())
         d.static_client_config = j.at("staticClientConfig").get<McpOauthRequiredStaticClientConfig>();
 }
@@ -1846,6 +1910,1065 @@ inline void from_json(const json& j, SystemNotificationData& d)
 // Session Event Type (Discriminated Union)
 // =============================================================================
 
+// --- Protocol surface additions: wire types present in the generated catalog ---
+struct ScheduleRearmedData
+{
+    int64_t id;
+    int64_t next_run_at;
+};
+
+inline void from_json(const json& j, ScheduleRearmedData& d)
+{
+    j.at("id").get_to(d.id);
+    j.at("nextRunAt").get_to(d.next_run_at);
+}
+
+struct AutopilotObjectiveChangedData
+{
+    json operation;
+    std::optional<int64_t> id;
+    std::optional<json> status;
+};
+
+inline void from_json(const json& j, AutopilotObjectiveChangedData& d)
+{
+    j.at("operation").get_to(d.operation);
+    if (j.contains("id") && !j["id"].is_null())
+        d.id = j.at("id").get<int64_t>();
+    if (j.contains("status") && !j["status"].is_null())
+        d.status = j.at("status").get<json>();
+}
+
+struct SessionLimitsChangedData
+{
+    json session_limits;
+};
+
+inline void from_json(const json& j, SessionLimitsChangedData& d)
+{
+    j.at("sessionLimits").get_to(d.session_limits);
+}
+
+struct PermissionsChangedData
+{
+    json previous_mode;
+    json mode;
+    std::optional<std::string> assisted_approval_model;
+};
+
+inline void from_json(const json& j, PermissionsChangedData& d)
+{
+    j.at("previousMode").get_to(d.previous_mode);
+    j.at("mode").get_to(d.mode);
+    if (j.contains("assistedApprovalModel") && !j["assistedApprovalModel"].is_null())
+        d.assisted_approval_model = j.at("assistedApprovalModel").get<std::string>();
+}
+
+struct TodosChangedData
+{
+    // No payload fields in the official schema.
+};
+
+inline void from_json(const json& j, TodosChangedData& d)
+{
+    (void)j;
+    (void)d;
+}
+
+struct MemoryChangedData
+{
+    // No payload fields in the official schema.
+};
+
+inline void from_json(const json& j, MemoryChangedData& d)
+{
+    (void)j;
+    (void)d;
+}
+
+struct UsageCheckpointData
+{
+    double total_nano_aiu;
+    std::optional<double> total_premium_requests;
+    std::optional<std::vector<json>> model_cache_state;
+    std::optional<std::vector<json>> prompt_cache_break_state;
+};
+
+inline void from_json(const json& j, UsageCheckpointData& d)
+{
+    j.at("totalNanoAiu").get_to(d.total_nano_aiu);
+    if (j.contains("totalPremiumRequests") && !j["totalPremiumRequests"].is_null())
+        d.total_premium_requests = j.at("totalPremiumRequests").get<double>();
+    if (j.contains("modelCacheState") && !j["modelCacheState"].is_null())
+        d.model_cache_state = j.at("modelCacheState").get<std::vector<json>>();
+    if (j.contains("promptCacheBreakState") && !j["promptCacheBreakState"].is_null())
+        d.prompt_cache_break_state = j.at("promptCacheBreakState").get<std::vector<json>>();
+}
+
+struct ContextClearedData
+{
+    std::optional<std::string> initial_message;
+    int64_t messages_cleared;
+};
+
+inline void from_json(const json& j, ContextClearedData& d)
+{
+    if (j.contains("initialMessage") && !j["initialMessage"].is_null())
+        d.initial_message = j.at("initialMessage").get<std::string>();
+    j.at("messagesCleared").get_to(d.messages_cleared);
+}
+
+struct FusionRouteStartedData
+{
+    std::string attempt_id;
+    json turn_kind;
+    std::optional<std::string> synthetic_model;
+    std::optional<std::string> policy;
+};
+
+inline void from_json(const json& j, FusionRouteStartedData& d)
+{
+    j.at("attemptId").get_to(d.attempt_id);
+    j.at("turnKind").get_to(d.turn_kind);
+    if (j.contains("syntheticModel") && !j["syntheticModel"].is_null())
+        d.synthetic_model = j.at("syntheticModel").get<std::string>();
+    if (j.contains("policy") && !j["policy"].is_null())
+        d.policy = j.at("policy").get<std::string>();
+}
+
+struct FusionRouteFailedData
+{
+    std::string attempt_id;
+    std::string synthetic_model;
+    std::string policy;
+    std::string reason;
+    std::optional<std::string> error_message;
+    std::string fallback_model;
+    std::optional<double> routing_latency_ms;
+};
+
+inline void from_json(const json& j, FusionRouteFailedData& d)
+{
+    j.at("attemptId").get_to(d.attempt_id);
+    j.at("syntheticModel").get_to(d.synthetic_model);
+    j.at("policy").get_to(d.policy);
+    j.at("reason").get_to(d.reason);
+    if (j.contains("errorMessage") && !j["errorMessage"].is_null())
+        d.error_message = j.at("errorMessage").get<std::string>();
+    j.at("fallbackModel").get_to(d.fallback_model);
+    if (j.contains("routingLatencyMs") && !j["routingLatencyMs"].is_null())
+        d.routing_latency_ms = j.at("routingLatencyMs").get<double>();
+}
+
+struct FusionResolvedData
+{
+    std::string fusion_id;
+    std::string turn_id;
+    int64_t contract_version;
+    std::string synthetic_model;
+    std::string policy;
+    std::optional<std::string> route_source;
+    std::optional<std::string> plan_version;
+    std::optional<std::string> policy_version;
+    std::optional<std::string> model_universe_version;
+    std::optional<std::string> rule_id;
+    std::optional<int64_t> rule_index;
+    std::optional<std::string> rule_name;
+    std::optional<json> scores;
+    json pattern;
+    std::string primary_model;
+    json secondary_model;
+    std::string fallback_model;
+    std::string follow_up_model;
+    std::optional<json> follow_up;
+    std::optional<double> routing_latency_ms;
+};
+
+inline void from_json(const json& j, FusionResolvedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("turnId").get_to(d.turn_id);
+    j.at("contractVersion").get_to(d.contract_version);
+    j.at("syntheticModel").get_to(d.synthetic_model);
+    j.at("policy").get_to(d.policy);
+    if (j.contains("routeSource") && !j["routeSource"].is_null())
+        d.route_source = j.at("routeSource").get<std::string>();
+    if (j.contains("planVersion") && !j["planVersion"].is_null())
+        d.plan_version = j.at("planVersion").get<std::string>();
+    if (j.contains("policyVersion") && !j["policyVersion"].is_null())
+        d.policy_version = j.at("policyVersion").get<std::string>();
+    if (j.contains("modelUniverseVersion") && !j["modelUniverseVersion"].is_null())
+        d.model_universe_version = j.at("modelUniverseVersion").get<std::string>();
+    if (j.contains("ruleId") && !j["ruleId"].is_null())
+        d.rule_id = j.at("ruleId").get<std::string>();
+    if (j.contains("ruleIndex") && !j["ruleIndex"].is_null())
+        d.rule_index = j.at("ruleIndex").get<int64_t>();
+    if (j.contains("ruleName") && !j["ruleName"].is_null())
+        d.rule_name = j.at("ruleName").get<std::string>();
+    if (j.contains("scores") && !j["scores"].is_null())
+        d.scores = j.at("scores").get<json>();
+    j.at("pattern").get_to(d.pattern);
+    j.at("primaryModel").get_to(d.primary_model);
+    j.at("secondaryModel").get_to(d.secondary_model);
+    j.at("fallbackModel").get_to(d.fallback_model);
+    j.at("followUpModel").get_to(d.follow_up_model);
+    if (j.contains("followUp") && !j["followUp"].is_null())
+        d.follow_up = j.at("followUp").get<json>();
+    if (j.contains("routingLatencyMs") && !j["routingLatencyMs"].is_null())
+        d.routing_latency_ms = j.at("routingLatencyMs").get<double>();
+}
+
+struct FusionHandoffData
+{
+    std::string fusion_id;
+    std::string source_phase_id;
+    std::string target_phase_id;
+    std::string target_model;
+    json message;
+};
+
+inline void from_json(const json& j, FusionHandoffData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("sourcePhaseId").get_to(d.source_phase_id);
+    j.at("targetPhaseId").get_to(d.target_phase_id);
+    j.at("targetModel").get_to(d.target_model);
+    j.at("message").get_to(d.message);
+}
+
+struct FusionCommitStartedData
+{
+    std::string fusion_id;
+    std::string commit_id;
+    std::string source_phase_id;
+    std::string source_model;
+    json kind;
+    json tool_call_id;
+};
+
+inline void from_json(const json& j, FusionCommitStartedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("commitId").get_to(d.commit_id);
+    j.at("sourcePhaseId").get_to(d.source_phase_id);
+    j.at("sourceModel").get_to(d.source_model);
+    j.at("kind").get_to(d.kind);
+    j.at("toolCallId").get_to(d.tool_call_id);
+}
+
+struct FusionCompletedData
+{
+    std::string fusion_id;
+    std::string commit_id;
+    std::string turn_id;
+    std::string synthetic_model;
+    json pattern;
+    std::string outcome;
+    json final_source_phase_id;
+    json final_source_model;
+    std::string follow_up_model;
+    json degraded_reason;
+    int64_t phase_count;
+    int64_t request_count;
+    int64_t input_tokens;
+    int64_t output_tokens;
+    int64_t cached_tokens;
+    std::optional<int64_t> cache_write_tokens;
+    double total_nano_aiu;
+    double duration_ms;
+};
+
+inline void from_json(const json& j, FusionCompletedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("commitId").get_to(d.commit_id);
+    j.at("turnId").get_to(d.turn_id);
+    j.at("syntheticModel").get_to(d.synthetic_model);
+    j.at("pattern").get_to(d.pattern);
+    j.at("outcome").get_to(d.outcome);
+    j.at("finalSourcePhaseId").get_to(d.final_source_phase_id);
+    j.at("finalSourceModel").get_to(d.final_source_model);
+    j.at("followUpModel").get_to(d.follow_up_model);
+    j.at("degradedReason").get_to(d.degraded_reason);
+    j.at("phaseCount").get_to(d.phase_count);
+    j.at("requestCount").get_to(d.request_count);
+    j.at("inputTokens").get_to(d.input_tokens);
+    j.at("outputTokens").get_to(d.output_tokens);
+    j.at("cachedTokens").get_to(d.cached_tokens);
+    if (j.contains("cacheWriteTokens") && !j["cacheWriteTokens"].is_null())
+        d.cache_write_tokens = j.at("cacheWriteTokens").get<int64_t>();
+    j.at("totalNanoAiu").get_to(d.total_nano_aiu);
+    j.at("durationMs").get_to(d.duration_ms);
+}
+
+struct AssistantTurnRetryData
+{
+    std::string turn_id;
+    std::optional<std::string> model;
+    std::optional<std::string> reason;
+};
+
+inline void from_json(const json& j, AssistantTurnRetryData& d)
+{
+    j.at("turnId").get_to(d.turn_id);
+    if (j.contains("model") && !j["model"].is_null())
+        d.model = j.at("model").get<std::string>();
+    if (j.contains("reason") && !j["reason"].is_null())
+        d.reason = j.at("reason").get<std::string>();
+}
+
+struct AgentInterruptedData
+{
+    json activity;
+    double elapsed_ms;
+    int64_t turn;
+    std::optional<std::string> model;
+    std::optional<std::string> api_endpoint;
+    std::optional<json> transport;
+    std::optional<std::string> reasoning_effort;
+    std::optional<json> cancel_phase;
+    std::optional<double> output_ttft_ms;
+    std::optional<std::vector<json>> tool_names;
+    std::optional<std::vector<json>> tool_call_ids;
+    std::optional<std::vector<json>> safe_tool_names;
+    std::optional<int64_t> interrupted_agent_count;
+};
+
+inline void from_json(const json& j, AgentInterruptedData& d)
+{
+    j.at("activity").get_to(d.activity);
+    j.at("elapsedMs").get_to(d.elapsed_ms);
+    j.at("turn").get_to(d.turn);
+    if (j.contains("model") && !j["model"].is_null())
+        d.model = j.at("model").get<std::string>();
+    if (j.contains("apiEndpoint") && !j["apiEndpoint"].is_null())
+        d.api_endpoint = j.at("apiEndpoint").get<std::string>();
+    if (j.contains("transport") && !j["transport"].is_null())
+        d.transport = j.at("transport").get<json>();
+    if (j.contains("reasoningEffort") && !j["reasoningEffort"].is_null())
+        d.reasoning_effort = j.at("reasoningEffort").get<std::string>();
+    if (j.contains("cancelPhase") && !j["cancelPhase"].is_null())
+        d.cancel_phase = j.at("cancelPhase").get<json>();
+    if (j.contains("outputTtftMs") && !j["outputTtftMs"].is_null())
+        d.output_ttft_ms = j.at("outputTtftMs").get<double>();
+    if (j.contains("toolNames") && !j["toolNames"].is_null())
+        d.tool_names = j.at("toolNames").get<std::vector<json>>();
+    if (j.contains("toolCallIds") && !j["toolCallIds"].is_null())
+        d.tool_call_ids = j.at("toolCallIds").get<std::vector<json>>();
+    if (j.contains("safeToolNames") && !j["safeToolNames"].is_null())
+        d.safe_tool_names = j.at("safeToolNames").get<std::vector<json>>();
+    if (j.contains("interruptedAgentCount") && !j["interruptedAgentCount"].is_null())
+        d.interrupted_agent_count = j.at("interruptedAgentCount").get<int64_t>();
+}
+
+struct FusionPhaseStartedData
+{
+    std::string fusion_id;
+    std::string phase_id;
+    json phase_kind;
+    json pattern;
+    std::string role;
+    json conversation_scope;
+    std::string model;
+};
+
+inline void from_json(const json& j, FusionPhaseStartedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("phaseId").get_to(d.phase_id);
+    j.at("phaseKind").get_to(d.phase_kind);
+    j.at("pattern").get_to(d.pattern);
+    j.at("role").get_to(d.role);
+    j.at("conversationScope").get_to(d.conversation_scope);
+    j.at("model").get_to(d.model);
+}
+
+struct FusionPhaseCompletedData
+{
+    std::string fusion_id;
+    std::string phase_id;
+    json phase_kind;
+    std::string role;
+    json conversation_scope;
+    std::string model;
+    json status;
+    std::string content;
+    json verdict;
+    double duration_ms;
+    json usage;
+    std::optional<json> projection_message;
+    std::optional<json> projection_mode;
+    std::optional<json> staged_terminal;
+};
+
+inline void from_json(const json& j, FusionPhaseCompletedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("phaseId").get_to(d.phase_id);
+    j.at("phaseKind").get_to(d.phase_kind);
+    j.at("role").get_to(d.role);
+    j.at("conversationScope").get_to(d.conversation_scope);
+    j.at("model").get_to(d.model);
+    j.at("status").get_to(d.status);
+    j.at("content").get_to(d.content);
+    j.at("verdict").get_to(d.verdict);
+    j.at("durationMs").get_to(d.duration_ms);
+    j.at("usage").get_to(d.usage);
+    if (j.contains("projectionMessage") && !j["projectionMessage"].is_null())
+        d.projection_message = j.at("projectionMessage").get<json>();
+    if (j.contains("projectionMode") && !j["projectionMode"].is_null())
+        d.projection_mode = j.at("projectionMode").get<json>();
+    if (j.contains("stagedTerminal") && !j["stagedTerminal"].is_null())
+        d.staged_terminal = j.at("stagedTerminal").get<json>();
+}
+
+struct FusionPhaseFailedData
+{
+    std::string fusion_id;
+    std::string phase_id;
+    json phase_kind;
+    std::string role;
+    json conversation_scope;
+    std::string model;
+    json status;
+    std::string reason;
+    double duration_ms;
+    json usage;
+    std::optional<std::string> error_message;
+    std::optional<std::string> degraded_to_phase_id;
+};
+
+inline void from_json(const json& j, FusionPhaseFailedData& d)
+{
+    j.at("fusionId").get_to(d.fusion_id);
+    j.at("phaseId").get_to(d.phase_id);
+    j.at("phaseKind").get_to(d.phase_kind);
+    j.at("role").get_to(d.role);
+    j.at("conversationScope").get_to(d.conversation_scope);
+    j.at("model").get_to(d.model);
+    j.at("status").get_to(d.status);
+    j.at("reason").get_to(d.reason);
+    j.at("durationMs").get_to(d.duration_ms);
+    j.at("usage").get_to(d.usage);
+    if (j.contains("errorMessage") && !j["errorMessage"].is_null())
+        d.error_message = j.at("errorMessage").get<std::string>();
+    if (j.contains("degradedToPhaseId") && !j["degradedToPhaseId"].is_null())
+        d.degraded_to_phase_id = j.at("degradedToPhaseId").get<std::string>();
+}
+
+struct AssistantServerToolProgressData
+{
+    int64_t output_index;
+    std::string kind;
+    std::string status;
+};
+
+inline void from_json(const json& j, AssistantServerToolProgressData& d)
+{
+    j.at("outputIndex").get_to(d.output_index);
+    j.at("kind").get_to(d.kind);
+    j.at("status").get_to(d.status);
+}
+
+struct AssistantToolCallDeltaData
+{
+    std::string tool_call_id;
+    std::optional<std::string> tool_name;
+    std::optional<json> tool_type;
+    std::string input_delta;
+};
+
+inline void from_json(const json& j, AssistantToolCallDeltaData& d)
+{
+    j.at("toolCallId").get_to(d.tool_call_id);
+    if (j.contains("toolName") && !j["toolName"].is_null())
+        d.tool_name = j.at("toolName").get<std::string>();
+    if (j.contains("toolType") && !j["toolType"].is_null())
+        d.tool_type = j.at("toolType").get<json>();
+    j.at("inputDelta").get_to(d.input_delta);
+}
+
+struct AssistantIdleData
+{
+    std::optional<bool> aborted;
+};
+
+inline void from_json(const json& j, AssistantIdleData& d)
+{
+    if (j.contains("aborted") && !j["aborted"].is_null())
+        d.aborted = j.at("aborted").get<bool>();
+}
+
+struct PromptCacheBreakData
+{
+    std::string primary_reason;
+    std::vector<json> contributing_reasons;
+    std::optional<json> before_request;
+    std::optional<json> after_request;
+    int64_t survived_tokens;
+    int64_t frontier_tokens;
+    int64_t shortfall_tokens;
+    double retention_ratio;
+    std::optional<std::string> model_from;
+    std::optional<std::string> model_to;
+    std::optional<std::vector<json>> tools_added;
+    std::optional<std::vector<json>> tools_removed;
+    std::optional<std::vector<json>> tools_redefined;
+    std::optional<std::vector<json>> tools_added_raw;
+    std::optional<std::vector<json>> tools_removed_raw;
+    std::optional<std::vector<json>> tools_redefined_raw;
+    std::optional<bool> tools_reordered;
+    std::optional<std::vector<json>> system_segments_changed;
+    std::optional<std::vector<json>> cache_config_changed_fields;
+    std::optional<int64_t> rewrite_message_index;
+    std::optional<std::string> rewrite_shape;
+    std::optional<std::vector<json>> rewrite_source;
+    std::optional<std::string> agent_name;
+};
+
+inline void from_json(const json& j, PromptCacheBreakData& d)
+{
+    j.at("primaryReason").get_to(d.primary_reason);
+    j.at("contributingReasons").get_to(d.contributing_reasons);
+    if (j.contains("beforeRequest") && !j["beforeRequest"].is_null())
+        d.before_request = j.at("beforeRequest").get<json>();
+    if (j.contains("afterRequest") && !j["afterRequest"].is_null())
+        d.after_request = j.at("afterRequest").get<json>();
+    j.at("survivedTokens").get_to(d.survived_tokens);
+    j.at("frontierTokens").get_to(d.frontier_tokens);
+    j.at("shortfallTokens").get_to(d.shortfall_tokens);
+    j.at("retentionRatio").get_to(d.retention_ratio);
+    if (j.contains("modelFrom") && !j["modelFrom"].is_null())
+        d.model_from = j.at("modelFrom").get<std::string>();
+    if (j.contains("modelTo") && !j["modelTo"].is_null())
+        d.model_to = j.at("modelTo").get<std::string>();
+    if (j.contains("toolsAdded") && !j["toolsAdded"].is_null())
+        d.tools_added = j.at("toolsAdded").get<std::vector<json>>();
+    if (j.contains("toolsRemoved") && !j["toolsRemoved"].is_null())
+        d.tools_removed = j.at("toolsRemoved").get<std::vector<json>>();
+    if (j.contains("toolsRedefined") && !j["toolsRedefined"].is_null())
+        d.tools_redefined = j.at("toolsRedefined").get<std::vector<json>>();
+    if (j.contains("toolsAddedRaw") && !j["toolsAddedRaw"].is_null())
+        d.tools_added_raw = j.at("toolsAddedRaw").get<std::vector<json>>();
+    if (j.contains("toolsRemovedRaw") && !j["toolsRemovedRaw"].is_null())
+        d.tools_removed_raw = j.at("toolsRemovedRaw").get<std::vector<json>>();
+    if (j.contains("toolsRedefinedRaw") && !j["toolsRedefinedRaw"].is_null())
+        d.tools_redefined_raw = j.at("toolsRedefinedRaw").get<std::vector<json>>();
+    if (j.contains("toolsReordered") && !j["toolsReordered"].is_null())
+        d.tools_reordered = j.at("toolsReordered").get<bool>();
+    if (j.contains("systemSegmentsChanged") && !j["systemSegmentsChanged"].is_null())
+        d.system_segments_changed = j.at("systemSegmentsChanged").get<std::vector<json>>();
+    if (j.contains("cacheConfigChangedFields") && !j["cacheConfigChangedFields"].is_null())
+        d.cache_config_changed_fields = j.at("cacheConfigChangedFields").get<std::vector<json>>();
+    if (j.contains("rewriteMessageIndex") && !j["rewriteMessageIndex"].is_null())
+        d.rewrite_message_index = j.at("rewriteMessageIndex").get<int64_t>();
+    if (j.contains("rewriteShape") && !j["rewriteShape"].is_null())
+        d.rewrite_shape = j.at("rewriteShape").get<std::string>();
+    if (j.contains("rewriteSource") && !j["rewriteSource"].is_null())
+        d.rewrite_source = j.at("rewriteSource").get<std::vector<json>>();
+    if (j.contains("agentName") && !j["agentName"].is_null())
+        d.agent_name = j.at("agentName").get<std::string>();
+}
+
+struct ModelCallFinishedData
+{
+    std::string turn_id;
+    std::optional<std::string> interaction_id;
+    double dispatch_duration_ms;
+    json outcome;
+    std::optional<bool> contains_built_in_file_edit_request;
+    int64_t edit_classifier_version;
+};
+
+inline void from_json(const json& j, ModelCallFinishedData& d)
+{
+    j.at("turnId").get_to(d.turn_id);
+    if (j.contains("interactionId") && !j["interactionId"].is_null())
+        d.interaction_id = j.at("interactionId").get<std::string>();
+    j.at("dispatchDurationMs").get_to(d.dispatch_duration_ms);
+    j.at("outcome").get_to(d.outcome);
+    if (j.contains("containsBuiltInFileEditRequest") && !j["containsBuiltInFileEditRequest"].is_null())
+        d.contains_built_in_file_edit_request = j.at("containsBuiltInFileEditRequest").get<bool>();
+    j.at("editClassifierVersion").get_to(d.edit_classifier_version);
+}
+
+struct ModelCallStartData
+{
+    std::string turn_id;
+    std::optional<std::string> model;
+    std::optional<std::string> previous_response_id;
+    std::optional<json> fusion;
+};
+
+inline void from_json(const json& j, ModelCallStartData& d)
+{
+    j.at("turnId").get_to(d.turn_id);
+    if (j.contains("model") && !j["model"].is_null())
+        d.model = j.at("model").get<std::string>();
+    if (j.contains("previousResponseId") && !j["previousResponseId"].is_null())
+        d.previous_response_id = j.at("previousResponseId").get<std::string>();
+    if (j.contains("fusion") && !j["fusion"].is_null())
+        d.fusion = j.at("fusion").get<json>();
+}
+
+struct ToolSearchActivatedData
+{
+    std::string strategy;
+    std::vector<json> tool_names;
+};
+
+inline void from_json(const json& j, ToolSearchActivatedData& d)
+{
+    j.at("strategy").get_to(d.strategy);
+    j.at("toolNames").get_to(d.tool_names);
+}
+
+struct SandboxDecisionData
+{
+    // No payload fields in the official schema.
+};
+
+inline void from_json(const json& j, SandboxDecisionData& d)
+{
+    (void)j;
+    (void)d;
+}
+
+struct SubagentConfiguredData
+{
+    std::string model;
+    std::optional<std::string> reasoning_effort;
+    std::optional<std::string> context_tier;
+    bool multi_turn;
+};
+
+inline void from_json(const json& j, SubagentConfiguredData& d)
+{
+    j.at("model").get_to(d.model);
+    if (j.contains("reasoningEffort") && !j["reasoningEffort"].is_null())
+        d.reasoning_effort = j.at("reasoningEffort").get<std::string>();
+    if (j.contains("contextTier") && !j["contextTier"].is_null())
+        d.context_tier = j.at("contextTier").get<std::string>();
+    j.at("multiTurn").get_to(d.multi_turn);
+}
+
+struct HookProgressData
+{
+    std::string message;
+    std::optional<bool> temporary;
+};
+
+inline void from_json(const json& j, HookProgressData& d)
+{
+    j.at("message").get_to(d.message);
+    if (j.contains("temporary") && !j["temporary"].is_null())
+        d.temporary = j.at("temporary").get<bool>();
+}
+
+struct BinaryAssetData
+{
+    std::string asset_id;
+    json type;
+    std::string mime_type;
+    int64_t byte_length;
+    std::string data;
+    std::optional<std::string> description;
+    std::optional<json> metadata;
+};
+
+inline void from_json(const json& j, BinaryAssetData& d)
+{
+    j.at("assetId").get_to(d.asset_id);
+    j.at("type").get_to(d.type);
+    j.at("mimeType").get_to(d.mime_type);
+    j.at("byteLength").get_to(d.byte_length);
+    j.at("data").get_to(d.data);
+    if (j.contains("description") && !j["description"].is_null())
+        d.description = j.at("description").get<std::string>();
+    if (j.contains("metadata") && !j["metadata"].is_null())
+        d.metadata = j.at("metadata").get<json>();
+}
+
+struct McpHeadersRefreshRequiredData
+{
+    std::string request_id;
+    std::string server_name;
+    std::string server_url;
+    json reason;
+};
+
+inline void from_json(const json& j, McpHeadersRefreshRequiredData& d)
+{
+    j.at("requestId").get_to(d.request_id);
+    j.at("serverName").get_to(d.server_name);
+    j.at("serverUrl").get_to(d.server_url);
+    j.at("reason").get_to(d.reason);
+}
+
+struct McpHeadersRefreshCompletedData
+{
+    std::string request_id;
+    json outcome;
+};
+
+inline void from_json(const json& j, McpHeadersRefreshCompletedData& d)
+{
+    j.at("requestId").get_to(d.request_id);
+    j.at("outcome").get_to(d.outcome);
+}
+
+struct UIEphemeralQueryData
+{
+    std::string request_id;
+    json phase;
+    std::optional<std::string> chunk;
+    std::optional<std::string> answer;
+    std::optional<std::string> error;
+};
+
+inline void from_json(const json& j, UIEphemeralQueryData& d)
+{
+    j.at("requestId").get_to(d.request_id);
+    j.at("phase").get_to(d.phase);
+    if (j.contains("chunk") && !j["chunk"].is_null())
+        d.chunk = j.at("chunk").get<std::string>();
+    if (j.contains("answer") && !j["answer"].is_null())
+        d.answer = j.at("answer").get<std::string>();
+    if (j.contains("error") && !j["error"].is_null())
+        d.error = j.at("error").get<std::string>();
+}
+
+struct SessionLimitsExhaustedRequestedData
+{
+    std::string request_id;
+    double used_ai_credits;
+    double max_ai_credits;
+};
+
+inline void from_json(const json& j, SessionLimitsExhaustedRequestedData& d)
+{
+    j.at("requestId").get_to(d.request_id);
+    j.at("usedAiCredits").get_to(d.used_ai_credits);
+    j.at("maxAiCredits").get_to(d.max_ai_credits);
+}
+
+struct SessionLimitsExhaustedCompletedData
+{
+    std::string request_id;
+    json response;
+};
+
+inline void from_json(const json& j, SessionLimitsExhaustedCompletedData& d)
+{
+    j.at("requestId").get_to(d.request_id);
+    j.at("response").get_to(d.response);
+}
+
+struct AutoModeResolvedData
+{
+    std::string chosen_model;
+    std::optional<json> reasoning_bucket;
+    std::optional<json> category_scores;
+    std::optional<std::string> predicted_label;
+    std::optional<double> confidence;
+    std::optional<std::vector<json>> candidate_models;
+    std::optional<std::string> routing_method;
+    std::optional<std::vector<json>> available_models;
+    std::optional<bool> fallback;
+    std::optional<std::string> fallback_reason;
+    std::optional<bool> sticky_override;
+    std::optional<double> router_latency_ms;
+    std::optional<double> end_to_end_latency_ms;
+    std::optional<double> chosen_shortfall;
+    std::optional<bool> has_image;
+};
+
+inline void from_json(const json& j, AutoModeResolvedData& d)
+{
+    j.at("chosenModel").get_to(d.chosen_model);
+    if (j.contains("reasoningBucket") && !j["reasoningBucket"].is_null())
+        d.reasoning_bucket = j.at("reasoningBucket").get<json>();
+    if (j.contains("categoryScores") && !j["categoryScores"].is_null())
+        d.category_scores = j.at("categoryScores").get<json>();
+    if (j.contains("predictedLabel") && !j["predictedLabel"].is_null())
+        d.predicted_label = j.at("predictedLabel").get<std::string>();
+    if (j.contains("confidence") && !j["confidence"].is_null())
+        d.confidence = j.at("confidence").get<double>();
+    if (j.contains("candidateModels") && !j["candidateModels"].is_null())
+        d.candidate_models = j.at("candidateModels").get<std::vector<json>>();
+    if (j.contains("routingMethod") && !j["routingMethod"].is_null())
+        d.routing_method = j.at("routingMethod").get<std::string>();
+    if (j.contains("availableModels") && !j["availableModels"].is_null())
+        d.available_models = j.at("availableModels").get<std::vector<json>>();
+    if (j.contains("fallback") && !j["fallback"].is_null())
+        d.fallback = j.at("fallback").get<bool>();
+    if (j.contains("fallbackReason") && !j["fallbackReason"].is_null())
+        d.fallback_reason = j.at("fallbackReason").get<std::string>();
+    if (j.contains("stickyOverride") && !j["stickyOverride"].is_null())
+        d.sticky_override = j.at("stickyOverride").get<bool>();
+    if (j.contains("routerLatencyMs") && !j["routerLatencyMs"].is_null())
+        d.router_latency_ms = j.at("routerLatencyMs").get<double>();
+    if (j.contains("endToEndLatencyMs") && !j["endToEndLatencyMs"].is_null())
+        d.end_to_end_latency_ms = j.at("endToEndLatencyMs").get<double>();
+    if (j.contains("chosenShortfall") && !j["chosenShortfall"].is_null())
+        d.chosen_shortfall = j.at("chosenShortfall").get<double>();
+    if (j.contains("hasImage") && !j["hasImage"].is_null())
+        d.has_image = j.at("hasImage").get<bool>();
+}
+
+struct ManagedSettingsResolvedData
+{
+    json source;
+    bool server_managed;
+    bool device_managed;
+    std::optional<bool> client_managed;
+    std::optional<bool> policy_helper_managed;
+    bool fail_closed;
+    std::optional<bool> sandbox_enabled_by_undetermined_policy;
+    bool bypass_permissions_disabled;
+    std::optional<bool> permissions_allow_intersected;
+    std::vector<json> managed_keys;
+    std::optional<json> settings;
+};
+
+inline void from_json(const json& j, ManagedSettingsResolvedData& d)
+{
+    j.at("source").get_to(d.source);
+    j.at("serverManaged").get_to(d.server_managed);
+    j.at("deviceManaged").get_to(d.device_managed);
+    if (j.contains("clientManaged") && !j["clientManaged"].is_null())
+        d.client_managed = j.at("clientManaged").get<bool>();
+    if (j.contains("policyHelperManaged") && !j["policyHelperManaged"].is_null())
+        d.policy_helper_managed = j.at("policyHelperManaged").get<bool>();
+    j.at("failClosed").get_to(d.fail_closed);
+    if (j.contains("sandboxEnabledByUndeterminedPolicy") && !j["sandboxEnabledByUndeterminedPolicy"].is_null())
+        d.sandbox_enabled_by_undetermined_policy = j.at("sandboxEnabledByUndeterminedPolicy").get<bool>();
+    j.at("bypassPermissionsDisabled").get_to(d.bypass_permissions_disabled);
+    if (j.contains("permissionsAllowIntersected") && !j["permissionsAllowIntersected"].is_null())
+        d.permissions_allow_intersected = j.at("permissionsAllowIntersected").get<bool>();
+    j.at("managedKeys").get_to(d.managed_keys);
+    if (j.contains("settings") && !j["settings"].is_null())
+        d.settings = j.at("settings").get<json>();
+}
+
+struct ManagedSettingsEnforcedData
+{
+    json action;
+    std::optional<json> escalation;
+    std::string setting;
+    bool fail_closed;
+    std::string message;
+};
+
+inline void from_json(const json& j, ManagedSettingsEnforcedData& d)
+{
+    j.at("action").get_to(d.action);
+    if (j.contains("escalation") && !j["escalation"].is_null())
+        d.escalation = j.at("escalation").get<json>();
+    j.at("setting").get_to(d.setting);
+    j.at("failClosed").get_to(d.fail_closed);
+    j.at("message").get_to(d.message);
+}
+
+struct FactoryRunUpdatedData
+{
+    std::string run_id;
+    int64_t revision;
+};
+
+inline void from_json(const json& j, FactoryRunUpdatedData& d)
+{
+    j.at("runId").get_to(d.run_id);
+    j.at("revision").get_to(d.revision);
+}
+
+struct FactoryRunStartedData
+{
+    std::string run_id;
+    std::string factory_name;
+    int64_t attempt;
+};
+
+inline void from_json(const json& j, FactoryRunStartedData& d)
+{
+    j.at("runId").get_to(d.run_id);
+    j.at("factoryName").get_to(d.factory_name);
+    j.at("attempt").get_to(d.attempt);
+}
+
+struct FactoryRunSettledData
+{
+    std::string run_id;
+    json status;
+    int64_t consumed_subagents;
+    int64_t consumed_nano_aiu;
+    int64_t elapsed_ms;
+    std::optional<std::string> failure_type;
+};
+
+inline void from_json(const json& j, FactoryRunSettledData& d)
+{
+    j.at("runId").get_to(d.run_id);
+    j.at("status").get_to(d.status);
+    j.at("consumedSubagents").get_to(d.consumed_subagents);
+    j.at("consumedNanoAiu").get_to(d.consumed_nano_aiu);
+    j.at("elapsedMs").get_to(d.elapsed_ms);
+    if (j.contains("failureType") && !j["failureType"].is_null())
+        d.failure_type = j.at("failureType").get<std::string>();
+}
+
+struct McpListChangedData
+{
+    std::string server_name;
+};
+
+inline void from_json(const json& j, McpListChangedData& d)
+{
+    j.at("serverName").get_to(d.server_name);
+}
+
+struct CanvasOpenedData
+{
+    std::string instance_id;
+    std::string extension_id;
+    std::optional<std::string> extension_name;
+    std::string canvas_id;
+    std::optional<std::string> icon;
+    std::optional<std::string> title;
+    std::optional<std::string> status;
+    std::optional<std::string> url;
+    std::optional<json> input;
+};
+
+inline void from_json(const json& j, CanvasOpenedData& d)
+{
+    j.at("instanceId").get_to(d.instance_id);
+    j.at("extensionId").get_to(d.extension_id);
+    if (j.contains("extensionName") && !j["extensionName"].is_null())
+        d.extension_name = j.at("extensionName").get<std::string>();
+    j.at("canvasId").get_to(d.canvas_id);
+    if (j.contains("icon") && !j["icon"].is_null())
+        d.icon = j.at("icon").get<std::string>();
+    if (j.contains("title") && !j["title"].is_null())
+        d.title = j.at("title").get<std::string>();
+    if (j.contains("status") && !j["status"].is_null())
+        d.status = j.at("status").get<std::string>();
+    if (j.contains("url") && !j["url"].is_null())
+        d.url = j.at("url").get<std::string>();
+    if (j.contains("input") && !j["input"].is_null())
+        d.input = j.at("input").get<json>();
+}
+
+struct CanvasRegistryChangedData
+{
+    std::vector<json> canvases;
+};
+
+inline void from_json(const json& j, CanvasRegistryChangedData& d)
+{
+    j.at("canvases").get_to(d.canvases);
+}
+
+struct CanvasClosedData
+{
+    std::string instance_id;
+    std::string extension_id;
+    std::string canvas_id;
+};
+
+inline void from_json(const json& j, CanvasClosedData& d)
+{
+    j.at("instanceId").get_to(d.instance_id);
+    j.at("extensionId").get_to(d.extension_id);
+    j.at("canvasId").get_to(d.canvas_id);
+}
+
+struct CanvasUnavailableData
+{
+    std::string instance_id;
+    std::string extension_id;
+    std::string canvas_id;
+};
+
+inline void from_json(const json& j, CanvasUnavailableData& d)
+{
+    j.at("instanceId").get_to(d.instance_id);
+    j.at("extensionId").get_to(d.extension_id);
+    j.at("canvasId").get_to(d.canvas_id);
+}
+
+struct CanvasRecordedData
+{
+    std::string instance_id;
+    std::string extension_id;
+    std::string canvas_id;
+    std::optional<std::string> title;
+    std::optional<json> input;
+};
+
+inline void from_json(const json& j, CanvasRecordedData& d)
+{
+    j.at("instanceId").get_to(d.instance_id);
+    j.at("extensionId").get_to(d.extension_id);
+    j.at("canvasId").get_to(d.canvas_id);
+    if (j.contains("title") && !j["title"].is_null())
+        d.title = j.at("title").get<std::string>();
+    if (j.contains("input") && !j["input"].is_null())
+        d.input = j.at("input").get<json>();
+}
+
+struct CanvasRemovedData
+{
+    std::string instance_id;
+    std::string extension_id;
+    std::string canvas_id;
+};
+
+inline void from_json(const json& j, CanvasRemovedData& d)
+{
+    j.at("instanceId").get_to(d.instance_id);
+    j.at("extensionId").get_to(d.extension_id);
+    j.at("canvasId").get_to(d.canvas_id);
+}
+
+struct ExtensionsAttachmentsPushedData
+{
+    std::vector<json> attachments;
+};
+
+inline void from_json(const json& j, ExtensionsAttachmentsPushedData& d)
+{
+    j.at("attachments").get_to(d.attachments);
+}
+
+struct McpAppToolCallCompleteData
+{
+    std::string server_name;
+    std::string tool_name;
+    std::optional<json> arguments;
+    bool success;
+    double duration_ms;
+    std::optional<json> result;
+    std::optional<json> error;
+    std::optional<json> tool_meta;
+};
+
+inline void from_json(const json& j, McpAppToolCallCompleteData& d)
+{
+    j.at("serverName").get_to(d.server_name);
+    j.at("toolName").get_to(d.tool_name);
+    if (j.contains("arguments") && !j["arguments"].is_null())
+        d.arguments = j.at("arguments").get<json>();
+    j.at("success").get_to(d.success);
+    j.at("durationMs").get_to(d.duration_ms);
+    if (j.contains("result") && !j["result"].is_null())
+        d.result = j.at("result").get<json>();
+    if (j.contains("error") && !j["error"].is_null())
+        d.error = j.at("error").get<json>();
+    if (j.contains("toolMeta") && !j["toolMeta"].is_null())
+        d.tool_meta = j.at("toolMeta").get<json>();
+}
+
 /// All possible event types
 enum class SessionEventType
 {
@@ -1931,6 +3054,58 @@ enum class SessionEventType
     ExitPlanModeRequested,
     ExitPlanModeCompleted,
     SystemNotification,
+    SessionScheduleRearmed,
+    SessionAutopilotObjectiveChanged,
+    SessionSessionLimitsChanged,
+    SessionPermissionsChanged,
+    SessionTodosChanged,
+    SessionMemoryChanged,
+    SessionUsageCheckpoint,
+    SessionContextCleared,
+    SessionFusionRouteStarted,
+    SessionFusionRouteFailed,
+    SessionFusionResolved,
+    SessionFusionHandoff,
+    SessionFusionCommitStarted,
+    SessionFusionCompleted,
+    AssistantTurnRetry,
+    AgentInterrupted,
+    AssistantFusionPhaseStarted,
+    AssistantFusionPhaseCompleted,
+    AssistantFusionPhaseFailed,
+    AssistantServerToolProgress,
+    AssistantToolCallDelta,
+    AssistantIdle,
+    PromptCacheBreak,
+    ModelCallFinished,
+    ModelCallStart,
+    ToolSearchActivated,
+    SandboxDecision,
+    SubagentConfigured,
+    HookProgress,
+    SessionBinaryAsset,
+    McpHeadersRefreshRequired,
+    McpHeadersRefreshCompleted,
+    UiEphemeralQuery,
+    SessionLimitsExhaustedRequested,
+    SessionLimitsExhaustedCompleted,
+    SessionAutoModeResolved,
+    SessionManagedSettingsResolved,
+    SessionManagedSettingsEnforced,
+    FactoryRunUpdated,
+    FactoryRunStarted,
+    FactoryRunSettled,
+    McpToolsListChanged,
+    McpResourcesListChanged,
+    McpPromptsListChanged,
+    SessionCanvasOpened,
+    SessionCanvasRegistryChanged,
+    SessionCanvasClosed,
+    SessionCanvasUnavailable,
+    SessionCanvasRecorded,
+    SessionCanvasRemoved,
+    SessionExtensionsAttachmentsPushed,
+    McpAppToolCallComplete,
     Unknown
 };
 
@@ -2018,6 +3193,56 @@ using SessionEventData = std::variant<
     ExitPlanModeRequestedData,
     ExitPlanModeCompletedData,
     SystemNotificationData,
+    ScheduleRearmedData,
+    AutopilotObjectiveChangedData,
+    SessionLimitsChangedData,
+    PermissionsChangedData,
+    TodosChangedData,
+    MemoryChangedData,
+    UsageCheckpointData,
+    ContextClearedData,
+    FusionRouteStartedData,
+    FusionRouteFailedData,
+    FusionResolvedData,
+    FusionHandoffData,
+    FusionCommitStartedData,
+    FusionCompletedData,
+    AssistantTurnRetryData,
+    AgentInterruptedData,
+    FusionPhaseStartedData,
+    FusionPhaseCompletedData,
+    FusionPhaseFailedData,
+    AssistantServerToolProgressData,
+    AssistantToolCallDeltaData,
+    AssistantIdleData,
+    PromptCacheBreakData,
+    ModelCallFinishedData,
+    ModelCallStartData,
+    ToolSearchActivatedData,
+    SandboxDecisionData,
+    SubagentConfiguredData,
+    HookProgressData,
+    BinaryAssetData,
+    McpHeadersRefreshRequiredData,
+    McpHeadersRefreshCompletedData,
+    UIEphemeralQueryData,
+    SessionLimitsExhaustedRequestedData,
+    SessionLimitsExhaustedCompletedData,
+    AutoModeResolvedData,
+    ManagedSettingsResolvedData,
+    ManagedSettingsEnforcedData,
+    FactoryRunUpdatedData,
+    FactoryRunStartedData,
+    FactoryRunSettledData,
+    McpListChangedData,
+    CanvasOpenedData,
+    CanvasRegistryChangedData,
+    CanvasClosedData,
+    CanvasUnavailableData,
+    CanvasRecordedData,
+    CanvasRemovedData,
+    ExtensionsAttachmentsPushedData,
+    McpAppToolCallCompleteData,
     json // Unknown event fallback
     >;
 
@@ -2162,6 +3387,58 @@ inline SessionEvent parse_session_event(const json& j)
         {"exit_plan_mode.requested", SessionEventType::ExitPlanModeRequested},
         {"exit_plan_mode.completed", SessionEventType::ExitPlanModeCompleted},
         {"system.notification", SessionEventType::SystemNotification},
+        {"session.schedule_rearmed", SessionEventType::SessionScheduleRearmed},
+        {"session.autopilot_objective_changed", SessionEventType::SessionAutopilotObjectiveChanged},
+        {"session.session_limits_changed", SessionEventType::SessionSessionLimitsChanged},
+        {"session.permissions_changed", SessionEventType::SessionPermissionsChanged},
+        {"session.todos_changed", SessionEventType::SessionTodosChanged},
+        {"session.memory_changed", SessionEventType::SessionMemoryChanged},
+        {"session.usage_checkpoint", SessionEventType::SessionUsageCheckpoint},
+        {"session.context_cleared", SessionEventType::SessionContextCleared},
+        {"session.fusion_route_started", SessionEventType::SessionFusionRouteStarted},
+        {"session.fusion_route_failed", SessionEventType::SessionFusionRouteFailed},
+        {"session.fusion_resolved", SessionEventType::SessionFusionResolved},
+        {"session.fusion_handoff", SessionEventType::SessionFusionHandoff},
+        {"session.fusion_commit_started", SessionEventType::SessionFusionCommitStarted},
+        {"session.fusion_completed", SessionEventType::SessionFusionCompleted},
+        {"assistant.turn_retry", SessionEventType::AssistantTurnRetry},
+        {"agent.interrupted", SessionEventType::AgentInterrupted},
+        {"assistant.fusion_phase_started", SessionEventType::AssistantFusionPhaseStarted},
+        {"assistant.fusion_phase_completed", SessionEventType::AssistantFusionPhaseCompleted},
+        {"assistant.fusion_phase_failed", SessionEventType::AssistantFusionPhaseFailed},
+        {"assistant.server_tool_progress", SessionEventType::AssistantServerToolProgress},
+        {"assistant.tool_call_delta", SessionEventType::AssistantToolCallDelta},
+        {"assistant.idle", SessionEventType::AssistantIdle},
+        {"prompt_cache_break", SessionEventType::PromptCacheBreak},
+        {"model.call_finished", SessionEventType::ModelCallFinished},
+        {"model.call_start", SessionEventType::ModelCallStart},
+        {"tool_search.activated", SessionEventType::ToolSearchActivated},
+        {"sandbox.decision", SessionEventType::SandboxDecision},
+        {"subagent.configured", SessionEventType::SubagentConfigured},
+        {"hook.progress", SessionEventType::HookProgress},
+        {"session.binary_asset", SessionEventType::SessionBinaryAsset},
+        {"mcp.headers_refresh_required", SessionEventType::McpHeadersRefreshRequired},
+        {"mcp.headers_refresh_completed", SessionEventType::McpHeadersRefreshCompleted},
+        {"ui.ephemeral_query", SessionEventType::UiEphemeralQuery},
+        {"session_limits_exhausted.requested", SessionEventType::SessionLimitsExhaustedRequested},
+        {"session_limits_exhausted.completed", SessionEventType::SessionLimitsExhaustedCompleted},
+        {"session.auto_mode_resolved", SessionEventType::SessionAutoModeResolved},
+        {"session.managed_settings_resolved", SessionEventType::SessionManagedSettingsResolved},
+        {"session.managed_settings_enforced", SessionEventType::SessionManagedSettingsEnforced},
+        {"factory.run_updated", SessionEventType::FactoryRunUpdated},
+        {"factory.run_started", SessionEventType::FactoryRunStarted},
+        {"factory.run_settled", SessionEventType::FactoryRunSettled},
+        {"mcp.tools.list_changed", SessionEventType::McpToolsListChanged},
+        {"mcp.resources.list_changed", SessionEventType::McpResourcesListChanged},
+        {"mcp.prompts.list_changed", SessionEventType::McpPromptsListChanged},
+        {"session.canvas.opened", SessionEventType::SessionCanvasOpened},
+        {"session.canvas.registry_changed", SessionEventType::SessionCanvasRegistryChanged},
+        {"session.canvas.closed", SessionEventType::SessionCanvasClosed},
+        {"session.canvas.unavailable", SessionEventType::SessionCanvasUnavailable},
+        {"session.canvas.recorded", SessionEventType::SessionCanvasRecorded},
+        {"session.canvas.removed", SessionEventType::SessionCanvasRemoved},
+        {"session.extensions.attachments_pushed", SessionEventType::SessionExtensionsAttachmentsPushed},
+        {"mcp_app.tool_call_complete", SessionEventType::McpAppToolCallComplete},
     };
 
     auto it = type_map.find(event.type_string);
@@ -2170,6 +3447,8 @@ inline SessionEvent parse_session_event(const json& j)
         event.type = it->second;
 
         // Parse data based on type
+        try
+        {
         switch (event.type)
         {
         case SessionEventType::SessionStart:
@@ -2416,9 +3695,172 @@ inline SessionEvent parse_session_event(const json& j)
         case SessionEventType::SystemNotification:
             event.data = data_json.get<SystemNotificationData>();
             break;
+        case SessionEventType::SessionScheduleRearmed:
+            event.data = data_json.get<ScheduleRearmedData>();
+            break;
+        case SessionEventType::SessionAutopilotObjectiveChanged:
+            event.data = data_json.get<AutopilotObjectiveChangedData>();
+            break;
+        case SessionEventType::SessionSessionLimitsChanged:
+            event.data = data_json.get<SessionLimitsChangedData>();
+            break;
+        case SessionEventType::SessionPermissionsChanged:
+            event.data = data_json.get<PermissionsChangedData>();
+            break;
+        case SessionEventType::SessionTodosChanged:
+            event.data = data_json.get<TodosChangedData>();
+            break;
+        case SessionEventType::SessionMemoryChanged:
+            event.data = data_json.get<MemoryChangedData>();
+            break;
+        case SessionEventType::SessionUsageCheckpoint:
+            event.data = data_json.get<UsageCheckpointData>();
+            break;
+        case SessionEventType::SessionContextCleared:
+            event.data = data_json.get<ContextClearedData>();
+            break;
+        case SessionEventType::SessionFusionRouteStarted:
+            event.data = data_json.get<FusionRouteStartedData>();
+            break;
+        case SessionEventType::SessionFusionRouteFailed:
+            event.data = data_json.get<FusionRouteFailedData>();
+            break;
+        case SessionEventType::SessionFusionResolved:
+            event.data = data_json.get<FusionResolvedData>();
+            break;
+        case SessionEventType::SessionFusionHandoff:
+            event.data = data_json.get<FusionHandoffData>();
+            break;
+        case SessionEventType::SessionFusionCommitStarted:
+            event.data = data_json.get<FusionCommitStartedData>();
+            break;
+        case SessionEventType::SessionFusionCompleted:
+            event.data = data_json.get<FusionCompletedData>();
+            break;
+        case SessionEventType::AssistantTurnRetry:
+            event.data = data_json.get<AssistantTurnRetryData>();
+            break;
+        case SessionEventType::AgentInterrupted:
+            event.data = data_json.get<AgentInterruptedData>();
+            break;
+        case SessionEventType::AssistantFusionPhaseStarted:
+            event.data = data_json.get<FusionPhaseStartedData>();
+            break;
+        case SessionEventType::AssistantFusionPhaseCompleted:
+            event.data = data_json.get<FusionPhaseCompletedData>();
+            break;
+        case SessionEventType::AssistantFusionPhaseFailed:
+            event.data = data_json.get<FusionPhaseFailedData>();
+            break;
+        case SessionEventType::AssistantServerToolProgress:
+            event.data = data_json.get<AssistantServerToolProgressData>();
+            break;
+        case SessionEventType::AssistantToolCallDelta:
+            event.data = data_json.get<AssistantToolCallDeltaData>();
+            break;
+        case SessionEventType::AssistantIdle:
+            event.data = data_json.get<AssistantIdleData>();
+            break;
+        case SessionEventType::PromptCacheBreak:
+            event.data = data_json.get<PromptCacheBreakData>();
+            break;
+        case SessionEventType::ModelCallFinished:
+            event.data = data_json.get<ModelCallFinishedData>();
+            break;
+        case SessionEventType::ModelCallStart:
+            event.data = data_json.get<ModelCallStartData>();
+            break;
+        case SessionEventType::ToolSearchActivated:
+            event.data = data_json.get<ToolSearchActivatedData>();
+            break;
+        case SessionEventType::SandboxDecision:
+            event.data = data_json.get<SandboxDecisionData>();
+            break;
+        case SessionEventType::SubagentConfigured:
+            event.data = data_json.get<SubagentConfiguredData>();
+            break;
+        case SessionEventType::HookProgress:
+            event.data = data_json.get<HookProgressData>();
+            break;
+        case SessionEventType::SessionBinaryAsset:
+            event.data = data_json.get<BinaryAssetData>();
+            break;
+        case SessionEventType::McpHeadersRefreshRequired:
+            event.data = data_json.get<McpHeadersRefreshRequiredData>();
+            break;
+        case SessionEventType::McpHeadersRefreshCompleted:
+            event.data = data_json.get<McpHeadersRefreshCompletedData>();
+            break;
+        case SessionEventType::UiEphemeralQuery:
+            event.data = data_json.get<UIEphemeralQueryData>();
+            break;
+        case SessionEventType::SessionLimitsExhaustedRequested:
+            event.data = data_json.get<SessionLimitsExhaustedRequestedData>();
+            break;
+        case SessionEventType::SessionLimitsExhaustedCompleted:
+            event.data = data_json.get<SessionLimitsExhaustedCompletedData>();
+            break;
+        case SessionEventType::SessionAutoModeResolved:
+            event.data = data_json.get<AutoModeResolvedData>();
+            break;
+        case SessionEventType::SessionManagedSettingsResolved:
+            event.data = data_json.get<ManagedSettingsResolvedData>();
+            break;
+        case SessionEventType::SessionManagedSettingsEnforced:
+            event.data = data_json.get<ManagedSettingsEnforcedData>();
+            break;
+        case SessionEventType::FactoryRunUpdated:
+            event.data = data_json.get<FactoryRunUpdatedData>();
+            break;
+        case SessionEventType::FactoryRunStarted:
+            event.data = data_json.get<FactoryRunStartedData>();
+            break;
+        case SessionEventType::FactoryRunSettled:
+            event.data = data_json.get<FactoryRunSettledData>();
+            break;
+        case SessionEventType::McpToolsListChanged:
+            event.data = data_json.get<McpListChangedData>();
+            break;
+        case SessionEventType::McpResourcesListChanged:
+            event.data = data_json.get<McpListChangedData>();
+            break;
+        case SessionEventType::McpPromptsListChanged:
+            event.data = data_json.get<McpListChangedData>();
+            break;
+        case SessionEventType::SessionCanvasOpened:
+            event.data = data_json.get<CanvasOpenedData>();
+            break;
+        case SessionEventType::SessionCanvasRegistryChanged:
+            event.data = data_json.get<CanvasRegistryChangedData>();
+            break;
+        case SessionEventType::SessionCanvasClosed:
+            event.data = data_json.get<CanvasClosedData>();
+            break;
+        case SessionEventType::SessionCanvasUnavailable:
+            event.data = data_json.get<CanvasUnavailableData>();
+            break;
+        case SessionEventType::SessionCanvasRecorded:
+            event.data = data_json.get<CanvasRecordedData>();
+            break;
+        case SessionEventType::SessionCanvasRemoved:
+            event.data = data_json.get<CanvasRemovedData>();
+            break;
+        case SessionEventType::SessionExtensionsAttachmentsPushed:
+            event.data = data_json.get<ExtensionsAttachmentsPushedData>();
+            break;
+        case SessionEventType::McpAppToolCallComplete:
+            event.data = data_json.get<McpAppToolCallCompleteData>();
+            break;
         default:
             event.data = data_json; // Fallback to raw JSON
             break;
+        }
+        }
+        catch (const json::exception&)
+        {
+            // Preserve forward compatibility when a known event's payload shape
+            // evolves or a formerly-required field is null.
+            event.data = data_json;
         }
     }
     else

@@ -214,7 +214,7 @@ TEST(ResumeSessionConfigV0149, FieldsOmittedByDefault)
     auto req = build_session_resume_request("sess-1", cfg);
     EXPECT_FALSE(req.contains("clientName"));
     EXPECT_FALSE(req.contains("enableSessionTelemetry"));
-    EXPECT_FALSE(req.contains("includeSubAgentStreamingEvents"));
+    EXPECT_TRUE(req["includeSubAgentStreamingEvents"].get<bool>());
     EXPECT_FALSE(req.contains("enableConfigDiscovery"));
     EXPECT_FALSE(req.contains("instructionDirectories"));
     EXPECT_FALSE(req.contains("remoteSession"));

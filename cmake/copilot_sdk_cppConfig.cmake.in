@@ -1,11 +1,9 @@
 @PACKAGE_INIT@
 
-include(CMakeFindDependencyMacro)
-
 # If the consumer didn't provide nlohmann_json, try to find it. If it still isn't
 # available, fall back to the vendored headers installed with this package.
 if(NOT TARGET nlohmann_json::nlohmann_json)
-  find_dependency(nlohmann_json QUIET)
+  find_package(nlohmann_json CONFIG QUIET)
 endif()
 if(NOT TARGET nlohmann_json::nlohmann_json)
   add_library(nlohmann_json::nlohmann_json INTERFACE IMPORTED)

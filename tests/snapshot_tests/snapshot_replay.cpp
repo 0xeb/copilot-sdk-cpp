@@ -504,7 +504,8 @@ int main(int argc, char* argv[])
         ClientOptions opts;
         opts.log_level = LogLevel::Info;
         opts.use_stdio = false;
-        opts.cli_url = std::to_string(port);
+        // Direct IPv4: avoids the refused-::1 cost of resolving a bare port via "localhost".
+        opts.cli_url = "127.0.0.1:" + std::to_string(port);
         opts.auto_start = false;
         Client client(opts);
         client.start().get();

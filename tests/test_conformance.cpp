@@ -401,7 +401,10 @@ struct ConnectedHarness
         int port = peer->start();
         ClientOptions opts;
         opts.use_stdio = false;
-        opts.cli_url = std::to_string(port);
+        // Address the IPv4 peer directly. A bare port resolves via "localhost", which tries ::1
+        // first and pays the OS cost of a refused attempt on every harness construction.
+        // TcpTransportTest.ConnectFallsThroughToIpv4WithoutBurningTimeout covers that path.
+        opts.cli_url = "127.0.0.1:" + std::to_string(port);
         opts.auto_start = false;
         client = std::make_unique<Client>(opts);
         client->start().get();
@@ -534,7 +537,7 @@ TEST(ConformanceSessionPayload, CreateRequestOmitsAllV0149FieldsByDefault)
     auto req = build_session_create_request(cfg);
     EXPECT_FALSE(req.contains("clientName"));
     EXPECT_FALSE(req.contains("enableSessionTelemetry"));
-    EXPECT_FALSE(req.contains("includeSubAgentStreamingEvents"));
+    EXPECT_TRUE(req["includeSubAgentStreamingEvents"].get<bool>());
     EXPECT_FALSE(req.contains("enableConfigDiscovery"));
     EXPECT_FALSE(req.contains("instructionDirectories"));
     EXPECT_FALSE(req.contains("remoteSession"));
@@ -567,7 +570,7 @@ TEST(ConformanceSessionPayload, ResumeRequestOmitsAllV0149FieldsByDefault)
     auto req = build_session_resume_request("sess-omit", cfg);
     EXPECT_FALSE(req.contains("clientName"));
     EXPECT_FALSE(req.contains("enableSessionTelemetry"));
-    EXPECT_FALSE(req.contains("includeSubAgentStreamingEvents"));
+    EXPECT_TRUE(req["includeSubAgentStreamingEvents"].get<bool>());
     EXPECT_FALSE(req.contains("enableConfigDiscovery"));
     EXPECT_FALSE(req.contains("instructionDirectories"));
     EXPECT_FALSE(req.contains("remoteSession"));
@@ -785,15 +788,16 @@ TEST(ConformanceSessionPayload, CreateRequestOmitsClientOnlyHandlerFields)
     EXPECT_TRUE(req["requestPermission"].get<bool>());
     EXPECT_TRUE(req["requestUserInput"].get<bool>());
 
+    EXPECT_TRUE(req["requestElicitation"].get<bool>());
+    EXPECT_TRUE(req["requestExitPlanMode"].get<bool>());
+    EXPECT_TRUE(req["requestAutoModeSwitch"].get<bool>());
+
     for (const char* key : {"onPermissionRequest",
                             "onUserInputRequest",
                             "onElicitationRequest",
                             "onExitPlanMode",
                             "onAutoModeSwitch",
-                            "onEvent",
-                            "requestElicitation",
-                            "requestExitPlanMode",
-                            "requestAutoModeSwitch"})
+                            "onEvent"})
     {
         EXPECT_FALSE(req.contains(key)) << key;
     }
@@ -1297,7 +1301,7 @@ TEST(ConformanceLifetime, ClientStopDuringInFlightToolHandlerIsGraceful)
 
     ClientOptions opts;
     opts.use_stdio = false;
-    opts.cli_url = std::to_string(port);
+    opts.cli_url = "127.0.0.1:" + std::to_string(port); // see ConnectedHarness for rationale
     opts.auto_start = false;
     auto client = std::make_unique<Client>(opts);
     client->start().get();

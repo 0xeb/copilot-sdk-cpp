@@ -33,6 +33,49 @@ Snapshot conformance tests (optional):
 - Enable with `-DCOPILOT_BUILD_SNAPSHOT_TESTS=ON` and set `-DCOPILOT_SDK_CPP_SNAPSHOT_DIR=...` if auto-detection fails.
 - Run: `cmake --build build --target run_snapshot_tests --config Release`
 
+## Official protocol baseline and code generation
+
+`schemas/official-baseline.json` pins the official SDK commit, protocol version,
+schema hashes, and the complete generated surface: 1,203 API definitions, 494
+session-event definitions, 363 RPC methods, and 122 event variants. Generated
+wire-preserving types live under `include/copilot/generated/`; the existing
+handwritten public API remains the ergonomic layer.
+
+```sh
+# Regenerate from the committed baseline
+cmake --build build --target copilot_codegen
+
+# Fail if committed generated headers are stale
+cmake --build build --target copilot_codegen_check
+```
+
+To refresh from a checked-out official SDK and the matching CLI package schemas:
+
+```sh
+python tools/generate_protocol_types.py --refresh \
+  --official-sdk-root ../copilot-sdk \
+  --api-schema <path-to-api.schema.json> \
+  --session-events-schema <path-to-session-events.schema.json>
+```
+
+## Current public API surface
+
+`ClientOptions` supports SDK modes plus stdio, TCP, URI, and declared in-process
+runtime connections. Session create/resume requests expose the current official
+configuration fields while preserving the existing handwritten C++ API.
+`Session::invoke`/`invoke_typed` provide low-level access, with typed convenience
+wrappers for MCP, authentication, agents, skills, tasks, commands, history,
+usage, and remote-session operations.
+
+Advanced parity includes:
+
+- `RuntimeConnection::for_in_process()` using the official
+  `copilot_runtime_*` native ABI (`prebuilds/<platform>/runtime.node`).
+- `CopilotRequestHandler` and WebSocket handlers for streamed model-layer I/O.
+- Automatic MCP OAuth event handling and pending-request responses.
+- `create_canvas`, `define_factory`, `Session::factory()`, and `join_session`
+  helpers for canvas, factory, and extension consumers.
+
 ## Custom Tools
 
 Custom tools are provided when creating or resuming a session. The SDK auto-generates JSON schemas from C++ types.

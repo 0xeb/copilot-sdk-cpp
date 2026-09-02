@@ -11,6 +11,7 @@
 /// @brief Cross-platform process management for Copilot CLI
 
 #include <map>
+#include <chrono>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -208,11 +209,18 @@ class Process
     /// @return Exit code
     int wait();
 
+    /// Wait up to a bounded duration for process termination.
+    /// @return Exit code, or nullopt when the timeout expires.
+    std::optional<int> wait_for(std::chrono::milliseconds timeout);
+
     /// Request graceful termination (SIGTERM on POSIX, close handles on Windows)
     void terminate();
 
     /// Forcefully kill the process (SIGKILL on POSIX, TerminateProcess on Windows)
     void kill();
+
+    /// Close redirected pipe handles to unblock transport readers.
+    void close_pipes();
 
     /// Get process ID
     /// @return Process ID, or 0 if not spawned

@@ -1702,12 +1702,12 @@ TEST(RequestBuilderTest, CreateSessionWithHooksAndUserInput)
     EXPECT_EQ(request["workingDirectory"], "/project");
 }
 
-TEST(RequestBuilderTest, CreateSessionWithoutHooksOmitsField)
+TEST(RequestBuilderTest, CreateSessionWithoutHooksSendsFalseFlags)
 {
     SessionConfig config;
     auto request = build_session_create_request(config);
-    EXPECT_FALSE(request.contains("requestUserInput"));
-    EXPECT_FALSE(request.contains("hooks"));
+    EXPECT_FALSE(request["requestUserInput"].get<bool>());
+    EXPECT_FALSE(request["hooks"].get<bool>());
     EXPECT_FALSE(request.contains("workingDirectory"));
     EXPECT_FALSE(request.contains("reasoningEffort"));
 }
@@ -1737,7 +1737,7 @@ TEST(RequestBuilderTest, SessionConfigNewDataFieldsSerialize)
     EXPECT_EQ(request["systemMessage"]["sections"]["tone"]["content"], "Be terse.");
     EXPECT_EQ(request["defaultAgent"]["excludedTools"][0], "bash");
     EXPECT_EQ(request["agent"], "reviewer");
-    EXPECT_EQ(request["githubToken"], "ghs_test");
+    EXPECT_EQ(request["gitHubToken"], "ghs_test");
 }
 
 TEST(RequestBuilderTest, ResumeSessionAllNewFields)
@@ -1801,7 +1801,7 @@ TEST(RequestBuilderTest, EmptyHooksNotSent)
     SessionConfig config;
     config.hooks = SessionHooks{};  // Empty hooks - has_any() is false
     auto request = build_session_create_request(config);
-    EXPECT_FALSE(request.contains("hooks"));
+    EXPECT_FALSE(request["hooks"].get<bool>());
 }
 
 // =============================================================================
@@ -2129,7 +2129,7 @@ TEST(SessionConfigTest, V0149FieldsOmittedByDefault)
 
     EXPECT_FALSE(req.contains("clientName"));
     EXPECT_FALSE(req.contains("enableSessionTelemetry"));
-    EXPECT_FALSE(req.contains("includeSubAgentStreamingEvents"));
+    EXPECT_TRUE(req["includeSubAgentStreamingEvents"].get<bool>());
     EXPECT_FALSE(req.contains("enableConfigDiscovery"));
     EXPECT_FALSE(req.contains("instructionDirectories"));
     EXPECT_FALSE(req.contains("remoteSession"));

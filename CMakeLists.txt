@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(copilot_sdk_cpp VERSION 0.2.0 LANGUAGES CXX)
+project(copilot_sdk_cpp VERSION 0.3.0 LANGUAGES CXX)
 
 # Enable folder organization in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -17,6 +17,23 @@ option(COPILOT_BUILD_TESTS "Build tests" ON)
 option(COPILOT_BUILD_EXAMPLES "Build examples" ON)
 option(COPILOT_BUILD_SNAPSHOT_TESTS "Build snapshot conformance tests (requires upstream snapshots + Python)" OFF)
 option(COPILOT_WITH_FASTMCPP "Build in-process MCP examples with fastmcpp" OFF)
+
+# Protocol code generation
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_custom_target(copilot_codegen
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_protocol_types.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Regenerating C++ protocol types from the official baseline"
+        VERBATIM
+    )
+    add_custom_target(copilot_codegen_check
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_protocol_types.py --check
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Checking generated C++ protocol types"
+        VERBATIM
+    )
+endif()
 
 # Find dependencies
 find_package(nlohmann_json CONFIG QUIET)
@@ -55,23 +72,39 @@ add_library(copilot_sdk_cpp
     include/copilot/copilot.hpp
     include/copilot/types.hpp
     include/copilot/events.hpp
+    include/copilot/extension.hpp
+    include/copilot/factory.hpp
+    include/copilot/generated/api_types.hpp
+    include/copilot/generated/compatibility_types.hpp
+    include/copilot/generated/protocol_version.hpp
+    include/copilot/generated/schema_coverage.hpp
+    include/copilot/generated/schema_value.hpp
+    include/copilot/generated/session_events.hpp
     include/copilot/transport.hpp
     include/copilot/transport_stdio.hpp
     include/copilot/transport_tcp.hpp
+    include/copilot/transport_ffi.hpp
     include/copilot/jsonrpc.hpp
     include/copilot/process.hpp
+    include/copilot/request_handler.hpp
     include/copilot/client.hpp
+    include/copilot/canvas.hpp
     include/copilot/session.hpp
     include/copilot/rpc_methods.hpp
     include/copilot/rpc_types.hpp
     # Sources
     src/types.cpp
     src/events.cpp
+    src/extension.cpp
+    src/factory.cpp
     src/transport.cpp
+    src/transport_ffi.cpp
     src/jsonrpc.cpp
     src/process_win32.cpp
     src/process_posix.cpp
+    src/request_handler.cpp
     src/client.cpp
+    src/canvas.cpp
     src/session.cpp
 )
 add_library(copilot::copilot_sdk_cpp ALIAS copilot_sdk_cpp)
@@ -87,6 +120,8 @@ target_include_directories(copilot_sdk_cpp
 target_link_libraries(copilot_sdk_cpp
     PUBLIC
         nlohmann_json::nlohmann_json
+    PRIVATE
+        ${CMAKE_DL_LIBS}
 )
 
 # Platform-specific settings
@@ -94,6 +129,12 @@ if(WIN32)
     target_compile_definitions(copilot_sdk_cpp PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
     # Needed for Winsock APIs when building with MinGW/GCC (pragma comment only works on MSVC)
     target_link_libraries(copilot_sdk_cpp PUBLIC ws2_32)
+endif()
+
+if(MSVC)
+    # SessionEventData is a std::variant with one alternative per event type; instantiating it
+    # exceeds the default COFF section limit. PUBLIC because consumers instantiate it too.
+    target_compile_options(copilot_sdk_cpp PUBLIC /bigobj)
 endif()
 
 # Set target properties

@@ -202,6 +202,26 @@ TEST(ProcessTest, Kill)
     EXPECT_FALSE(proc.is_running());
 }
 
+TEST(ProcessTest, KillAndClosePipesCompletesWithinBound)
+{
+    Process proc;
+#ifdef _WIN32
+    proc.spawn("ping", {"-n", "100", "127.0.0.1"});
+#else
+    proc.spawn("sleep", {"100"});
+#endif
+
+    const auto started = std::chrono::steady_clock::now();
+    proc.kill();
+    const auto result = proc.wait_for(std::chrono::seconds(5));
+    proc.close_pipes();
+
+    EXPECT_TRUE(result.has_value());
+    EXPECT_LT(
+        std::chrono::steady_clock::now() - started,
+        std::chrono::seconds(6));
+}
+
 TEST(ProcessTest, Environment)
 {
     Process proc;

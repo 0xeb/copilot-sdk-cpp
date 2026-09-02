@@ -2,28 +2,87 @@
 // SPDX-License-Identifier: MIT
 
 #include <copilot/client.hpp>
+#include <copilot/canvas.hpp>
+#include <copilot/factory.hpp>
 #include <copilot/rpc_methods.hpp>
 #include <copilot/session.hpp>
 #include <condition_variable>
+#include <thread>
 
 namespace copilot
 {
+
+json build_mcp_auth_response(
+    const McpAuthHandler& handler,
+    const json& request,
+    const std::string& session_id)
+{
+    try
+    {
+        if (handler)
+        {
+            if (auto token = handler(request, session_id))
+            {
+                json result{
+                    {"kind", "token"},
+                    {"accessToken", token->access_token},
+                };
+                if (token->token_type)
+                    result["tokenType"] = *token->token_type;
+                if (token->expires_in)
+                    result["expiresIn"] = *token->expires_in;
+                return result;
+            }
+        }
+    }
+    catch (...)
+    {
+    }
+    return json{{"kind", "cancelled"}};
+}
 
 // =============================================================================
 // Constructor / Destructor
 // =============================================================================
 
 Session::Session(const std::string& session_id, Client* client,
-                 const std::optional<std::string>& workspace_path)
-    : session_id_(session_id), client_(client), workspace_path_(workspace_path)
+                 const std::optional<std::string>& workspace_path,
+                 SessionCapabilities capabilities,
+                 bool managed_settings_enabled)
+    : session_id_(session_id),
+      client_(client),
+      workspace_path_(workspace_path),
+      capabilities_(std::move(capabilities)),
+      managed_settings_enabled_(managed_settings_enabled)
 {
 }
 
 Session::~Session()
 {
-    // Note: We don't automatically destroy the session on destruction
-    // because the user might want to resume it later.
-    // Call destroy() explicitly if you want to remove it from the server.
+    std::vector<std::future<void>> tasks;
+    {
+        std::lock_guard<std::mutex> lock(background_tasks_mutex_);
+        tasks.swap(background_tasks_);
+    }
+
+    for (auto& task : tasks)
+        if (task.valid())
+            task.wait();
+}
+
+void Session::enqueue_background(std::function<void()> task)
+{
+    auto future = std::async(std::launch::async, std::move(task));
+    std::lock_guard<std::mutex> lock(background_tasks_mutex_);
+    background_tasks_.push_back(std::move(future));
+}
+
+void Session::set_initial_state(
+    std::optional<std::string> workspace_path,
+    SessionCapabilities capabilities)
+{
+    workspace_path_ = std::move(workspace_path);
+    capabilities_ = std::move(capabilities);
 }
 
 // =============================================================================
@@ -38,6 +97,7 @@ std::future<std::string> Session::send(MessageOptions options)
         {
             json params = options;
             params["sessionId"] = session_id_;
+            params.update(client_->trace_context());
 
             auto response = client_->rpc_client()->invoke(copilot::rpc::methods::kSessionSend, params).get();
             return response["messageId"].get<std::string>();
@@ -183,6 +243,179 @@ void Session::register_persistent_event_handler(EventHandler handler)
 
 void Session::dispatch_event(const SessionEvent& event)
 {
+    if (event.type == SessionEventType::ExternalToolRequested)
+    {
+        const auto* data = event.try_as<ExternalToolRequestedData>();
+        if (data)
+        {
+            Tool tool;
+            {
+                std::lock_guard<std::mutex> lock(tools_mutex_);
+                const auto it = tools_.find(data->tool_name);
+                if (it != tools_.end())
+                    tool = it->second;
+            }
+            if (tool.handler)
+            {
+                const auto request = *data;
+                enqueue_background(
+                    [this, tool = std::move(tool), request]
+                    {
+                        try
+                        {
+                            ToolInvocation invocation{
+                                .session_id = session_id_,
+                                .tool_call_id = request.tool_call_id,
+                                .tool_name = request.tool_name,
+                                .arguments = request.arguments,
+                                .traceparent = request.traceparent,
+                                .tracestate = request.tracestate,
+                            };
+                            const auto result = tool.handler(invocation);
+                            invoke(
+                                "session.tools.handlePendingToolCall",
+                                json{{"requestId", request.request_id}, {"result", result}}).get();
+                        }
+                        catch (const std::exception& error)
+                        {
+                            try
+                            {
+                                invoke(
+                                    "session.tools.handlePendingToolCall",
+                                    json{
+                                        {"requestId", request.request_id},
+                                        {"error", error.what()},
+                                    }).get();
+                            }
+                            catch (...)
+                            {
+                            }
+                        }
+                    });
+            }
+        }
+    }
+
+    if (event.type == SessionEventType::PermissionRequested &&
+        (permission_handler_ || permission_handler_with_context_))
+    {
+        const auto* data = event.try_as<PermissionRequestedData>();
+        if (data && !data->resolved_by_hook.value_or(false))
+        {
+            const auto request_id = data->request_id;
+            const auto request_json = data->permission_request;
+            enqueue_background(
+                [this, request_id, request_json]
+                {
+                    try
+                    {
+                        const auto request = request_json.get<PermissionRequest>();
+                        auto result = handle_permission_request(request);
+                        if (result.kind == "no-result")
+                            return;
+                        if (result.kind == "approved")
+                            result.kind = "approve-once";
+                        json params{{"requestId", request_id}, {"result", json(result)}};
+                        if (result.decision_context)
+                            params["decisionContext"] = *result.decision_context;
+                        invoke(
+                            "session.permissions.handlePendingPermissionRequest",
+                            std::move(params)).get();
+                    }
+                    catch (...)
+                    {
+                        try
+                        {
+                            invoke(
+                                "session.permissions.handlePendingPermissionRequest",
+                                json{
+                                    {"requestId", request_id},
+                                    {"result", {{"kind", "user-not-available"}}},
+                                }).get();
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                });
+        }
+    }
+
+    if (event.type == SessionEventType::UserInputRequested && user_input_handler_)
+    {
+        const auto* data = event.try_as<UserInputRequestedData>();
+        if (data)
+        {
+            const auto value = *data;
+            enqueue_background(
+                [this, value]
+                {
+                    UserInputRequest request{
+                        .question = value.question,
+                        .choices = value.choices,
+                        .allow_freeform = value.allow_freeform,
+                    };
+                    const auto response = handle_user_input_request(request);
+                    invoke(
+                        "session.ui.handlePendingUserInput",
+                        json{
+                            {"requestId", value.request_id},
+                            {"response", response},
+                        }).get();
+                });
+        }
+    }
+
+    if (event.type == SessionEventType::McpOauthRequired && mcp_auth_handler_)
+    {
+        const auto* data = event.try_as<McpOauthRequiredData>();
+        if (data)
+        {
+            json request{
+                {"requestId", data->request_id},
+                {"serverName", data->server_name},
+                {"serverUrl", data->server_url},
+            };
+            if (data->reason)
+                request["reason"] = *data->reason;
+            if (data->www_authenticate_params)
+                request["wwwAuthenticateParams"] = *data->www_authenticate_params;
+            if (data->resource_metadata)
+                request["resourceMetadata"] = *data->resource_metadata;
+            if (data->static_client_config)
+            {
+                json config{{"clientId", data->static_client_config->client_id}};
+                if (data->static_client_config->client_secret)
+                    config["clientSecret"] = *data->static_client_config->client_secret;
+                if (data->static_client_config->grant_type)
+                    config["grantType"] = *data->static_client_config->grant_type;
+                if (data->static_client_config->public_client)
+                    config["publicClient"] = *data->static_client_config->public_client;
+                request["staticClientConfig"] = std::move(config);
+            }
+
+            const auto handler = mcp_auth_handler_;
+            const auto request_id = data->request_id;
+            enqueue_background(
+                [this, handler, request = std::move(request), request_id]
+                {
+                    const json result =
+                        build_mcp_auth_response(handler, request, session_id_);
+                    if (!client_)
+                        return;
+                    try
+                    {
+                        invoke(
+                            "session.mcp.oauth.handlePendingRequest",
+                            json{{"requestId", request_id}, {"result", result}}).get();
+                    }
+                    catch (...)
+                    {
+                    }
+                });
+        }
+    }
+
     std::vector<EventHandler> handlers_copy;
 
     {
@@ -230,6 +463,77 @@ const Tool* Session::get_tool(const std::string& name) const
     return (it != tools_.end()) ? &it->second : nullptr;
 }
 
+void Session::register_canvases(
+    const std::vector<std::shared_ptr<Canvas>>& canvases)
+{
+    std::lock_guard<std::mutex> lock(tools_mutex_);
+    for (const auto& canvas : canvases)
+        if (canvas)
+            canvases_[canvas->id()] = canvas;
+}
+
+json Session::handle_canvas_request(
+    const std::string& method, const json& params)
+{
+    const auto canvas_id = params.value("canvasId", "");
+    std::shared_ptr<Canvas> canvas;
+    {
+        std::lock_guard<std::mutex> lock(tools_mutex_);
+        const auto it = canvases_.find(canvas_id);
+        if (it == canvases_.end())
+            throw CanvasError("canvas_not_found", "Unknown canvas " + canvas_id);
+        canvas = it->second;
+    }
+
+    try
+    {
+        if (method == "canvas.open")
+            return canvas->handle_open(params);
+        if (method == "canvas.close")
+        {
+            canvas->handle_close(params);
+            return json::object();
+        }
+        return canvas->handle_action(params.value("actionName", ""), params);
+    }
+    catch (const CanvasError& error)
+    {
+        return json{{"error", {{"code", error.code()}, {"message", error.what()}}}};
+    }
+}
+
+void Session::register_factories(
+    const std::vector<std::shared_ptr<FactoryHandle>>& factories)
+{
+    std::lock_guard<std::mutex> lock(tools_mutex_);
+    for (const auto& factory : factories)
+    {
+        if (!factory || !factory->meta.contains("name"))
+            continue;
+        factories_[factory->meta.at("name").get<std::string>()] = factory;
+    }
+}
+
+json Session::handle_factory_request(
+    const std::string& method, const json& params)
+{
+    if (method == "factory.abort")
+        return json::object();
+
+    const auto name = params.value("name", "");
+    std::shared_ptr<FactoryHandle> factory;
+    {
+        std::lock_guard<std::mutex> lock(tools_mutex_);
+        const auto it = factories_.find(name);
+        if (it == factories_.end())
+            throw std::runtime_error("Unknown factory " + name);
+        factory = it->second;
+    }
+    json context = params;
+    context["sessionId"] = session_id_;
+    return json{{"result", factory->run(context)}};
+}
+
 // =============================================================================
 // Permission Handling
 // =============================================================================
@@ -239,15 +543,28 @@ void Session::register_permission_handler(PermissionHandler handler)
     permission_handler_ = std::move(handler);
 }
 
+void Session::register_permission_handler(PermissionHandlerWithContext handler)
+{
+    permission_handler_with_context_ = std::move(handler);
+}
+
+void Session::register_mcp_auth_handler(McpAuthHandler handler)
+{
+    mcp_auth_handler_ = std::move(handler);
+}
+
 PermissionRequestResult Session::handle_permission_request(const PermissionRequest& request)
 {
+    PermissionInvocation invocation{
+        .session_id = session_id_,
+        .managed_settings_enabled = managed_settings_enabled_,
+    };
+    if (permission_handler_with_context_)
+        return permission_handler_with_context_(request, invocation);
     if (permission_handler_)
         return permission_handler_(request);
 
-    // Default deny if no handler registered
-    PermissionRequestResult result;
-    result.kind = "denied-no-approval-rule-and-could-not-request-from-user";
-    return result;
+    return PermissionRequestResult::no_result();
 }
 
 // =============================================================================
@@ -376,6 +693,8 @@ json Session::handle_hooks_invoke(const std::string& hook_type, const json& inpu
     HookInvocation invocation;
     invocation.session_id = session_id_;
 
+    try
+    {
     if (hook_type == "preToolUse" && hooks->on_pre_tool_use)
     {
         auto result = (*hooks->on_pre_tool_use)(input.get<PreToolUseHookInput>(), invocation);
@@ -443,6 +762,32 @@ json Session::handle_hooks_invoke(const std::string& hook_type, const json& inpu
         return nullptr;
     }
 
+    const JsonHookHandler* generic = nullptr;
+    if (hook_type == "preMcpToolCall" && hooks->on_pre_mcp_tool_call)
+        generic = &*hooks->on_pre_mcp_tool_call;
+    else if (hook_type == "postToolUseFailure" && hooks->on_post_tool_use_failure)
+        generic = &*hooks->on_post_tool_use_failure;
+    else if (hook_type == "userPromptTransformed" && hooks->on_user_prompt_transformed)
+        generic = &*hooks->on_user_prompt_transformed;
+    else if (hook_type == "agentStop" && hooks->on_agent_stop)
+        generic = &*hooks->on_agent_stop;
+    else if (hook_type == "subagentStop" && hooks->on_subagent_stop)
+        generic = &*hooks->on_subagent_stop;
+    else if (hook_type == "permissionRequest" && hooks->on_permission_request)
+        generic = &*hooks->on_permission_request;
+
+    if (generic)
+    {
+        const auto result = (*generic)(input, invocation);
+        return result.value_or(json(nullptr));
+    }
+    }
+    catch (const json::exception&)
+    {
+        // Unknown or newly-null hook fields must not block session startup.
+        return nullptr;
+    }
+
     return nullptr;
 }
 
@@ -461,6 +806,102 @@ std::future<void> Session::destroy()
 
             client_->rpc_client()->invoke(copilot::rpc::methods::kSessionDestroy, params).get();
         }
+    );
+}
+
+std::future<json> Session::invoke(const std::string& method, json params)
+{
+    return std::async(
+        std::launch::async,
+        [this, method, params = std::move(params)]() mutable
+        {
+            if (!params.is_object())
+                throw std::invalid_argument("session RPC params must be a JSON object");
+            params["sessionId"] = session_id_;
+            return client_->rpc_client()->invoke(method, params).get();
+        }
+    );
+}
+
+std::future<generated::api::McpServerList> Session::list_mcp_servers()
+{
+    return invoke_typed<generated::api::McpServerList>("session.mcp.list");
+}
+
+std::future<generated::api::AuthIdentity> Session::get_current_auth_info()
+{
+    return invoke_typed<generated::api::AuthIdentity>(
+        "session.gitHubAuth.getCurrentAuthInfo"
+    );
+}
+
+std::future<generated::api::AgentList> Session::list_agents(json params)
+{
+    return invoke_typed<generated::api::AgentList>(
+        "session.agent.list", std::move(params)
+    );
+}
+
+std::future<generated::api::SkillList> Session::list_skills()
+{
+    return invoke_typed<generated::api::SkillList>("session.skills.list");
+}
+
+std::future<generated::api::TaskList> Session::list_tasks()
+{
+    return invoke_typed<generated::api::TaskList>("session.tasks.list");
+}
+
+std::future<generated::api::CommandList> Session::list_commands(json params)
+{
+    return invoke_typed<generated::api::CommandList>(
+        "session.commands.list", std::move(params)
+    );
+}
+
+std::future<generated::api::HistoryListRewindPointsResult>
+Session::list_rewind_points()
+{
+    return invoke_typed<generated::api::HistoryListRewindPointsResult>(
+        "session.history.listRewindPoints"
+    );
+}
+
+std::future<generated::api::UsageGetMetricsResult> Session::get_usage_metrics()
+{
+    return invoke_typed<generated::api::UsageGetMetricsResult>(
+        "session.usage.getMetrics"
+    );
+}
+
+std::future<generated::api::RemoteEnableResult> Session::enable_remote(json params)
+{
+    return invoke_typed<generated::api::RemoteEnableResult>(
+        "session.remote.enable", std::move(params)
+    );
+}
+
+std::future<void> Session::disable_remote()
+{
+    return std::async(
+        std::launch::async,
+        [future = invoke("session.remote.disable")]() mutable
+        {
+            future.get();
+        }
+    );
+}
+
+SessionFactoryApi Session::factory()
+{
+    return SessionFactoryApi(*this);
+}
+
+std::future<generated::api::SandboxEnforcementStatus>
+Session::get_sandbox_enforcement_status()
+{
+    return invoke_typed<generated::api::SandboxEnforcementStatus>(
+        "session.sandbox.getEnforcementStatus"
     );
 }
 
