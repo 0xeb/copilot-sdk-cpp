@@ -587,19 +587,19 @@ int Process::wait()
         return handle_->exit_code;
     }
 
-    std::optional<int> Process::wait_for(std::chrono::milliseconds timeout)
-    {
-        const auto deadline = std::chrono::steady_clock::now() + timeout;
-        do
-        {
-            if (auto result = try_wait())
-                return result;
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        } while (std::chrono::steady_clock::now() < deadline);
-        return std::nullopt;
-    }
-
     throw ProcessError("waitpid failed: " + get_errno_message());
+}
+
+std::optional<int> Process::wait_for(std::chrono::milliseconds timeout)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    do
+    {
+        if (auto result = try_wait())
+            return result;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    } while (std::chrono::steady_clock::now() < deadline);
+    return std::nullopt;
 }
 
 void Process::terminate()

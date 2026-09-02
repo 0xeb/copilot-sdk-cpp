@@ -12,13 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            cmake_generator: "Unix Makefiles"
-          - os: windows-latest
-            cmake_generator: "Visual Studio 17 2022"
-          - os: macos-latest
-            cmake_generator: "Unix Makefiles"
 
     runs-on: ${{ matrix.os }}
 
@@ -26,7 +19,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Configure CMake
-        run: cmake -B build -G "${{ matrix.cmake_generator }}" -DCMAKE_BUILD_TYPE=Release -DCOPILOT_BUILD_TESTS=ON
+        # Deliberately no -G: runner images rotate their Visual Studio version, and pinning
+        # one ("Visual Studio 17 2022") breaks the Windows job the moment the image moves on.
+        # CMake's per-platform default is correct on all three runners.
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCOPILOT_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build --config Release
