@@ -3106,6 +3106,18 @@ enum class SessionEventType
     SessionCanvasRemoved,
     SessionExtensionsAttachmentsPushed,
     McpAppToolCallComplete,
+    // Added with the @github/copilot 1.0.84-5 re-pin (upstream f45c46fd).
+    SessionAutoTierRecommendation,
+    SessionAutoTierSwitchFailed,
+    SessionModeNoticeDelivered,
+    SessionCompletionReceipt,
+    AssistantFusionPhaseActivity,
+    PermissionCarriedForward,
+    PermissionMessageAuthorization,
+    PermissionMessageAuthorizationRead,
+    PermissionMessageAuthorizationDegraded,
+    SessionMcpServerRemoved,
+    SessionMcpServerNeedsReconnect,
     Unknown
 };
 
@@ -3439,6 +3451,21 @@ inline SessionEvent parse_session_event(const json& j)
         {"session.canvas.removed", SessionEventType::SessionCanvasRemoved},
         {"session.extensions.attachments_pushed", SessionEventType::SessionExtensionsAttachmentsPushed},
         {"mcp_app.tool_call_complete", SessionEventType::McpAppToolCallComplete},
+        // @github/copilot 1.0.84-5 (upstream f45c46fd). Wire spellings are taken
+        // verbatim from the generated kSessionEventWireTypes -- note the mixed
+        // conventions upstream uses under permission.*, which are not typos here.
+        {"session.auto_tier_recommendation", SessionEventType::SessionAutoTierRecommendation},
+        {"session.auto_tier_switch_failed", SessionEventType::SessionAutoTierSwitchFailed},
+        {"session.mode_notice_delivered", SessionEventType::SessionModeNoticeDelivered},
+        {"session.completion_receipt", SessionEventType::SessionCompletionReceipt},
+        {"assistant.fusion_phase_activity", SessionEventType::AssistantFusionPhaseActivity},
+        {"permission.carriedForward", SessionEventType::PermissionCarriedForward},
+        {"permission.messageAuthorization", SessionEventType::PermissionMessageAuthorization},
+        {"permission.messageAuthorizationRead", SessionEventType::PermissionMessageAuthorizationRead},
+        {"permission.messageAuthorizationDegraded",
+         SessionEventType::PermissionMessageAuthorizationDegraded},
+        {"session.mcp_server_removed", SessionEventType::SessionMcpServerRemoved},
+        {"session.mcp_server_needs_reconnect", SessionEventType::SessionMcpServerNeedsReconnect},
     };
 
     auto it = type_map.find(event.type_string);

@@ -347,6 +347,42 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future resolving to the model identifier (or nullopt if none)
     std::future<std::optional<std::string>> get_current_model();
 
+    /// Routing preference used when the session model is `auto`.
+    ///
+    /// `Fast` is an integrator-only latency preset, not a first-party GitHub
+    /// Copilot product preference.
+    enum class AutoTier
+    {
+        Efficiency,
+        Balance,
+        Intelligence,
+        Fast,
+    };
+
+    /// Outcome of set_auto_tier(). Mirrors ModelSwitchAutoTierResult.
+    struct AutoTierResult
+    {
+        /// Immediate request status; "pending" means accepted but not committed.
+        std::string status;
+        /// Preference currently committed for the session, when reported.
+        std::optional<AutoTier> effective_auto_tier;
+        /// Latest unclaimed preference, when one is queued.
+        std::optional<AutoTier> pending_auto_tier;
+        /// Full result payload, so fields not surfaced above stay reachable.
+        json raw;
+    };
+
+    /// Set the Auto routing preference for this session.
+    ///
+    /// Calls session.model.switchAutoTier. The change is not immediate: it
+    /// activates when a future user turn on the `auto` model mints a replacement
+    /// model/token pair, which is why the result carries a status and a pending
+    /// preference rather than just succeeding.
+    ///
+    /// @param auto_tier Preference to activate, or nullopt to return to
+    ///                  provider-default Auto routing (upstream's ResetAutoTier).
+    std::future<AutoTierResult> set_auto_tier(std::optional<AutoTier> auto_tier);
+
     /// Agent interaction mode. Matches upstream nodejs SessionMode union.
     enum class Mode
     {

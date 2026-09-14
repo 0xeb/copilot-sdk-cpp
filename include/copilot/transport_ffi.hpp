@@ -4,6 +4,7 @@
 #pragma once
 
 #include <copilot/transport.hpp>
+#include <chrono>
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
@@ -35,6 +36,23 @@ class FfiTransport : public ITransport
     bool is_open() const override;
 
     const std::string& library_path() const noexcept { return library_path_; }
+
+    /// True once the runtime confirmed the connection closed and the library was
+    /// unloaded. False after a close() where the runtime never quiesced -- the
+    /// handle is then held for the life of the process on purpose, see close().
+    bool is_released() const noexcept { return library_ == nullptr; }
+
+    /// How long close() keeps asking the runtime to release the connection.
+    ///
+    /// close() runs from the destructor, so it cannot wait forever the way a
+    /// background retry loop could. Past the budget it gives up and quarantines
+    /// the library instead of unloading it. Exposed so tests can exercise the
+    /// give-up path without a multi-second wait.
+    void set_close_retry_policy(unsigned attempts, std::chrono::milliseconds delay) noexcept
+    {
+        close_retry_attempts_ = attempts;
+        close_retry_delay_ = delay;
+    }
 
   private:
     using OutboundCallback = void (*)(void*, const std::uint8_t*, std::size_t);
@@ -78,6 +96,11 @@ class FfiTransport : public ITransport
     std::condition_variable cv_;
     std::deque<char> inbound_;
     bool open_ = false;
+
+    // 50 x 100ms = 5s, matching the .NET host's 100ms retry cadence but bounded,
+    // because close() is reachable from the destructor.
+    unsigned close_retry_attempts_ = 50;
+    std::chrono::milliseconds close_retry_delay_{100};
 };
 
 } // namespace copilot

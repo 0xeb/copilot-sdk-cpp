@@ -2710,3 +2710,69 @@ TEST(EventsTest, UnknownEventStillFallsBack)
     EXPECT_TRUE(event.is<json>());
     EXPECT_EQ(event.as<json>()["foo"], "bar");
 }
+
+// =============================================================================
+// @github/copilot 1.0.84-5 additions
+// =============================================================================
+
+// The public names are application/integration; the wire names are
+// editor/extension. Getting this backwards would silently mis-attribute every
+// host's telemetry, and nothing else in the handshake would complain.
+TEST(ClientInfoTest, MapsApplicationTerminologyOntoEditorWireNames)
+{
+    CopilotClientInfo info;
+    info.application_name = "my-editor";
+    info.application_version = "1.2.3";
+    info.integration_name = "my-extension";
+    info.integration_version = "0.9.0";
+
+    const auto wire = info.to_wire_json();
+    ASSERT_TRUE(wire.has_value());
+    EXPECT_EQ((*wire)["editorName"], "my-editor");
+    EXPECT_EQ((*wire)["editorVersion"], "1.2.3");
+    EXPECT_EQ((*wire)["extensionName"], "my-extension");
+    EXPECT_EQ((*wire)["extensionVersion"], "0.9.0");
+    EXPECT_EQ(wire->size(), 4u);
+}
+
+TEST(ClientInfoTest, DropsEmptyFieldsAndOmitsAnEmptyIdentity)
+{
+    CopilotClientInfo partial;
+    partial.application_name = "app";
+    partial.integration_name = "";  // empty must not reach the wire
+    const auto wire = partial.to_wire_json();
+    ASSERT_TRUE(wire.has_value());
+    EXPECT_TRUE(wire->contains("editorName"));
+    EXPECT_FALSE(wire->contains("extensionName"));
+
+    // Nothing usable -> no clientInfo at all, so the runtime keeps its default
+    // attribution instead of recording a blank identity.
+    EXPECT_FALSE(CopilotClientInfo{}.to_wire_json().has_value());
+    CopilotClientInfo blank;
+    blank.application_name = "";
+    EXPECT_FALSE(blank.to_wire_json().has_value());
+}
+
+// Wire form is a plain string constrained to
+// ^(user|system|command-.*|schedule-\d+|agent-.+)$
+TEST(MessageSourceTest, SerializesToTheWireStrings)
+{
+    EXPECT_EQ(MessageSource::user().value(), "user");
+    EXPECT_EQ(MessageSource::system().value(), "system");
+    EXPECT_EQ(MessageSource::agent("planner").value(), "agent-planner");
+    // The id is preserved verbatim after the prefix, hyphens included.
+    EXPECT_EQ(MessageSource::agent("a-b-c").value(), "agent-a-b-c");
+    EXPECT_EQ(MessageSource::user(), MessageSource::user());
+}
+
+TEST(MessageSourceTest, MessageOptionsOmitsSourceUnlessSet)
+{
+    MessageOptions without;
+    without.prompt = "hi";
+    EXPECT_FALSE(json(without).contains("source"));
+
+    MessageOptions with;
+    with.prompt = "hi";
+    with.source = MessageSource::system();
+    EXPECT_EQ(json(with)["source"], "system");
+}

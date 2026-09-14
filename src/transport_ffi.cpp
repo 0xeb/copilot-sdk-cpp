@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <filesystem>
+#include <thread>
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
@@ -201,11 +202,37 @@ void FfiTransport::close()
     }
     cv_.notify_all();
 
+    // copilot_runtime_connection_close returning false does NOT mean failure -- it
+    // means the runtime has not quiesced yet and still holds our outbound callback.
+    // Unloading here would free the code that callback points into, so retry until
+    // the runtime agrees it is done.
+    bool connection_released = true;
     if (connection_id_ && connection_close_)
     {
-        connection_close_(connection_id_);
-        connection_id_ = 0;
+        connection_released = false;
+        for (unsigned attempt = 0; attempt < close_retry_attempts_; ++attempt)
+        {
+            if (attempt != 0)
+                std::this_thread::sleep_for(close_retry_delay_);
+            if (connection_close_(connection_id_))
+            {
+                connection_released = true;
+                break;
+            }
+        }
+        if (connection_released)
+            connection_id_ = 0;
     }
+
+    if (!connection_released)
+    {
+        // The runtime never released the connection. Quarantine rather than unload:
+        // leaking the library handle for the life of the process is strictly better
+        // than a callback landing in unmapped memory. server_id_/connection_id_ are
+        // deliberately left set so is_released() reports the truth.
+        return;
+    }
+
     if (server_id_ && host_shutdown_)
     {
         host_shutdown_(server_id_);

@@ -166,6 +166,13 @@ class Client
     /// @return Future that completes when deleted
     std::future<void> delete_session(const std::string& session_id);
 
+    /// Force the runtime to drop its cached managed-settings snapshot.
+    ///
+    /// Calls managedSettings.clearCache. Useful when the host has changed managed
+    /// settings out-of-band and wants the next read to re-resolve them rather than
+    /// wait for the runtime's own cache expiry.
+    std::future<void> clear_managed_settings_cache();
+
     /// Get the ID of the most recently used session
     /// @return Future that resolves to session ID or nullopt if none
     std::future<std::optional<std::string>> get_last_session_id();

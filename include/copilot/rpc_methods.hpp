@@ -78,6 +78,8 @@ inline constexpr const char* kSessionAuthGetStatus                            = 
 
 inline constexpr const char* kSessionModelGetCurrent                          = "session.model.getCurrent";
 inline constexpr const char* kSessionModelSwitchTo                            = "session.model.switchTo";
+inline constexpr const char* kSessionModelSwitchAutoTier                      = "session.model.switchAutoTier";
+inline constexpr const char* kManagedSettingsClearCache                       = "managedSettings.clearCache";
 
 inline constexpr const char* kSessionModeGet                                  = "session.mode.get";
 inline constexpr const char* kSessionModeSet                                  = "session.mode.set";

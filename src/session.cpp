@@ -926,6 +926,82 @@ std::future<void> Session::set_model(const std::string& model_id, SetModelOption
     );
 }
 
+namespace
+{
+
+const char* auto_tier_wire(Session::AutoTier tier)
+{
+    switch (tier)
+    {
+    case Session::AutoTier::Efficiency:
+        return "efficiency";
+    case Session::AutoTier::Balance:
+        return "balance";
+    case Session::AutoTier::Intelligence:
+        return "intelligence";
+    case Session::AutoTier::Fast:
+        return "fast";
+    }
+    return "balance";
+}
+
+std::optional<Session::AutoTier> auto_tier_from_wire(const json& value)
+{
+    if (!value.is_string())
+        return std::nullopt;
+    const auto text = value.get<std::string>();
+    if (text == "efficiency")
+        return Session::AutoTier::Efficiency;
+    if (text == "balance")
+        return Session::AutoTier::Balance;
+    if (text == "intelligence")
+        return Session::AutoTier::Intelligence;
+    if (text == "fast")
+        return Session::AutoTier::Fast;
+    // An unrecognized tier is left unset rather than guessed; the raw payload
+    // still carries it for callers that need the exact value.
+    return std::nullopt;
+}
+
+} // namespace
+
+std::future<Session::AutoTierResult> Session::set_auto_tier(std::optional<AutoTier> auto_tier)
+{
+    return std::async(
+        std::launch::async,
+        [this, auto_tier]() -> AutoTierResult
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            // null is meaningful here -- it returns the session to provider-default
+            // Auto routing -- so the key is always present.
+            if (auto_tier)
+                params["autoTier"] = auto_tier_wire(*auto_tier);
+            else
+                params["autoTier"] = nullptr;
+
+            const json response =
+                client_->rpc_client()
+                    ->invoke(copilot::rpc::methods::kSessionModelSwitchAutoTier, params)
+                    .get();
+
+            AutoTierResult result;
+            result.raw = response;
+            if (response.is_object())
+            {
+                if (const auto it = response.find("status");
+                    it != response.end() && it->is_string())
+                    result.status = it->get<std::string>();
+                if (const auto it = response.find("effectiveAutoTier"); it != response.end())
+                    result.effective_auto_tier = auto_tier_from_wire(*it);
+                if (const auto it = response.find("pendingAutoTier"); it != response.end())
+                    result.pending_auto_tier = auto_tier_from_wire(*it);
+            }
+            return result;
+        }
+    );
+}
+
 std::future<std::optional<std::string>> Session::get_current_model()
 {
     return std::async(

@@ -160,6 +160,8 @@ void append_session_config(json& request, const Config& config, ClientMode mode)
     copy("capi", config.capi);
     copy("providers", config.providers);
     copy("models", config.models);
+    copy("featureFlags", config.feature_flags);
+    copy("authClientIdMetadataUrl", config.auth_client_id_metadata_url);
     copy("enableSessionTelemetry", config.enable_session_telemetry);
     copy("enableCitations", config.enable_citations);
     copy("enableFileChangeTracking", config.enable_file_change_tracking);
@@ -589,12 +591,19 @@ void Client::parse_cli_url(const std::string& url)
     if (url.find("://") == std::string::npos)
         url_to_parse = "https://" + url;
 
-    // Parse host:port
-    std::regex url_regex(R"((?:https?://)?([^:/]+)(?::(\d+))?)");
+    // Parse host:port. The bracketed alternative comes first so an IPv6 literal
+    // ("[::1]:4000") matches as a whole -- [^:/]+ stops at the address's own
+    // colons and would otherwise reject it or take only the first group.
+    std::regex url_regex(R"((?:https?://)?(\[[^\]]+\]|[^:/]+)(?::(\d+))?)");
     std::smatch match;
     if (std::regex_match(url_to_parse, match, url_regex))
     {
-        parsed_host_ = match[1].str();
+        std::string host = match[1].str();
+        // Store the bare address: brackets are URL syntax for disambiguating the
+        // port, and the socket layer wants the address without them.
+        if (host.size() >= 2 && host.front() == '[' && host.back() == ']')
+            host = host.substr(1, host.size() - 2);
+        parsed_host_ = host;
         if (match[2].matched)
         {
             parsed_port_ = std::stoi(match[2].str());
@@ -1130,6 +1139,13 @@ void Client::verify_protocol_version()
             params["token"] = *options_.tcp_connection_token;
         if (options_.on_github_telemetry)
             params["enableGitHubTelemetryForwarding"] = true;
+        if (options_.client_info)
+        {
+            // Omitted entirely when every field is empty, so the runtime keeps its
+            // own attribution rather than seeing a blank identity.
+            if (auto wire = options_.client_info->to_wire_json())
+                params["clientInfo"] = std::move(*wire);
+        }
         response = rpc_->invoke(copilot::rpc::methods::kConnect, params).get();
     }
     catch (const JsonRpcError& error)
@@ -1494,6 +1510,20 @@ std::future<void> Client::delete_session(const std::string& session_id)
 
             std::lock_guard<std::mutex> lock(mutex_);
             sessions_.erase(session_id);
+        }
+    );
+}
+
+std::future<void> Client::clear_managed_settings_cache()
+{
+    return std::async(
+        std::launch::async,
+        [this]()
+        {
+            if (state_ != ConnectionState::Connected)
+                throw std::runtime_error("Client not connected");
+
+            rpc_->invoke(copilot::rpc::methods::kManagedSettingsClearCache, json::object()).get();
         }
     );
 }

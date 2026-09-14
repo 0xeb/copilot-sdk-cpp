@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from collections import Counter
@@ -43,6 +44,41 @@ def cpp_string(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def official_cli_version(root: Path) -> str:
+    """Copilot CLI version the official SDK checkout is pinned to.
+
+    Upstream moved this. It used to be an ordinary npm dependency recorded in
+    nodejs/package-lock.json; since the CLI began shipping via GitHub Releases
+    (github/copilot-sdk ec1c6f4b, 570ae11b) that lock file has no @github/copilot
+    entry at all and the version is declared in nodejs/src/cliVersion.ts.
+
+    Read the current location first and keep the lock file as a fallback so older
+    references still validate. Reading the lock file unconditionally raised a bare
+    KeyError against any reference newer than 2026-09, which said nothing about
+    what was actually wrong.
+    """
+    version_ts = root / "nodejs" / "src" / "cliVersion.ts"
+    if version_ts.exists():
+        match = re.search(
+            r'COPILOT_CLI_VERSION\s*=\s*"([^"]+)"',
+            version_ts.read_text(encoding="utf-8"),
+        )
+        if match:
+            return match.group(1)
+
+    lock_path = root / "nodejs" / "package-lock.json"
+    if lock_path.exists():
+        entry = load_json(lock_path).get("packages", {}).get("node_modules/@github/copilot")
+        if entry and "version" in entry:
+            return entry["version"]
+
+    raise ValueError(
+        f"could not determine the Copilot CLI version from {root}: neither "
+        f"nodejs/src/cliVersion.ts (COPILOT_CLI_VERSION) nor nodejs/package-lock.json "
+        f"(packages -> node_modules/@github/copilot) provided one"
+    )
+
+
 def validate_official_sdk(root: Path, baseline: dict[str, Any]) -> None:
     expected = baseline["officialSdk"]
     head = subprocess.run(
@@ -61,11 +97,10 @@ def validate_official_sdk(root: Path, baseline: dict[str, Any]) -> None:
             f"expected {baseline['protocol']['version']}"
         )
 
-    package_lock = load_json(root / "nodejs" / "package-lock.json")
-    package = package_lock["packages"]["node_modules/@github/copilot"]
-    if package["version"] != expected["schemaPackageVersion"]:
+    cli_version = official_cli_version(root)
+    if cli_version != expected["schemaPackageVersion"]:
         raise ValueError(
-            f"official schema package is {package['version']}, "
+            f"official schema package is {cli_version}, "
             f"expected {expected['schemaPackageVersion']}"
         )
 

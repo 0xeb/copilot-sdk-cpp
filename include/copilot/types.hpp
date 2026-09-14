@@ -1629,6 +1629,14 @@ struct SessionConfig
     /// GitHub token for per-session authentication.
     std::optional<std::string> github_token;
 
+    // ===== @github/copilot 1.0.84-5 additions =====
+
+    /// Feature-flag values resolved by the host, forwarded to the session.
+    std::optional<std::map<std::string, bool>> feature_flags;
+
+    /// OAuth Client ID Metadata Document URL this host uses for MCP authorization.
+    std::optional<std::string> auth_client_id_metadata_url;
+
     // ===== v0.1.49 additions =====
 
     /// Client identifier reported to the CLI (PR #510).
@@ -1815,6 +1823,10 @@ struct ResumeSessionConfig
     std::optional<std::vector<std::string>> disabled_mcp_servers;
     std::optional<json> memory;
     std::optional<std::string> github_token;
+    /// Mirrors SessionConfig; upstream carries both on SessionConfigBase, so a
+    /// resumed session can restate the host's flags and OAuth metadata URL.
+    std::optional<std::map<std::string, bool>> feature_flags;
+    std::optional<std::string> auth_client_id_metadata_url;
     std::optional<bool> enable_managed_settings;
     std::optional<json> managed_settings;
     std::optional<bool> skip_embedding_retrieval;
@@ -1834,6 +1846,36 @@ struct ResumeSessionConfig
 };
 
 /// Options for sending a message
+/// Provenance tag copied to the resulting `user.message` event.
+///
+/// On the wire this is a plain string constrained to
+/// `^(user|system|command-.*|schedule-\d+|agent-.+)$`. Only the three forms the
+/// official SDKs expose are constructible here; `command-` and `schedule-` are
+/// runtime-internal provenance the SDK surface does not mint.
+class MessageSource
+{
+  public:
+    /// The message originates from user input.
+    static MessageSource user() { return MessageSource("user"); }
+    /// The message provides application-generated context.
+    static MessageSource system() { return MessageSource("system"); }
+    /// A prompt sent on behalf of another agent. `id` is preserved verbatim
+    /// after the `agent-` prefix.
+    static MessageSource agent(const std::string& id) { return MessageSource("agent-" + id); }
+
+    /// The string used on the wire.
+    const std::string& value() const noexcept { return value_; }
+
+    friend bool operator==(const MessageSource& a, const MessageSource& b) noexcept
+    {
+        return a.value_ == b.value_;
+    }
+
+  private:
+    explicit MessageSource(std::string value) : value_(std::move(value)) {}
+    std::string value_;
+};
+
 struct MessageOptions
 {
     std::string prompt;
@@ -1842,6 +1884,8 @@ struct MessageOptions
     std::optional<std::string> agent_mode;
     std::optional<std::map<std::string, std::string>> request_headers;
     std::optional<std::string> display_prompt;
+    /// Optional provenance tag; omitted from the wire when unset.
+    std::optional<MessageSource> source;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -1857,6 +1901,8 @@ inline void to_json(json& j, const MessageOptions& o)
         j["requestHeaders"] = *o.request_headers;
     if (o.display_prompt)
         j["displayPrompt"] = *o.display_prompt;
+    if (o.source)
+        j["source"] = o.source->value();
 }
 
 inline void from_json(const json& j, MessageOptions& o)
@@ -2028,6 +2074,51 @@ struct SessionFsConfig
     std::map<std::string, SessionFsHandler> handlers;
 };
 
+/// Identity of the integrating application, sent on the `connect` handshake.
+///
+/// All fields are optional; empty ones are dropped and an entirely empty struct
+/// is omitted from the handshake so the runtime keeps its default attribution.
+///
+/// The public field names deliberately differ from the wire names. Upstream
+/// settled on application/integration terminology for the SDK surface while the
+/// protocol still spells them editor/extension:
+///
+///   application_name    -> editorName
+///   application_version -> editorVersion
+///   integration_name    -> extensionName
+///   integration_version -> extensionVersion
+struct CopilotClientInfo
+{
+    /// Name of the application using the SDK, e.g. "my-editor".
+    std::optional<std::string> application_name;
+    /// Version of the application using the SDK. The runtime ignores values that
+    /// do not look like a version string.
+    std::optional<std::string> application_version;
+    /// Optional named integration within the application, such as an extension
+    /// or plugin.
+    std::optional<std::string> integration_name;
+    /// Version of that integration. Same version-shape caveat as above.
+    std::optional<std::string> integration_version;
+
+    /// Wire form, or nullopt when nothing usable was supplied.
+    std::optional<json> to_wire_json() const
+    {
+        json out = json::object();
+        const auto put = [&out](const char* key, const std::optional<std::string>& value)
+        {
+            if (value && !value->empty())
+                out[key] = *value;
+        };
+        put("editorName", application_name);
+        put("editorVersion", application_version);
+        put("extensionName", integration_name);
+        put("extensionVersion", integration_version);
+        if (out.empty())
+            return std::nullopt;
+        return out;
+    }
+};
+
 /// Options for creating a CopilotClient
 struct ClientOptions
 {
@@ -2079,6 +2170,15 @@ struct ClientOptions
     /// `use_stdio = true` (stdio is pre-authenticated by transport).
     /// Forwarded to the CLI via the COPILOT_CONNECTION_TOKEN environment variable.
     std::optional<std::string> tcp_connection_token;
+
+    /// Identity of the integrating application, declared once on the `connect`
+    /// handshake so the runtime attributes this connection's telemetry to a
+    /// consistent surface instead of its own build. Omitted entirely when unset
+    /// or when every field is empty, which keeps the runtime's default.
+    ///
+    /// The public names are application/integration, but the wire names are
+    /// editor/extension -- see CopilotClientInfo.
+    std::optional<CopilotClientInfo> client_info;
 
     /// Custom data directory for the Copilot CLI ($COPILOT_HOME). When omitted,
     /// the CLI uses its default location (typically ~/.copilot).
