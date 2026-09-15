@@ -9,8 +9,8 @@
 namespace copilot::generated::api
 {
 
-inline constexpr std::size_t kGeneratedDefinitionCount = 1293;
-inline constexpr std::array<std::string_view, 384> kRpcMethods{{
+inline constexpr std::size_t kGeneratedDefinitionCount = 1306;
+inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "ping",
     "connect",
     "hooks.discover",
@@ -100,7 +100,6 @@ inline constexpr std::array<std::string_view, 384> kRpcMethods{{
     "sessions.setRemoteControlSteering",
     "sessions.stopRemoteControl",
     "sessions.getRemoteControlStatus",
-    "sessions.registerExtensionToolsOnSession",
     "sessions.configureSessionExtensions",
     "agentRegistry.spawn",
     "session.suspend",
@@ -3241,7 +3240,7 @@ struct DebugCollectLogsRedactionSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 2> known_string_values{"plain-text", "events-jsonl"};
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"plain-text", "events-jsonl", "none"};
 };
 using DebugCollectLogsRedaction = detail::SchemaValue<DebugCollectLogsRedactionSchemaTag>;
 
@@ -5188,7 +5187,7 @@ struct InstalledPluginInfoSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t property_count = 7;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5403,6 +5402,19 @@ struct InterruptMainTurnResultSchemaTag
 };
 using InterruptMainTurnResult = detail::SchemaValue<InterruptMainTurnResultSchemaTag>;
 
+struct JsonSchemaResponseFormatSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "JsonSchemaResponseFormat";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using JsonSchemaResponseFormat = detail::SchemaValue<JsonSchemaResponseFormatSchemaTag>;
+
 struct LlmInferenceHeadersSchemaTag
 {
     inline static constexpr std::string_view schema_name = "LlmInferenceHeaders";
@@ -5610,6 +5622,19 @@ struct LspInitializeRequestSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using LspInitializeRequest = detail::SchemaValue<LspInitializeRequestSchemaTag>;
+
+struct ManagedMcpServerConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedMcpServerConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedMcpServerConfig = detail::SchemaValue<ManagedMcpServerConfigSchemaTag>;
 
 struct ManagedSettingsReadResultSchemaTag
 {
@@ -6295,7 +6320,7 @@ struct McpHeadersHandlePendingHeadersRefreshRequestSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::size_t union_variant_count = 3;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using McpHeadersHandlePendingHeadersRefreshRequest = detail::SchemaValue<McpHeadersHandlePendingHeadersRefreshRequestSchemaTag>;
@@ -7281,7 +7306,7 @@ struct McpServerSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t property_count = 8;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7570,7 +7595,7 @@ struct McpServerSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"user", "workspace", "plugin", "builtin"};
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"user", "workspace", "plugin", "builtin", "managed"};
 };
 using McpServerSource = detail::SchemaValue<McpServerSourceSchemaTag>;
 
@@ -10486,6 +10511,32 @@ struct PluginsUpdateRequestSchemaTag
 };
 using PluginsUpdateRequest = detail::SchemaValue<PluginsUpdateRequestSchemaTag>;
 
+struct ProtocolAppendModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolAppendMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"append"};
+};
+using ProtocolAppendMode = detail::SchemaValue<ProtocolAppendModeSchemaTag>;
+
+struct ProtocolCustomizeModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolCustomizeMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"customize"};
+};
+using ProtocolCustomizeMode = detail::SchemaValue<ProtocolCustomizeModeSchemaTag>;
+
 struct ProtocolExternalToolDeferSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ProtocolExternalToolDefer";
@@ -10511,6 +10562,123 @@ struct ProtocolExternalToolDefinitionSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProtocolExternalToolDefinition = detail::SchemaValue<ProtocolExternalToolDefinitionSchemaTag>;
+
+struct ProtocolMarkerSectionOverrideSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolMarkerSectionOverride";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolMarkerSectionOverride = detail::SchemaValue<ProtocolMarkerSectionOverrideSchemaTag>;
+
+struct ProtocolReplaceModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolReplaceMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"replace"};
+};
+using ProtocolReplaceMode = detail::SchemaValue<ProtocolReplaceModeSchemaTag>;
+
+struct ProtocolSectionOverrideSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolSectionOverride";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolSectionOverride = detail::SchemaValue<ProtocolSectionOverrideSchemaTag>;
+
+struct ProtocolStaticSectionActionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolStaticSectionAction";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"replace", "remove", "append", "prepend"};
+};
+using ProtocolStaticSectionAction = detail::SchemaValue<ProtocolStaticSectionActionSchemaTag>;
+
+struct ProtocolStaticSectionOverrideSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolStaticSectionOverride";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolStaticSectionOverride = detail::SchemaValue<ProtocolStaticSectionOverrideSchemaTag>;
+
+struct ProtocolSystemMessageAppendConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolSystemMessageAppendConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolSystemMessageAppendConfig = detail::SchemaValue<ProtocolSystemMessageAppendConfigSchemaTag>;
+
+struct ProtocolSystemMessageConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolSystemMessageConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolSystemMessageConfig = detail::SchemaValue<ProtocolSystemMessageConfigSchemaTag>;
+
+struct ProtocolSystemMessageCustomizeConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolSystemMessageCustomizeConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolSystemMessageCustomizeConfig = detail::SchemaValue<ProtocolSystemMessageCustomizeConfigSchemaTag>;
+
+struct ProtocolSystemMessageReplaceConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolSystemMessageReplaceConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolSystemMessageReplaceConfig = detail::SchemaValue<ProtocolSystemMessageReplaceConfigSchemaTag>;
 
 struct ProviderAddRequestSchemaTag
 {
@@ -10674,7 +10842,7 @@ struct ProviderModelConfigSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t property_count = 10;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -11448,32 +11616,6 @@ struct RegisterEventInterestResultSchemaTag
 };
 using RegisterEventInterestResult = detail::SchemaValue<RegisterEventInterestResultSchemaTag>;
 
-struct RegisterExtensionToolsParamsSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "RegisterExtensionToolsParams";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using RegisterExtensionToolsParams = detail::SchemaValue<RegisterExtensionToolsParamsSchemaTag>;
-
-struct RegisterExtensionToolsResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "RegisterExtensionToolsResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using RegisterExtensionToolsResult = detail::SchemaValue<RegisterExtensionToolsResultSchemaTag>;
-
 struct ReleaseEventInterestParamsSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ReleaseEventInterestParams";
@@ -11773,6 +11915,19 @@ struct RemoteSessionRepositorySchemaTag
 };
 using RemoteSessionRepository = detail::SchemaValue<RemoteSessionRepositorySchemaTag>;
 
+struct ResponseFormatSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ResponseFormat";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 1;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ResponseFormat = detail::SchemaValue<ResponseFormatSchemaTag>;
+
 struct RunOptionsSchemaTag
 {
     inline static constexpr std::string_view schema_name = "RunOptions";
@@ -11883,7 +12038,7 @@ struct SandboxConfigUserPolicyNetworkSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -11954,6 +12109,19 @@ struct SandboxEnforcementStatusSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SandboxEnforcementStatus = detail::SchemaValue<SandboxEnforcementStatusSchemaTag>;
+
+struct SandboxSessionChangeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxSessionChange";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"disabled", "restored"};
+};
+using SandboxSessionChange = detail::SchemaValue<SandboxSessionChangeSchemaTag>;
 
 struct ScheduleAddAtRequestSchemaTag
 {
@@ -12169,7 +12337,7 @@ struct SendMessagesRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -12208,7 +12376,7 @@ struct SendRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 13;
+    inline static constexpr std::size_t property_count = 14;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13235,7 +13403,7 @@ struct SessionOpenOptionsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 73;
+    inline static constexpr std::size_t property_count = 74;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -14191,19 +14359,6 @@ struct SessionsReadPersistedEventsRequestSchemaTag
 };
 using SessionsReadPersistedEventsRequest = detail::SchemaValue<SessionsReadPersistedEventsRequestSchemaTag>;
 
-struct SessionsRegisterExtensionToolsOnSessionOptionsSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "SessionsRegisterExtensionToolsOnSessionOptions";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using SessionsRegisterExtensionToolsOnSessionOptions = detail::SchemaValue<SessionsRegisterExtensionToolsOnSessionOptionsSchemaTag>;
-
 struct SessionsReleaseLockRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SessionsReleaseLockRequest";
@@ -15016,7 +15171,7 @@ struct SlashCommandTextResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -15074,6 +15229,19 @@ struct SubagentSettingsEntryContextTierSchemaTag
     inline static constexpr std::array<std::string_view, 3> known_string_values{"inherit", "default", "long_context"};
 };
 using SubagentSettingsEntryContextTier = detail::SchemaValue<SubagentSettingsEntryContextTierSchemaTag>;
+
+struct SystemMessageBlockSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SystemMessageBlock";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SystemMessageBlock = detail::SchemaValue<SystemMessageBlockSchemaTag>;
 
 struct TaskAgentInfoSchemaTag
 {

@@ -9,8 +9,8 @@
 namespace copilot::generated::events
 {
 
-inline constexpr std::size_t kGeneratedDefinitionCount = 576;
-inline constexpr std::array<std::string_view, 144> kSessionEventWireTypes{{
+inline constexpr std::size_t kGeneratedDefinitionCount = 582;
+inline constexpr std::array<std::string_view, 147> kSessionEventWireTypes{{
     "session.start",
     "session.resume",
     "session.remote_steerable_changed",
@@ -85,6 +85,9 @@ inline constexpr std::array<std::string_view, 144> kSessionEventWireTypes{{
     "tool.execution_complete",
     "tool_search.activated",
     "skill.invoked",
+    "skill.invoked_ref",
+    "skill.context_delivered",
+    "skill.context_delivered_ref",
     "sandbox.decision",
     "subagent.started",
     "subagent.configured",
@@ -372,7 +375,7 @@ struct AssistantMessageDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 24;
+    inline static constexpr std::size_t property_count = 25;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3573,7 +3576,7 @@ struct McpHeadersRefreshCompletedOutcomeSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 3> known_string_values{"headers", "none", "timeout"};
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"headers", "none", "error", "timeout"};
 };
 using McpHeadersRefreshCompletedOutcome = detail::SchemaValue<McpHeadersRefreshCompletedOutcomeSchemaTag>;
 
@@ -3846,7 +3849,7 @@ struct McpServerSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"user", "workspace", "plugin", "builtin"};
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"user", "workspace", "plugin", "builtin", "managed"};
 };
 using McpServerSource = detail::SchemaValue<McpServerSourceSchemaTag>;
 
@@ -3934,7 +3937,7 @@ struct McpServersLoadedServerSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5471,7 +5474,7 @@ struct SandboxDenialClassSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 12> known_string_values{"filesystem_read", "filesystem_write", "process_startup", "registry_access", "ipc_access", "process_access", "job_access", "ui_access", "service_access", "network_outbound", "network_local", "other_access"};
+    inline static constexpr std::array<std::string_view, 13> known_string_values{"filesystem_read", "filesystem_write", "process_startup", "registry_access", "ipc_access", "process_access", "job_access", "ui_access", "service_access", "network_outbound", "network_local", "network_host", "other_access"};
 };
 using SandboxDenialClass = detail::SchemaValue<SandboxDenialClassSchemaTag>;
 
@@ -5665,8 +5668,8 @@ struct SessionEventSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 144;
-    inline static constexpr std::array<std::string_view, 144> known_string_values{"session.start", "session.resume", "session.remote_steerable_changed", "session.error", "session.idle", "session.title_changed", "session.schedule_created", "session.schedule_cancelled", "session.schedule_rearmed", "session.autopilot_objective_changed", "session.info", "session.warning", "session.model_change", "session.auto_tier_recommendation", "session.auto_tier_switch_failed", "session.mode_changed", "session.mode_notice_delivered", "session.session_limits_changed", "session.permissions_changed", "session.plan_changed", "session.todos_changed", "session.memory_changed", "session.workspace_file_changed", "session.handoff", "session.truncation", "session.snapshot_rewind", "session.shutdown", "session.usage_checkpoint", "session.context_changed", "session.usage_info", "session.context_cleared", "session.compaction_start", "session.compaction_complete", "session.task_complete", "session.completion_receipt", "session.fusion_route_started", "session.fusion_route_failed", "session.fusion_resolved", "session.fusion_handoff", "session.fusion_commit_started", "session.fusion_completed", "user.message", "pending_messages.modified", "assistant.turn_start", "assistant.turn_retry", "agent.interrupted", "assistant.intent", "assistant.fusion_phase_started", "assistant.fusion_phase_activity", "assistant.fusion_phase_completed", "assistant.fusion_phase_failed", "assistant.server_tool_progress", "assistant.reasoning", "assistant.reasoning_delta", "assistant.tool_call_delta", "assistant.streaming_delta", "assistant.message", "assistant.message_start", "assistant.message_delta", "assistant.turn_end", "assistant.idle", "assistant.usage", "prompt_cache_break", "model.call_failure", "model.call_finished", "model.call_start", "abort", "tool.user_requested", "tool.execution_start", "tool.execution_partial_result", "tool.execution_progress", "tool.execution_complete", "tool_search.activated", "skill.invoked", "sandbox.decision", "subagent.started", "subagent.configured", "subagent.completed", "subagent.failed", "subagent.selected", "subagent.deselected", "hook.start", "hook.end", "hook.progress", "session.binary_asset", "system.message", "system.notification", "permission.requested", "permission.completed", "permission.carriedForward", "permission.messageAuthorization", "permission.messageAuthorizationRead", "permission.messageAuthorizationDegraded", "user_input.requested", "user_input.completed", "elicitation.requested", "elicitation.completed", "sampling.requested", "sampling.completed", "mcp.oauth_required", "mcp.oauth_completed", "mcp.headers_refresh_required", "mcp.headers_refresh_completed", "session.custom_notification", "ui.ephemeral_query", "external_tool.requested", "external_tool.completed", "command.queued", "command.execute", "command.completed", "auto_mode_switch.requested", "auto_mode_switch.completed", "session_limits_exhausted.requested", "session_limits_exhausted.completed", "session.auto_mode_resolved", "session.managed_settings_resolved", "session.managed_settings_enforced", "commands.changed", "capabilities.changed", "exit_plan_mode.requested", "exit_plan_mode.completed", "session.tools_updated", "session.background_tasks_changed", "factory.run_updated", "factory.run_started", "factory.run_settled", "session.skills_loaded", "session.custom_agents_updated", "session.mcp_servers_loaded", "session.mcp_server_status_changed", "session.mcp_server_removed", "session.mcp_server_needs_reconnect", "mcp.tools.list_changed", "mcp.resources.list_changed", "mcp.prompts.list_changed", "session.extensions_loaded", "session.canvas.opened", "session.canvas.registry_changed", "session.canvas.closed", "session.canvas.unavailable", "session.canvas.recorded", "session.canvas.removed", "session.extensions.attachments_pushed", "mcp_app.tool_call_complete"};
+    inline static constexpr std::size_t union_variant_count = 147;
+    inline static constexpr std::array<std::string_view, 147> known_string_values{"session.start", "session.resume", "session.remote_steerable_changed", "session.error", "session.idle", "session.title_changed", "session.schedule_created", "session.schedule_cancelled", "session.schedule_rearmed", "session.autopilot_objective_changed", "session.info", "session.warning", "session.model_change", "session.auto_tier_recommendation", "session.auto_tier_switch_failed", "session.mode_changed", "session.mode_notice_delivered", "session.session_limits_changed", "session.permissions_changed", "session.plan_changed", "session.todos_changed", "session.memory_changed", "session.workspace_file_changed", "session.handoff", "session.truncation", "session.snapshot_rewind", "session.shutdown", "session.usage_checkpoint", "session.context_changed", "session.usage_info", "session.context_cleared", "session.compaction_start", "session.compaction_complete", "session.task_complete", "session.completion_receipt", "session.fusion_route_started", "session.fusion_route_failed", "session.fusion_resolved", "session.fusion_handoff", "session.fusion_commit_started", "session.fusion_completed", "user.message", "pending_messages.modified", "assistant.turn_start", "assistant.turn_retry", "agent.interrupted", "assistant.intent", "assistant.fusion_phase_started", "assistant.fusion_phase_activity", "assistant.fusion_phase_completed", "assistant.fusion_phase_failed", "assistant.server_tool_progress", "assistant.reasoning", "assistant.reasoning_delta", "assistant.tool_call_delta", "assistant.streaming_delta", "assistant.message", "assistant.message_start", "assistant.message_delta", "assistant.turn_end", "assistant.idle", "assistant.usage", "prompt_cache_break", "model.call_failure", "model.call_finished", "model.call_start", "abort", "tool.user_requested", "tool.execution_start", "tool.execution_partial_result", "tool.execution_progress", "tool.execution_complete", "tool_search.activated", "skill.invoked", "skill.invoked_ref", "skill.context_delivered", "skill.context_delivered_ref", "sandbox.decision", "subagent.started", "subagent.configured", "subagent.completed", "subagent.failed", "subagent.selected", "subagent.deselected", "hook.start", "hook.end", "hook.progress", "session.binary_asset", "system.message", "system.notification", "permission.requested", "permission.completed", "permission.carriedForward", "permission.messageAuthorization", "permission.messageAuthorizationRead", "permission.messageAuthorizationDegraded", "user_input.requested", "user_input.completed", "elicitation.requested", "elicitation.completed", "sampling.requested", "sampling.completed", "mcp.oauth_required", "mcp.oauth_completed", "mcp.headers_refresh_required", "mcp.headers_refresh_completed", "session.custom_notification", "ui.ephemeral_query", "external_tool.requested", "external_tool.completed", "command.queued", "command.execute", "command.completed", "auto_mode_switch.requested", "auto_mode_switch.completed", "session_limits_exhausted.requested", "session_limits_exhausted.completed", "session.auto_mode_resolved", "session.managed_settings_resolved", "session.managed_settings_enforced", "commands.changed", "capabilities.changed", "exit_plan_mode.requested", "exit_plan_mode.completed", "session.tools_updated", "session.background_tasks_changed", "factory.run_updated", "factory.run_started", "factory.run_settled", "session.skills_loaded", "session.custom_agents_updated", "session.mcp_servers_loaded", "session.mcp_server_status_changed", "session.mcp_server_removed", "session.mcp_server_needs_reconnect", "mcp.tools.list_changed", "mcp.resources.list_changed", "mcp.prompts.list_changed", "session.extensions_loaded", "session.canvas.opened", "session.canvas.registry_changed", "session.canvas.closed", "session.canvas.unavailable", "session.canvas.recorded", "session.canvas.removed", "session.extensions.attachments_pushed", "mcp_app.tool_call_complete"};
 };
 using SessionEvent = detail::SchemaValue<SessionEventSchemaTag>;
 
@@ -5930,6 +5933,58 @@ struct ShutdownTypeSchemaTag
 };
 using ShutdownType = detail::SchemaValue<ShutdownTypeSchemaTag>;
 
+struct SkillContextDeliveredDataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillContextDeliveredData";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillContextDeliveredData = detail::SchemaValue<SkillContextDeliveredDataSchemaTag>;
+
+struct SkillContextDeliveredEventSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillContextDeliveredEvent";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillContextDeliveredEvent = detail::SchemaValue<SkillContextDeliveredEventSchemaTag>;
+
+struct SkillContextDeliveredRefDataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillContextDeliveredRefData";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillContextDeliveredRefData = detail::SchemaValue<SkillContextDeliveredRefDataSchemaTag>;
+
+struct SkillContextDeliveredRefEventSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillContextDeliveredRefEvent";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillContextDeliveredRefEvent = detail::SchemaValue<SkillContextDeliveredRefEventSchemaTag>;
+
 struct SkillInvokedDataSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SkillInvokedData";
@@ -5955,6 +6010,32 @@ struct SkillInvokedEventSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SkillInvokedEvent = detail::SchemaValue<SkillInvokedEventSchemaTag>;
+
+struct SkillInvokedRefDataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInvokedRefData";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 12;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInvokedRefData = detail::SchemaValue<SkillInvokedRefDataSchemaTag>;
+
+struct SkillInvokedRefEventSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInvokedRefEvent";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInvokedRefEvent = detail::SchemaValue<SkillInvokedRefEventSchemaTag>;
 
 struct SkillInvokedTriggerSchemaTag
 {
@@ -6222,7 +6303,7 @@ struct SubagentStartedDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t property_count = 12;
     inline static constexpr std::size_t required_property_count = 4;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7002,7 +7083,7 @@ struct ToolExecutionStartDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 14;
+    inline static constexpr std::size_t property_count = 16;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};

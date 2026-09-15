@@ -743,6 +743,13 @@ std::future<std::vector<StopError>> Client::stop()
             std::unique_ptr<ITransport> transport;
             {
                 std::lock_guard<std::mutex> lock(mutex_);
+                // Before dropping the sessions: ~Session waits on in-flight tool handlers,
+                // and each answers with an RPC. Cancel first so a handler finishing during
+                // teardown drops its result instead of calling into a transport that is
+                // already going away.
+                for (auto& [id, session] : sessions_)
+                    if (session)
+                        session->cancel_pending_tool_invocations();
                 sessions_.clear();
                 process = std::move(process_);
                 rpc = std::move(rpc_);
@@ -788,6 +795,13 @@ void Client::force_stop()
     std::unique_ptr<ITransport> transport;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        // Before dropping the sessions: ~Session waits on in-flight tool handlers,
+        // and each answers with an RPC. Cancel first so a handler finishing during
+        // teardown drops its result instead of calling into a transport that is
+        // already going away.
+        for (auto& [id, session] : sessions_)
+            if (session)
+                session->cancel_pending_tool_invocations();
         sessions_.clear();
         process = std::move(process_);
         rpc = std::move(rpc_);

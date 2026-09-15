@@ -70,6 +70,16 @@ Session::~Session()
             task.wait();
 }
 
+void Session::cancel_pending_tool_invocations() noexcept
+{
+    tool_invocations_cancelled_.store(true, std::memory_order_release);
+}
+
+int Session::pending_tool_invocations() const noexcept
+{
+    return pending_tool_invocations_.load(std::memory_order_relaxed);
+}
+
 void Session::enqueue_background(std::function<void()> task)
 {
     auto future = std::async(std::launch::async, std::move(task));
@@ -258,9 +268,20 @@ void Session::dispatch_event(const SessionEvent& event)
             if (tool.handler)
             {
                 const auto request = *data;
+                pending_tool_invocations_.fetch_add(1, std::memory_order_relaxed);
                 enqueue_background(
                     [this, tool = std::move(tool), request]
                     {
+                        // Answering after the connection has gone means an RPC into
+                        // a transport being torn down. The handler itself cannot be
+                        // interrupted, so the result is simply dropped.
+                        const auto answer = [this](json payload)
+                        {
+                            if (tool_invocations_cancelled_.load(std::memory_order_acquire))
+                                return;
+                            invoke("session.tools.handlePendingToolCall", std::move(payload)).get();
+                        };
+
                         try
                         {
                             ToolInvocation invocation{
@@ -272,25 +293,22 @@ void Session::dispatch_event(const SessionEvent& event)
                                 .tracestate = request.tracestate,
                             };
                             const auto result = tool.handler(invocation);
-                            invoke(
-                                "session.tools.handlePendingToolCall",
-                                json{{"requestId", request.request_id}, {"result", result}}).get();
+                            answer(json{{"requestId", request.request_id}, {"result", result}});
                         }
                         catch (const std::exception& error)
                         {
                             try
                             {
-                                invoke(
-                                    "session.tools.handlePendingToolCall",
-                                    json{
-                                        {"requestId", request.request_id},
-                                        {"error", error.what()},
-                                    }).get();
+                                answer(json{
+                                    {"requestId", request.request_id},
+                                    {"error", error.what()},
+                                });
                             }
                             catch (...)
                             {
                             }
                         }
+                        pending_tool_invocations_.fetch_sub(1, std::memory_order_relaxed);
                     });
             }
         }
@@ -795,16 +813,44 @@ json Session::handle_hooks_invoke(const std::string& hook_type, const json& inpu
 // Lifecycle
 // =============================================================================
 
+std::future<Session::DetachResult> Session::detach()
+{
+    return std::async(
+        std::launch::async,
+        [this]() -> DetachResult
+        {
+            json params;
+            params["sessionId"] = session_id_;
+
+            const json response =
+                client_->rpc_client()->invoke(copilot::rpc::methods::kSessionDetach, params).get();
+
+            DetachResult result;
+            result.raw = response;
+            if (response.is_object())
+            {
+                if (const auto it = response.find("success");
+                    it != response.end() && it->is_boolean())
+                    result.success = it->get<bool>();
+                if (const auto it = response.find("error"); it != response.end() && it->is_string())
+                    result.error = it->get<std::string>();
+            }
+            return result;
+        }
+    );
+}
+
 std::future<void> Session::destroy()
 {
     return std::async(
         std::launch::async,
         [this]()
         {
-            json params;
-            params["sessionId"] = session_id_;
-
-            client_->rpc_client()->invoke(copilot::rpc::methods::kSessionDestroy, params).get();
+            // A declined detach is deliberately not raised: this runs on the
+            // teardown path, and failing it would leave callers unable to close
+            // a session the runtime already considers gone. Callers who need the
+            // status call detach() directly.
+            (void)detach().get();
         }
     );
 }

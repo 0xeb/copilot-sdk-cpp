@@ -173,6 +173,7 @@ inline constexpr const char* kSessionGetMetadata  = "session.getMetadata";
 inline constexpr const char* kSessionDelete       = "session.delete";
 inline constexpr const char* kSessionGetLastId    = "session.getLastId";
 inline constexpr const char* kSessionDestroy      = "session.destroy";
+inline constexpr const char* kSessionDetach       = "session.detach";
 inline constexpr const char* kSessionSend         = "session.send";
 inline constexpr const char* kSessionAbort        = "session.abort";
 inline constexpr const char* kSessionGetMessages  = "session.getMessages";

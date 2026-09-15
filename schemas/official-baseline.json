@@ -2,10 +2,10 @@
   "formatVersion": 2,
   "officialSdk": {
     "repository": "github/copilot-sdk",
-    "commit": "f45c46fd1812f8bed5b4cbc250f47177c83068f0",
+    "commit": "e5c53790c6a8aa253aa3887ebb8958646bd60452",
     "protocolVersionSource": "sdk-protocol-version.json",
     "schemaPackage": "@github/copilot",
-    "schemaPackageVersion": "1.0.84-5",
+    "schemaPackageVersion": "1.0.84-6",
     "apiSchemaPath": "schemas/api.schema.json",
     "sessionEventsSchemaPath": "schemas/session-events.schema.json",
     "validationEvidence": [
@@ -20,37 +20,37 @@
     "minimumProtocolVersion": 2
   },
   "schemaSources": {
-    "apiSha256": "5835517c600d1661bb857aa74deeb2abd2cfb9ed1e69cdedd1402181ea9eca98",
-    "sessionEventsSha256": "fded8ae9faa212cc84adae273c8b107a450b90ab66a723ee03e9057d41f8e4c5"
+    "apiSha256": "443958cfdccb9323b13c20ce5133817c1800b8e9e700ae3b9520bcc6f2a66340",
+    "sessionEventsSha256": "d34b2b2af8f20c2118f1d07d1409bceac10d400c0878e987b9af68f903103d8c"
   },
   "coverage": {
-    "apiDefinitionCount": 1293,
-    "sessionEventDefinitionCount": 576,
+    "apiDefinitionCount": 1306,
+    "sessionEventDefinitionCount": 582,
     "sharedDefinitionCount": 58,
-    "uniqueDefinitionCount": 1811,
-    "rpcMethodCount": 384,
-    "sessionEventVariantCount": 144,
-    "apiDefinitionNamesSha256": "374f18544d37959a909d1852524008b95b656b1db7f53890abc606cee8120077",
-    "sessionEventDefinitionNamesSha256": "21e92237ac86ce0a8e6a2e1554369b83a413f9a6006c03d40f0709a409758ffc",
-    "rpcMethodNamesSha256": "940bc904071d6292b0707fc71523fc78aad5cd73a2a1df8dc03f388bc1ef1b27",
-    "sessionEventWireTypesSha256": "e149d65f991cac05fd210a93dd034d4bad7c4ba02e1bf443fb5c9b5af8850e33",
+    "uniqueDefinitionCount": 1830,
+    "rpcMethodCount": 383,
+    "sessionEventVariantCount": 147,
+    "apiDefinitionNamesSha256": "1a0c4ed01b23fd47aa97d01ac99c29ba6861873c61d0f8d9e9b95c80ef293b95",
+    "sessionEventDefinitionNamesSha256": "528849e2f18ec2429afb1ad0201b0a317c8be84ec6c6fa823a288da129b598e1",
+    "rpcMethodNamesSha256": "37f118b1fbbb0f3442d0b366e3f4d73ebc5ba287b7dcb5ca75448dd2c86345dc",
+    "sessionEventWireTypesSha256": "d45372a060c9f6851e5438ac8a5d14073dff77f44138dc2e6be51dc556bd979f",
     "apiKindCounts": {
       "array": 2,
-      "enum": 222,
+      "enum": 227,
       "map": 3,
-      "object": 988,
+      "object": 992,
       "opaque": 20,
       "string": 3,
-      "union": 55
+      "union": 59
     },
     "sessionEventKindCounts": {
       "enum": 105,
       "map": 1,
-      "object": 455,
+      "object": 461,
       "opaque": 2,
       "union": 13
     },
-    "surfaceSha256": "d8c46b04dd0fee2eee2552833266fa12a97b403667c9f541d59716e602229689"
+    "surfaceSha256": "02dd29c3d305ad86ecaabd8879afa5cd418039ac6f564819297a5c45c5384769"
   },
   "surface": {
     "api": [
@@ -2614,7 +2614,7 @@
       {
         "name": "DebugCollectLogsCollectedEntry",
         "kind": "object",
-        "schemaSha256": "4200f697ca5271c280537fb6685dbadb899e502d5e78e7fa7dbdf57f331b74c8",
+        "schemaSha256": "89d88220cdfb5adb0691d9e244e34c6cb53eb5ebf152f4d20516ef471ddd35be",
         "propertyCount": 3,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": false,
@@ -2625,7 +2625,7 @@
       {
         "name": "DebugCollectLogsDestination",
         "kind": "union",
-        "schemaSha256": "c6b5ed9063bad2a8d0b99f41364e55b329c3bb5687484880f63eb3df10196a46",
+        "schemaSha256": "65802dde2168d5034eb7f865f8413d5d8b1a42282c8e0832ca02d7bd3395c399",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -2636,7 +2636,7 @@
       {
         "name": "DebugCollectLogsEntry",
         "kind": "object",
-        "schemaSha256": "f4bc14949de1038cf52739173f46477e39d5e532ea48c039df534ab606577d46",
+        "schemaSha256": "ee9df32b4c95d4434d9fd0cd1e5979f14758f6418ff66c474d110b1786915894",
         "propertyCount": 5,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -2672,7 +2672,7 @@
       {
         "name": "DebugCollectLogsRedaction",
         "kind": "enum",
-        "schemaSha256": "0b33d04a1ef737f573546b634142e478166a03404088cf504e59a2b7ad46a8e0",
+        "schemaSha256": "30e5807f5b572ffa1c73f22650c1c6a2f9e6712d291feed17afe3349a2f72eea",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -2680,13 +2680,14 @@
         "unionVariantCount": 0,
         "knownStringValues": [
           "plain-text",
-          "events-jsonl"
+          "events-jsonl",
+          "none"
         ]
       },
       {
         "name": "DebugCollectLogsRequest",
         "kind": "object",
-        "schemaSha256": "93223b8d101b24450bd7298c50da3a0857de78cf5d7640affb45f94b9cee11cd",
+        "schemaSha256": "98becc9d49a90645fdd2076ef0e61ee93d1ea38ed67873327dc4c26c278f6e81",
         "propertyCount": 3,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
@@ -2697,7 +2698,7 @@
       {
         "name": "DebugCollectLogsResult",
         "kind": "object",
-        "schemaSha256": "f802c239ef8360f3887b7cb6d5ae9448c55bc3a08e7293e8b45d266be0f20c90",
+        "schemaSha256": "644652a5881a7976bf58f6724309415ba139b96b5cf64b8d847194b710fbd2f9",
         "propertyCount": 4,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -2708,7 +2709,7 @@
       {
         "name": "DebugCollectLogsResultKind",
         "kind": "enum",
-        "schemaSha256": "6e23da8fea21581af7fd97b016fc9c18a6d0bc042e076bf9fcba45c1a1ed3b7c",
+        "schemaSha256": "e4cc5243892f892c7b80ff139dc3ff3eb0d21310d4b1b33d2915fa2aed4914c1",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -4457,8 +4458,8 @@
       {
         "name": "InstalledPluginInfo",
         "kind": "object",
-        "schemaSha256": "4360b000861de7286c15f105704cb706b78983b222972050194a920330d7665a",
-        "propertyCount": 6,
+        "schemaSha256": "c2c6b69010bb6587ff787e8318a993366da7449a88714ab2f30573b3e075bf13",
+        "propertyCount": 7,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -4663,6 +4664,17 @@
         "knownStringValues": []
       },
       {
+        "name": "JsonSchemaResponseFormat",
+        "kind": "object",
+        "schemaSha256": "881b7537789712a917ed7f8901093c42a66fdac0200cf3422aca91eee77966d9",
+        "propertyCount": 4,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "LlmInferenceHeaders",
         "kind": "map",
         "schemaSha256": "f5be10f23e16220c707b207241549eeb5952991044432cfc03fed2cfdacc4bf8",
@@ -4836,6 +4848,17 @@
         "schemaSha256": "87fda825aacac9a1c33781e21f4e4551c41b0a1641c65cebfd21112a63322138",
         "propertyCount": 3,
         "requiredPropertyCount": 0,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ManagedMcpServerConfig",
+        "kind": "object",
+        "schemaSha256": "3ff4d0da3574938d36d10252330cdc4c0be42ef650523a579e05f27265d0f26a",
+        "propertyCount": 5,
+        "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
         "unionVariantCount": 0,
@@ -5448,12 +5471,12 @@
       {
         "name": "McpHeadersHandlePendingHeadersRefreshRequest",
         "kind": "union",
-        "schemaSha256": "03757ddd170a04afe93bbce12630acf491c7f542ee0e25a0602f3def9d1a2d32",
+        "schemaSha256": "e090b5b4668808f3f70def6b44e15130d23e17bd2c0965d39bcaddad91c7ddb4",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 2,
+        "unionVariantCount": 3,
         "knownStringValues": []
       },
       {
@@ -6340,8 +6363,8 @@
       {
         "name": "McpServer",
         "kind": "object",
-        "schemaSha256": "113dfb347be1fc0572038f0ae7e3190ab0ed98700b96974d62b9572532ebfbb7",
-        "propertyCount": 7,
+        "schemaSha256": "7f02a888bf26ad92e2b6f408072f1e4da0d5abbdce7565688a33b76f8ba2b4c3",
+        "propertyCount": 8,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -6603,7 +6626,7 @@
       {
         "name": "McpServerSource",
         "kind": "enum",
-        "schemaSha256": "c3b17f7eb2f21547b2f1a8103ee3b3f976f8f0b0a9e214ccc3bc00e6f1cb2143",
+        "schemaSha256": "58bd1bc65d3d5e1c9b82ed069e91f6e3eaedf1c8f3597038894864340d701e52",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -6613,7 +6636,8 @@
           "user",
           "workspace",
           "plugin",
-          "builtin"
+          "builtin",
+          "managed"
         ]
       },
       {
@@ -9197,6 +9221,32 @@
         "knownStringValues": []
       },
       {
+        "name": "ProtocolAppendMode",
+        "kind": "enum",
+        "schemaSha256": "f41d1fa0d5f72a4b0ea5ae6fc5d6b50b3b1d28d68692aeface032eaec3798435",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "append"
+        ]
+      },
+      {
+        "name": "ProtocolCustomizeMode",
+        "kind": "enum",
+        "schemaSha256": "f5189f647048e0341dc1d438514c9fbaf2c84b3cb621a8eca31b845ea79a644e",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "customize"
+        ]
+      },
+      {
         "name": "ProtocolExternalToolDefer",
         "kind": "enum",
         "schemaSha256": "ac4a567f44b56ddff43aa53b2958b93d03282431cbedac56b8ab999ae3246c72",
@@ -9215,6 +9265,112 @@
         "kind": "object",
         "schemaSha256": "05f2cfd8e6709cf6ba7ace1edc6d4720a38da8e9adba0a0c615d77e72f273c45",
         "propertyCount": 9,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolMarkerSectionOverride",
+        "kind": "union",
+        "schemaSha256": "23cef7ddebde3640b901d4ed4ff79c2d08ef0fa54518558a9c0102f61d498e18",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 2,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolReplaceMode",
+        "kind": "enum",
+        "schemaSha256": "15fff2eb3f708eace277a2fdc60c9b38eb072e296c79a162dde842283f3d72cc",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "replace"
+        ]
+      },
+      {
+        "name": "ProtocolSectionOverride",
+        "kind": "union",
+        "schemaSha256": "20dc927292a453ffe4a5e419f686b4f72f2dd56f4b0c5777fd9a2d57348dcf35",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 2,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolStaticSectionAction",
+        "kind": "enum",
+        "schemaSha256": "7860ea85a360d70e5fd7c6c9ceea1cd31c5a16d8338df50581fdecb920f20a13",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "replace",
+          "remove",
+          "append",
+          "prepend"
+        ]
+      },
+      {
+        "name": "ProtocolStaticSectionOverride",
+        "kind": "object",
+        "schemaSha256": "629ed81ea669b0107adadcb86fe8a0e2010649db53cebd89f7e472980c90dedb",
+        "propertyCount": 2,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolSystemMessageAppendConfig",
+        "kind": "object",
+        "schemaSha256": "75ce51b8705c911481938b5ed909b86a688badc52402437ffca127cbdc330947",
+        "propertyCount": 2,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolSystemMessageConfig",
+        "kind": "union",
+        "schemaSha256": "be5cd9346fa41ac5b964715df2d4c46e085400cd27c18766b4854a8530fbce9b",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 3,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolSystemMessageCustomizeConfig",
+        "kind": "object",
+        "schemaSha256": "166f6ca96236d8120438df3ad6e7ea87f1d5387e4bf6822bfb3d1c14c520f331",
+        "propertyCount": 3,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ProtocolSystemMessageReplaceConfig",
+        "kind": "object",
+        "schemaSha256": "da74c5cae0b59d37aa2b51b20395e9f8dd043490b18b8a3c214a5e0bf1becb75",
+        "propertyCount": 3,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -9376,8 +9532,8 @@
       {
         "name": "ProviderModelConfig",
         "kind": "object",
-        "schemaSha256": "47492c3f425e3bf182cd32e4c862b9f3f0dc66a8f63b9751ee9064646f899501",
-        "propertyCount": 9,
+        "schemaSha256": "923c4643ec58e9b3039f7ba0508fecf28fcd3457adcab005cd4888c2de315127",
+        "propertyCount": 10,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -10045,28 +10201,6 @@
         "knownStringValues": []
       },
       {
-        "name": "RegisterExtensionToolsParams",
-        "kind": "object",
-        "schemaSha256": "31167ffb8a720427b62985f223c74990e01192443d9645e3a7e6cf7f031946ab",
-        "propertyCount": 3,
-        "requiredPropertyCount": 2,
-        "hasOptionalProperties": true,
-        "hasMap": false,
-        "unionVariantCount": 0,
-        "knownStringValues": []
-      },
-      {
-        "name": "RegisterExtensionToolsResult",
-        "kind": "object",
-        "schemaSha256": "959b5accfa0b43ac5e2aed6b6f934394160a32bfa12ca434a7bc821bc6891fa9",
-        "propertyCount": 1,
-        "requiredPropertyCount": 1,
-        "hasOptionalProperties": false,
-        "hasMap": false,
-        "unionVariantCount": 0,
-        "knownStringValues": []
-      },
-      {
         "name": "ReleaseEventInterestParams",
         "kind": "object",
         "schemaSha256": "196f7b7ec705d9c80c5ba398ffd0e277e5ceb938f6cc111fbf5fc384aeabe54c",
@@ -10338,6 +10472,17 @@
         "knownStringValues": []
       },
       {
+        "name": "ResponseFormat",
+        "kind": "union",
+        "schemaSha256": "35e1db4e2e35b9761af783be3463eba17156e341fe45c4d777e55710d217b239",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 1,
+        "knownStringValues": []
+      },
+      {
         "name": "RunOptions",
         "kind": "object",
         "schemaSha256": "0b7f0b3a142fe48ce4718a2ff46784c9f19bf6dbbbcc4bb7d7d4bab95dd7a911",
@@ -10436,8 +10581,8 @@
       {
         "name": "SandboxConfigUserPolicyNetwork",
         "kind": "object",
-        "schemaSha256": "e2ca62d2a71ffdc0729dfe1264e2cea627214a76b7564bab2cc956d151f50342",
-        "propertyCount": 3,
+        "schemaSha256": "ce8aac79aad18b21c10ebc058b25578a4b073cb8ed130ed29943617fbbe00bdf",
+        "propertyCount": 5,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -10498,6 +10643,20 @@
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
+      },
+      {
+        "name": "SandboxSessionChange",
+        "kind": "enum",
+        "schemaSha256": "9221630be506c4bd247cbbec32398ecb819219825949a2ea3896be64939dc0bd",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "disabled",
+          "restored"
+        ]
       },
       {
         "name": "ScheduleAddAtRequest",
@@ -10683,8 +10842,8 @@
       {
         "name": "SendMessagesRequest",
         "kind": "object",
-        "schemaSha256": "b396bd465122877c9088d81b55cc3ea822ef46990c8fac486337e33f7777d146",
-        "propertyCount": 8,
+        "schemaSha256": "fc18242b68b9d4a0aadf39cb561bae304b8c47f6ed9389605ba33e1d5066a3c8",
+        "propertyCount": 9,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -10694,7 +10853,7 @@
       {
         "name": "SendMessagesResult",
         "kind": "object",
-        "schemaSha256": "ddf2fd2e46ac72721e32cac3f6dc43b7d5e254abf4169927fb035d41867eff13",
+        "schemaSha256": "4350ca46e37763ee89c1310316c62f95487587dae0bca37685b64f3a7ccd2821",
         "propertyCount": 1,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": false,
@@ -10719,8 +10878,8 @@
       {
         "name": "SendRequest",
         "kind": "object",
-        "schemaSha256": "e3871a54a5c7d4273d850c9fc43bd8abb6033879476384a43f2a0090ddfbe5e2",
-        "propertyCount": 13,
+        "schemaSha256": "99c5e2f5cacfd49962abd1fa8a0024b609a71906baeff110d70c5b5757095e71",
+        "propertyCount": 14,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -11643,8 +11802,8 @@
       {
         "name": "SessionOpenOptions",
         "kind": "object",
-        "schemaSha256": "9d9ed7d8a730d00a796a8fa340bc6ef3c40b033a5a5690e23eec0622615ff85e",
-        "propertyCount": 73,
+        "schemaSha256": "163313fd1511e5bbd34ded193f1d6dd538b08771572045539a0711c5b7172ad1",
+        "propertyCount": 74,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -12514,17 +12673,6 @@
         "knownStringValues": []
       },
       {
-        "name": "SessionsRegisterExtensionToolsOnSessionOptions",
-        "kind": "object",
-        "schemaSha256": "39397fa196c841cd6d37e442487f88d6afd266d9d7271df2f47f07d599951d01",
-        "propertyCount": 1,
-        "requiredPropertyCount": 0,
-        "hasOptionalProperties": true,
-        "hasMap": false,
-        "unionVariantCount": 0,
-        "knownStringValues": []
-      },
-      {
         "name": "SessionsReleaseLockRequest",
         "kind": "object",
         "schemaSha256": "9430e0d972efe00a4b1118b6d006d8863b0c02bc0a6d7d81de8c33771bf0ed25",
@@ -13242,8 +13390,8 @@
       {
         "name": "SlashCommandTextResult",
         "kind": "object",
-        "schemaSha256": "a549f08954521abe496f7d79932fdd35a2b9cd2f224c72ed26e4acb07d79515d",
-        "propertyCount": 5,
+        "schemaSha256": "fcc4673bd377ea7f781e055a7b9dc22b157d47953b717fed82802d9c9b428b1c",
+        "propertyCount": 6,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -13297,6 +13445,17 @@
           "default",
           "long_context"
         ]
+      },
+      {
+        "name": "SystemMessageBlock",
+        "kind": "object",
+        "schemaSha256": "6f7c5a1e5283ca1658ad8f973134574ab935226cfff8509284d03f29e70b9962",
+        "propertyCount": 2,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
       },
       {
         "name": "TaskAgentInfo",
@@ -15390,8 +15549,8 @@
       {
         "name": "AssistantMessageData",
         "kind": "object",
-        "schemaSha256": "690292f858a0afd1b3e6818dc7a737ed52dd48bc825611053898827f90d4d964",
-        "propertyCount": 24,
+        "schemaSha256": "d3799020873a34cbf01381cc4a9c9c25991d3216973eedded412261b7faceecb",
+        "propertyCount": 25,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -17975,7 +18134,7 @@
       {
         "name": "HookEndData",
         "kind": "object",
-        "schemaSha256": "648836d8c313864b2eb6d13545da73160381c6fbc19bcb0f6bfda24d9f41abbc",
+        "schemaSha256": "07cfb5b17aefeec9570e4c1985ec7bfd1d6f552645bf2bfb720d6fc70caf2e75",
         "propertyCount": 6,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -18030,7 +18189,7 @@
       {
         "name": "HookStartData",
         "kind": "object",
-        "schemaSha256": "7f02e03204c2ed07ebf97776b29a88430d8cec837835ad0f4e69ed5de5becbe4",
+        "schemaSha256": "8f65c3aec1d67bde45f7af9d01305839afc6d5a8c9a5ad0a26317a19cf0fbb3d",
         "propertyCount": 4,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
@@ -18266,7 +18425,7 @@
       {
         "name": "McpHeadersRefreshCompletedOutcome",
         "kind": "enum",
-        "schemaSha256": "344f631461758061fd73ad333be39f5a40b97bc2fa8473506157241df251fe11",
+        "schemaSha256": "b12a9608b1817c80438ff38aebf05120b3c137f67548140d7bebbcbf57f90dee",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -18275,6 +18434,7 @@
         "knownStringValues": [
           "headers",
           "none",
+          "error",
           "timeout"
         ]
       },
@@ -18513,7 +18673,7 @@
       {
         "name": "McpServerSource",
         "kind": "enum",
-        "schemaSha256": "c3b17f7eb2f21547b2f1a8103ee3b3f976f8f0b0a9e214ccc3bc00e6f1cb2143",
+        "schemaSha256": "58bd1bc65d3d5e1c9b82ed069e91f6e3eaedf1c8f3597038894864340d701e52",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -18523,7 +18683,8 @@
           "user",
           "workspace",
           "plugin",
-          "builtin"
+          "builtin",
+          "managed"
         ]
       },
       {
@@ -18608,8 +18769,8 @@
       {
         "name": "McpServersLoadedServer",
         "kind": "object",
-        "schemaSha256": "efdb6487ee66a6aaa8f86fd0265d29e4b86fba5addfb28b2a101e8b2ae884242",
-        "propertyCount": 8,
+        "schemaSha256": "102d4170ad701b7f9b3eb27b13fdc641b42ae09d5853f1c1f5d7a0e1c1654402",
+        "propertyCount": 9,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -20015,7 +20176,7 @@
       {
         "name": "SandboxDenialClass",
         "kind": "enum",
-        "schemaSha256": "b0899b144a50009601b41b806f6cf4bf247f1870b6f33332842572d71e440f68",
+        "schemaSha256": "aa4372f6a53e4908816de9abca915ef2797f27b42e00c7bf9109f4383a601fb9",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -20033,6 +20194,7 @@
           "service_access",
           "network_outbound",
           "network_local",
+          "network_host",
           "other_access"
         ]
       },
@@ -20230,12 +20392,12 @@
       {
         "name": "SessionEvent",
         "kind": "union",
-        "schemaSha256": "a10ab90378a44db68ec530a69dc73eb51c70a9c88b67aa28be7a3e88a9633309",
+        "schemaSha256": "3df942e41e9654dd187d9126c4e06f03ef97973a4a3c23ba544d601037d332cf",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 144,
+        "unionVariantCount": 147,
         "knownStringValues": [
           "session.start",
           "session.resume",
@@ -20311,6 +20473,9 @@
           "tool.execution_complete",
           "tool_search.activated",
           "skill.invoked",
+          "skill.invoked_ref",
+          "skill.context_delivered",
+          "skill.context_delivered_ref",
           "sandbox.decision",
           "subagent.started",
           "subagent.configured",
@@ -20616,6 +20781,50 @@
         ]
       },
       {
+        "name": "SkillContextDeliveredData",
+        "kind": "object",
+        "schemaSha256": "47eb88956284eeafd6ea87fc1e5a9cfe30f1de1daaba60a9184cf3ef15cbb60a",
+        "propertyCount": 3,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SkillContextDeliveredEvent",
+        "kind": "object",
+        "schemaSha256": "85b43c739c7b44b086ed5d152c745c5fc68428a613bcb9bacfac19a3165c3b55",
+        "propertyCount": 7,
+        "requiredPropertyCount": 5,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SkillContextDeliveredRefData",
+        "kind": "object",
+        "schemaSha256": "9a049d76fe937f91d5576851da4031d42cf26250c31bb43d644d1dbc7efa21b0",
+        "propertyCount": 5,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SkillContextDeliveredRefEvent",
+        "kind": "object",
+        "schemaSha256": "4db1d113cdfec0015e4bfc06f58b53fa6fbbb73f80847b1f1c1baf16c33ccb03",
+        "propertyCount": 7,
+        "requiredPropertyCount": 5,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "SkillInvokedData",
         "kind": "object",
         "schemaSha256": "ad41c3df5f449f9333703724345f5dbf8a43773cbaea43191d51ccadc275292a",
@@ -20630,6 +20839,28 @@
         "name": "SkillInvokedEvent",
         "kind": "object",
         "schemaSha256": "a898bce15bbf299b1328fef1f5a9bf5670b4d468a3c631ba10689cddd670e87c",
+        "propertyCount": 7,
+        "requiredPropertyCount": 5,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SkillInvokedRefData",
+        "kind": "object",
+        "schemaSha256": "ff5078d2eb33b48630da8794961ed0cce42e5baf85c1086ddcc829d623867b23",
+        "propertyCount": 12,
+        "requiredPropertyCount": 4,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SkillInvokedRefEvent",
+        "kind": "object",
+        "schemaSha256": "e31208cb7a3ad1d0002497b3f998195ae08c4e6537a615b08dbba20f9e519c08",
         "propertyCount": 7,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
@@ -20881,8 +21112,8 @@
       {
         "name": "SubagentStartedData",
         "kind": "object",
-        "schemaSha256": "2a9f94bff1656dc8787b5619e7143a6ac922eebcd87a5231ac497d32b0509569",
-        "propertyCount": 11,
+        "schemaSha256": "13439858a351546ecd897df0798c5ed135f28c501e99f2912bfdcc97237e14c6",
+        "propertyCount": 12,
         "requiredPropertyCount": 4,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -21367,7 +21598,7 @@
       {
         "name": "ToolExecutionCompleteResult",
         "kind": "object",
-        "schemaSha256": "47bd58659507a934ae2b22abd0ae25c247066f3c5fe8a950fb89b8ee09af63e7",
+        "schemaSha256": "8e9720f9acb636f1cbbdb9a0fa4a9de7940e91d87aa9a3cb827c85693dac7846",
         "propertyCount": 8,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
@@ -21568,8 +21799,8 @@
       {
         "name": "ToolExecutionStartData",
         "kind": "object",
-        "schemaSha256": "b9a39434878d7cf97c884f316d4b4737b8f0f4759aba4456e2bad2839f0383dd",
-        "propertyCount": 14,
+        "schemaSha256": "2162b80d18a0b0e308398383e4dcfa068e3a1601a0f3514d6f7f6ffa81da752b",
+        "propertyCount": 16,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -22234,7 +22465,6 @@
       "sessions.setRemoteControlSteering",
       "sessions.stopRemoteControl",
       "sessions.getRemoteControlStatus",
-      "sessions.registerExtensionToolsOnSession",
       "sessions.configureSessionExtensions",
       "agentRegistry.spawn",
       "session.suspend",
@@ -22826,6 +23056,18 @@
       {
         "definition": "SkillInvokedEvent",
         "wireType": "skill.invoked"
+      },
+      {
+        "definition": "SkillInvokedRefEvent",
+        "wireType": "skill.invoked_ref"
+      },
+      {
+        "definition": "SkillContextDeliveredEvent",
+        "wireType": "skill.context_delivered"
+      },
+      {
+        "definition": "SkillContextDeliveredRefEvent",
+        "wireType": "skill.context_delivered_ref"
       },
       {
         "definition": "SandboxDecisionEvent",

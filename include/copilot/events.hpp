@@ -3118,6 +3118,10 @@ enum class SessionEventType
     PermissionMessageAuthorizationDegraded,
     SessionMcpServerRemoved,
     SessionMcpServerNeedsReconnect,
+    // Added with the @github/copilot 1.0.84-6 re-pin (upstream e5c53790).
+    SkillInvokedRef,
+    SkillContextDelivered,
+    SkillContextDeliveredRef,
     Unknown
 };
 
@@ -3466,6 +3470,10 @@ inline SessionEvent parse_session_event(const json& j)
          SessionEventType::PermissionMessageAuthorizationDegraded},
         {"session.mcp_server_removed", SessionEventType::SessionMcpServerRemoved},
         {"session.mcp_server_needs_reconnect", SessionEventType::SessionMcpServerNeedsReconnect},
+        // @github/copilot 1.0.84-6 (upstream e5c53790).
+        {"skill.invoked_ref", SessionEventType::SkillInvokedRef},
+        {"skill.context_delivered", SessionEventType::SkillContextDelivered},
+        {"skill.context_delivered_ref", SessionEventType::SkillContextDeliveredRef},
     };
 
     auto it = type_map.find(event.type_string);

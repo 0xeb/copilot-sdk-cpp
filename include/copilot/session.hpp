@@ -285,8 +285,45 @@ class Session : public std::enable_shared_from_this<Session>
     // Lifecycle
     // =========================================================================
 
-    /// Destroy the session on the server
-    /// @return Future that completes when destroyed
+    /// Stop answering host tool invocations on this session.
+    ///
+    /// A handler already running is user code on a background task and cannot be
+    /// interrupted; this ensures that when it returns, its result is dropped
+    /// instead of being sent as `session.tools.handlePendingToolCall` over a
+    /// connection that is closing. Called by Client during stop, mirroring
+    /// upstream github/copilot-sdk 53e74d81.
+    void cancel_pending_tool_invocations() noexcept;
+
+    /// Host tool invocations dispatched but not yet answered. Exposed so the
+    /// cancellation contract is observable from a test.
+    int pending_tool_invocations() const noexcept;
+
+    /// Outcome of detach(). Mirrors upstream's SessionDetachResponse.
+    struct DetachResult
+    {
+        /// Whether the runtime released the session.
+        bool success = false;
+        /// Runtime-supplied reason when `success` is false.
+        std::optional<std::string> error;
+        /// Full response, so fields not surfaced above stay reachable.
+        json raw;
+    };
+
+    /// Detach the session from this connection.
+    ///
+    /// Calls `session.detach`, which replaced `session.destroy` as the SDK
+    /// teardown RPC upstream (github/copilot-sdk fcffcdf0). A `success: false`
+    /// response is reported here rather than thrown: teardown should not fail
+    /// because the runtime declined to release a session.
+    std::future<DetachResult> detach();
+
+    /// Destroy the session on the server.
+    ///
+    /// Retained for source compatibility and implemented in terms of detach().
+    /// A soft failure (`success: false`) is **discarded** here because the
+    /// signature cannot carry it — call detach() directly if you need to know.
+    /// Transport and RPC errors still propagate.
+    /// @return Future that completes when the session has been detached
     std::future<void> destroy();
 
     /// Disconnect this SDK participant while leaving the session resumable.
@@ -451,6 +488,13 @@ class Session : public std::enable_shared_from_this<Session>
 
     std::mutex background_tasks_mutex_;
     std::vector<std::future<void>> background_tasks_;
+
+    /// Set when the connection is going away. A host tool handler already running
+    /// cannot be interrupted -- it is user code on a detached task -- but once it
+    /// returns we must not answer into a connection that is being torn down.
+    std::atomic<bool> tool_invocations_cancelled_{false};
+    /// Host tool invocations dispatched but not yet answered.
+    std::atomic<int> pending_tool_invocations_{0};
 };
 
 } // namespace copilot

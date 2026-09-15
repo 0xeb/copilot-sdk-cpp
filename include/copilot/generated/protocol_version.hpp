@@ -9,7 +9,7 @@ namespace copilot::generated
 
 inline constexpr int kSdkProtocolVersion = 3;
 inline constexpr int kMinProtocolVersion = 2;
-inline constexpr std::string_view kOfficialSdkCommit = "f45c46fd1812f8bed5b4cbc250f47177c83068f0";
-inline constexpr std::string_view kOfficialSchemaPackageVersion = "1.0.84-5";
+inline constexpr std::string_view kOfficialSdkCommit = "e5c53790c6a8aa253aa3887ebb8958646bd60452";
+inline constexpr std::string_view kOfficialSchemaPackageVersion = "1.0.84-6";
 
 } // namespace copilot::generated
