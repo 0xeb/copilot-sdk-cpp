@@ -7,7 +7,9 @@
 
 #ifdef _WIN32
 
+#include <atomic>
 #include <copilot/process.hpp>
+#include <thread>
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -42,6 +44,7 @@ struct PipeHandle
 struct ProcessHandle
 {
     HANDLE process_handle = INVALID_HANDLE_VALUE;
+    HANDLE job_handle = nullptr;
     HANDLE thread_handle = INVALID_HANDLE_VALUE;
     DWORD process_id = 0;
     bool running = false;
@@ -49,34 +52,14 @@ struct ProcessHandle
 
     ~ProcessHandle()
     {
+        if (job_handle)
+            CloseHandle(job_handle);
         if (thread_handle != INVALID_HANDLE_VALUE)
             CloseHandle(thread_handle);
         if (process_handle != INVALID_HANDLE_VALUE)
             CloseHandle(process_handle);
     }
 };
-// =============================================================================
-// Job Object for child process cleanup
-// =============================================================================
-
-// Singleton job object that kills all child processes when parent exits.
-// Using JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE ensures spawned servers die
-// when the client process terminates (even abnormally).
-static HANDLE get_child_process_job()
-{
-    static HANDLE job = []() -> HANDLE {
-        HANDLE h = CreateJobObjectA(nullptr, nullptr);
-        if (h)
-        {
-            JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = {};
-            info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-            SetInformationJobObject(h, JobObjectExtendedLimitInformation, &info, sizeof(info));
-        }
-        return h;
-    }();
-    return job;
-}
-
 // =============================================================================
 // Helper functions
 // =============================================================================
@@ -179,8 +162,8 @@ resolve_executable_for_spawn(const std::string& executable, const ProcessOptions
     {
         std::error_code ec;
         std::filesystem::path base_dir = options.working_directory.empty()
-            ? std::filesystem::current_path(ec)
-            : std::filesystem::path(options.working_directory);
+                                             ? std::filesystem::current_path(ec)
+                                             : std::filesystem::path(options.working_directory);
         if (ec)
             return executable;
 
@@ -358,6 +341,23 @@ bool WritePipe::is_open() const
 // Process implementation
 // =============================================================================
 
+struct Process::ProcessWatch
+{
+    std::atomic<bool> cancelled{false};
+    std::thread thread;
+    ~ProcessWatch()
+    {
+        cancelled.store(true);
+        if (thread.joinable())
+        {
+            if (thread.get_id() == std::this_thread::get_id())
+                thread.detach();
+            else
+                thread.join();
+        }
+    }
+};
+
 Process::Process()
     : handle_(std::make_unique<ProcessHandle>()), stdin_(std::make_unique<WritePipe>()),
       stdout_(std::make_unique<ReadPipe>()), stderr_(std::make_unique<ReadPipe>())
@@ -499,7 +499,7 @@ void Process::spawn(
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
 
-    DWORD creation_flags = 0;
+    DWORD creation_flags = CREATE_SUSPENDED;
     if (options.create_no_window)
         creation_flags |= CREATE_NO_WINDOW;
 
@@ -541,10 +541,26 @@ void Process::spawn(
     handle_->process_id = pi.dwProcessId;
     handle_->running = true;
 
-    // Assign to job object so child dies when parent dies
-    HANDLE job = get_child_process_job();
-    if (job)
-        AssignProcessToJobObject(job, pi.hProcess);
+    // Each child gets its own job; killing one runtime must not terminate other clients.
+    handle_->job_handle = CreateJobObjectA(nullptr, nullptr);
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION job_info{};
+    job_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    if (!handle_->job_handle ||
+        !SetInformationJobObject(
+            handle_->job_handle, JobObjectExtendedLimitInformation, &job_info, sizeof(job_info)
+        ) ||
+        !AssignProcessToJobObject(handle_->job_handle, pi.hProcess))
+    {
+        TerminateProcess(pi.hProcess, 1);
+        if (stdin_write != INVALID_HANDLE_VALUE)
+            CloseHandle(stdin_write);
+        if (stdout_read != INVALID_HANDLE_VALUE)
+            CloseHandle(stdout_read);
+        if (stderr_read != INVALID_HANDLE_VALUE)
+            CloseHandle(stderr_read);
+        throw ProcessError("Failed to create runtime process job");
+    }
+    ResumeThread(pi.hThread);
 
     stdin_->handle_->handle = stdin_write;
     stdout_->handle_->handle = stdout_read;
@@ -620,8 +636,8 @@ std::optional<int> Process::wait_for(std::chrono::milliseconds timeout)
     if (!handle_ || handle_->process_handle == INVALID_HANDLE_VALUE)
         return handle_ ? std::optional<int>(handle_->exit_code) : std::nullopt;
 
-    const auto bounded = static_cast<DWORD>(
-        std::min<int64_t>(timeout.count(), static_cast<int64_t>(MAXDWORD - 1)));
+    const auto bounded =
+        static_cast<DWORD>(std::min<int64_t>(timeout.count(), static_cast<int64_t>(MAXDWORD - 1)));
     if (WaitForSingleObject(handle_->process_handle, bounded) != WAIT_OBJECT_0)
         return std::nullopt;
 
@@ -644,15 +660,59 @@ void Process::terminate()
         if (result != WAIT_OBJECT_0)
         {
             // Force kill if it didn't exit
-            TerminateProcess(handle_->process_handle, 1);
+            kill();
         }
     }
 }
 
 void Process::kill()
 {
-    if (handle_ && handle_->process_handle != INVALID_HANDLE_VALUE)
+    if (!handle_)
+        return;
+    if (handle_->job_handle)
+        TerminateJobObject(handle_->job_handle, 1);
+    else if (handle_->process_handle != INVALID_HANDLE_VALUE)
         TerminateProcess(handle_->process_handle, 1);
+}
+
+void Process::on_exit(std::function<void()> callback)
+{
+    watch_.reset();
+    watch_ = std::make_unique<ProcessWatch>();
+    HANDLE observed = nullptr;
+    if (!DuplicateHandle(
+            GetCurrentProcess(),
+            handle_->process_handle,
+            GetCurrentProcess(),
+            &observed,
+            SYNCHRONIZE,
+            FALSE,
+            0
+        ))
+        throw ProcessError("Failed to watch runtime process");
+    watch_->thread = std::thread(
+        [state = watch_.get(), observed, callback = std::move(callback)]
+        {
+            while (!state->cancelled.load())
+            {
+                if (WaitForSingleObject(observed, 20) == WAIT_OBJECT_0)
+                {
+                    if (!state->cancelled.load())
+                    {
+                        try
+                        {
+                            callback();
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                    break;
+                }
+            }
+            CloseHandle(observed);
+        }
+    );
 }
 
 void Process::close_pipes()

@@ -9,19 +9,125 @@
 namespace copilot::generated::api
 {
 
-inline constexpr std::size_t kGeneratedDefinitionCount = 1306;
-inline constexpr std::array<std::string_view, 383> kRpcMethods{{
+inline constexpr std::size_t kGeneratedDefinitionCount = 1899;
+inline constexpr std::array<std::string_view, 619> kRpcMethods{{
+    "sandbox.proxyCa.checkInstallationSupport",
+    "sandbox.proxyCa.checkRelevance",
+    "sandbox.proxyCa.getStatus",
+    "sandbox.proxyCa.create",
+    "sandbox.proxyCa.rotate",
+    "sandbox.proxyCa.trust",
+    "sandbox.proxyCa.remove",
+    "sandbox.proxySecret.getLocation",
+    "sandbox.proxySecret.get",
+    "sandbox.proxySecret.save",
+    "sandbox.proxySecret.delete",
+    "sandbox.settings.applyDefaults",
+    "sandbox.resolveFlooredConfig",
+    "sandbox.preparePickerPolicy",
+    "sandbox.filterPickerCandidates",
+    "sandbox.resolveForOptional",
+    "sandbox.checkPlatformSupport",
+    "sandbox.checkWindowsHostLoopbackSupport",
+    "sandbox.getUnsupportedMessage",
+    "sandbox.getUnsupportedSettingDisabledNotice",
+    "sandbox.getUnsupportedStartupNotice",
+    "sandbox.checkEnforcementCommand",
+    "sandbox.getDocsUrl",
+    "sandbox.getHostSupport",
+    "persistence.writeRawJsonLocked",
+    "user.settings.setHookDisabled",
+    "user.settings.loadForConfigDir",
+    "user.settings.loadRepo",
+    "user.settings.loadAndMergeRepo",
+    "user.settings.getPath",
+    "user.settings.loadWithWarning",
+    "user.settings.mergeManagedAndUser",
+    "user.settings.mergeRepoValue",
+    "user.settings.migrateStaffUpdateChannelOnce",
+    "user.settings.resetStaffModelSelectionOnce",
+    "user.settings.getUnknownKeysWarning",
+    "user.settings.buildRuntime",
+    "user.settings.migrateStaffLogLevelOnce",
+    "user.settings.migrateObsoleteOnDisk",
+    "user.settings.get",
+    "user.settings.getPaths",
+    "user.settings.set",
+    "user.settings.listGovernanceKeys",
+    "user.settings.edit",
+    "user.settings.normalize",
+    "user.settings.diagnoseProblems",
+    "user.settings.applyTopKey",
+    "user.settings.writeAll",
+    "user.settings.update",
+    "user.settings.loadForEdit",
+    "user.settings.validate",
+    "repo.settings.edit",
+    "repo.settings.readRaw",
+    "repo.settings.writeKey",
+    "repo.settings.writeAll",
+    "featureFlags.resolveStartupGates",
+    "featureFlags.listMetadata",
+    "featureFlags.resolve",
+    "permissions.locations.cleanupOrphaned",
+    "permissions.folderTrust.checkTrust",
+    "permissions.evaluateManagedPolicy",
+    "managedSettings.readDevice",
+    "managedSettings.retainPolicy",
+    "managedSettings.applyControls",
+    "managedSettings.parseClientValue",
+    "managedSettings.resolveEffectiveValue",
+    "managedSettings.resolveBypassDisableTransition",
+    "managedSettings.ingest",
+    "managedSettings.resolveStartupPolicy",
+    "managedSettings.loadRemoteControl",
+    "managedSettings.resolveDeviceForceLoginOrgsGate",
+    "managedSettings.read",
+    "managedSettings.clearCache",
+    "managedSettings.resolve",
+    "managedSettings.permissions.evaluate",
+    "managedSettings.schema",
+    "managedSettings.validate",
+    "managedSettings.compose",
+    "environments.list",
+    "environments.get",
+    "environments.delete",
+    "host.publishSession",
+    "host.unpublishSession",
+    "host.listSessions",
+    "host.createSession",
+    "host.releaseSession",
+    "host.start",
+    "host.dispose",
+    "host.getEnvironmentCredentials",
+    "host.getConfiguration",
+    "host.ready",
     "ping",
     "connect",
     "hooks.discover",
     "models.list",
     "models.getBuiltInCatalog",
+    "models.listTokenPriceUnits",
+    "azureMl.catalog",
+    "azureMl.latest",
+    "azureMl.resolve",
+    "azureMl.download",
+    "azureMl.acquireFamily",
+    "azureMl.releaseFamily",
+    "azureMl.status",
+    "azureMl.cancel",
+    "azureMl.discard",
+    "contentExclusion.validatePolicies",
     "tools.list",
     "account.getQuota",
     "account.getCurrentAuth",
     "account.getAllUsers",
     "account.login",
     "account.logout",
+    "account.describeAuthInfo",
+    "account.getGistSupport",
+    "account.getWebUrl",
+    "account.getTokenEnvVar",
     "secrets.addFilterValues",
     "mcp.config.list",
     "mcp.config.add",
@@ -30,13 +136,48 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "mcp.config.enable",
     "mcp.config.disable",
     "mcp.config.reload",
+    "mcp.registry.allocateRequestId",
+    "mcp.registry.search",
+    "mcp.registry.cancel",
     "mcp.discover",
+    "mcp.listBuiltinServerNames",
+    "mcp.shouldExcludeGitHubTools",
     "mcp.planInstall",
+    "mcp.oauth.staticClientConfig",
+    "mcp.oauth.fetchProtectedResourceMetadata",
+    "mcp.oauth.checkDcrSupport",
+    "mcp.oauth.isMicrosoftAuthorizationServer",
+    "mcp.prepareInstall",
+    "mcp.applyInstall",
+    "mcp.planUninstall",
+    "mcp.applyUninstall",
+    "mcp.installations.list",
+    "mcp.installations.recover",
+    "mcp.installations.status",
+    "mcp.installations.cancel",
     "extensions.discover",
     "extensions.enable",
     "extensions.disable",
-    "registerExtensionLaunchProvider",
-    "catalog.search",
+    "instructions.getInitPrompt",
+    "instructions.discover",
+    "instructions.discoverRepoSources",
+    "instructions.getDiscoveryPaths",
+    "instructions.clearCache",
+    "skills.planInstall",
+    "skills.applyInstall",
+    "skills.installations.list",
+    "skills.installations.recover",
+    "skills.installations.status",
+    "skills.installations.cancel",
+    "skills.installations.setEnabled",
+    "skills.planUninstall",
+    "skills.applyUninstall",
+    "skills.config.setDisabledSkills",
+    "skills.config.setSkillDisabled",
+    "skills.discover",
+    "skills.getDiscoveryPaths",
+    "plugins.planInstall",
+    "plugins.applyInstall",
     "plugins.list",
     "plugins.install",
     "plugins.uninstall",
@@ -50,20 +191,30 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "plugins.marketplaces.remove",
     "plugins.marketplaces.browse",
     "plugins.marketplaces.refresh",
-    "skills.config.setDisabledSkills",
-    "skills.config.setSkillDisabled",
-    "skills.discover",
-    "skills.getDiscoveryPaths",
+    "registerExtensionLaunchProvider",
+    "catalog.search",
+    "catalog.getSavedFeed",
+    "catalog.getGeneratedFeed",
+    "catalog.select",
+    "catalog.planInstallFromReference",
     "agents.discover",
     "agents.getDiscoveryPaths",
-    "instructions.discover",
-    "instructions.getDiscoveryPaths",
+    "agents.getBuiltins",
+    "agents.getAvailableBuiltins",
+    "agents.getBuiltinDefinition",
+    "agents.getBuiltinListingDefinition",
+    "agents.customAgentInitialModelDecision",
+    "globalState.load",
+    "globalState.loadForConfigDir",
+    "globalState.writeKey",
     "commands.list",
-    "user.settings.reload",
-    "user.settings.get",
-    "user.settings.set",
-    "managedSettings.read",
-    "managedSettings.clearCache",
+    "gitHubRepository.atPath",
+    "gitHubOwners.nextRequestId",
+    "gitHubOwners.list",
+    "gitHubOwners.cancel",
+    "git.currentBranchRemote",
+    "git.workingDirectoryContext",
+    "git.reposFromRemotes",
     "runtime.shutdown",
     "sessionFs.setProvider",
     "llmInference.setProvider",
@@ -91,6 +242,9 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "sessions.save",
     "sessions.releaseLock",
     "sessions.enrichMetadata",
+    "sessions.createWorkspace",
+    "sessions.loadWorkspace",
+    "sessions.updateWorkspaceFields",
     "sessions.reloadPluginHooks",
     "sessions.loadDeferredRepoHooks",
     "sessions.setAdditionalPlugins",
@@ -102,11 +256,22 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "sessions.getRemoteControlStatus",
     "sessions.configureSessionExtensions",
     "agentRegistry.spawn",
+    "connectors.getCapabilities",
+    "connectors.getAccounts",
+    "connectors.list",
+    "connectors.refresh",
+    "session.providers.getCatalog",
+    "session.providers.discover",
+    "session.providers.getStatus",
+    "session.providers.models.list",
+    "session.providers.models.prepareConfiguration",
     "session.suspend",
     "session.send",
     "session.sendMessages",
     "session.sandbox.getEnforcementStatus",
+    "session.sandbox.getCredentialSuggestions",
     "session.sandbox.disableForSession",
+    "session.sandbox.grantPathForRequest",
     "session.sendSystemNotification",
     "session.abort",
     "session.interruptMainTurn",
@@ -122,6 +287,12 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.gitHubAuth.logout",
     "session.gitHubAuth.logoutUser",
     "session.gitHubAuth.lastAuthErrors",
+    "session.accounts.enumerate",
+    "session.accounts.get",
+    "session.accounts.set",
+    "session.accounts.login.begin",
+    "session.accounts.login.advance",
+    "session.accounts.login.cancel",
     "session.debug.collectLogs",
     "session.canvas.list",
     "session.canvas.listOpen",
@@ -130,27 +301,29 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.canvas.action.invoke",
     "session.canvas.provider.register",
     "session.canvas.provider.unregister",
-    "session.factory.run",
-    "session.factory.resume",
-    "session.factory.runFromTool",
-    "session.factory.resumeFromTool",
-    "session.factory.getRun",
-    "session.factory.listRuns",
-    "session.factory.getRunDetail",
-    "session.factory.getRunProgress",
-    "session.factory.cancel",
-    "session.factory.pause",
-    "session.factory.pauseAtCheckpoint",
-    "session.factory.log",
-    "session.factory.agent",
-    "session.factory.journal.get",
-    "session.factory.journal.put",
+    "session.workflow.run",
+    "session.workflow.resume",
+    "session.workflow.runFromTool",
+    "session.workflow.resumeFromTool",
+    "session.workflow.getRun",
+    "session.workflow.listRuns",
+    "session.workflow.getRunDetail",
+    "session.workflow.getRunProgress",
+    "session.workflow.cancel",
+    "session.workflow.pause",
+    "session.workflow.pauseAtCheckpoint",
+    "session.workflow.log",
+    "session.workflow.agent",
+    "session.workflow.journal.get",
+    "session.workflow.journal.put",
     "session.model.getCurrent",
     "session.model.switchTo",
     "session.model.switchAutoTier",
     "session.model.applyStartupOverlay",
+    "session.model.clearStartupSeed",
     "session.model.setAllowedModels",
     "session.model.setReasoningEffort",
+    "session.model.getReasoningSummaries",
     "session.model.list",
     "session.mode.get",
     "session.mode.set",
@@ -168,6 +341,10 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.workspaces.listFiles",
     "session.workspaces.readFile",
     "session.workspaces.createFile",
+    "session.workspaces.statFile",
+    "session.workspaces.createDirectory",
+    "session.workspaces.removePath",
+    "session.workspaces.renamePath",
     "session.workspaces.listCheckpoints",
     "session.workspaces.readCheckpoint",
     "session.workspaces.addSummary",
@@ -182,6 +359,8 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.completions.getTriggerCharacters",
     "session.completions.request",
     "session.instructions.getSources",
+    "session.instructions.reload",
+    "session.customizations.reload",
     "session.fleet.start",
     "session.agent.list",
     "session.agent.setPrompt",
@@ -196,6 +375,7 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.tasks.refresh",
     "session.tasks.waitForPending",
     "session.tasks.getProgress",
+    "session.tasks.readOutput",
     "session.tasks.getCurrentPromotable",
     "session.tasks.promoteToBackground",
     "session.tasks.promoteCurrentToBackground",
@@ -208,7 +388,9 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.skills.disable",
     "session.skills.reload",
     "session.skills.ensureLoaded",
+    "session.mcp.setConnectedIdeInfo",
     "session.mcp.list",
+    "session.mcp.listConfigured",
     "session.mcp.listTools",
     "session.mcp.enable",
     "session.mcp.disable",
@@ -228,8 +410,11 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.mcp.isServerRunning",
     "session.mcp.oauth.handlePendingRequest",
     "session.mcp.oauth.authenticationStateChanged",
+    "session.mcp.oauth.prepareLogin",
     "session.mcp.oauth.login",
+    "session.mcp.oauth.complete",
     "session.mcp.oauth.probe",
+    "session.mcp.oauth.cancelLogin",
     "session.mcp.oauth.respond",
     "session.mcp.headers.handlePendingHeadersRefreshRequest",
     "session.mcp.apps.readResource",
@@ -241,21 +426,53 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.mcp.resources.read",
     "session.mcp.resources.list",
     "session.mcp.resources.listTemplates",
+    "session.mcp.prompts.list",
+    "session.mcp.prompts.get",
+    "session.diagnostics.configure",
+    "session.diagnostics.read",
+    "session.connectors.getCapabilities",
+    "session.connectors.getAccount",
+    "session.connectors.getStatus",
+    "session.connectors.list",
+    "session.connectors.refresh",
+    "session.connectors.connect",
+    "session.connectors.reconnect",
+    "session.connectors.continueConnection",
+    "session.connectors.disconnect",
+    "session.connectors.reconcile",
+    "session.connectors.reconcileForStartup",
+    "session.connectors.withdrawProjection",
+    "session.managedSettings.get",
     "session.plugins.list",
+    "session.plugins.install",
+    "session.plugins.uninstall",
+    "session.plugins.update",
+    "session.plugins.enable",
+    "session.plugins.disable",
+    "session.plugins.marketplaces.list",
+    "session.plugins.marketplaces.add",
+    "session.plugins.marketplaces.remove",
+    "session.plugins.marketplaces.browse",
+    "session.plugins.marketplaces.refresh",
     "session.plugins.reload",
+    "session.plugins.retryManaged",
     "session.provider.getEndpoint",
     "session.provider.add",
+    "session.provider.sync",
+    "session.provider.withdraw",
     "session.options.update",
     "session.lsp.initialize",
     "session.extensions.list",
     "session.extensions.enable",
     "session.extensions.disable",
     "session.extensions.reload",
+    "session.extensions.reconcile",
     "session.extensions.sendAttachmentsToMessage",
     "session.tools.execute",
     "session.tools.getBuiltinDescriptors",
     "session.tools.taskCompleteEventData",
     "session.tools.handlePendingToolCall",
+    "session.tools.listPendingRequests",
     "session.tools.initializeAndValidate",
     "session.tools.getCurrentMetadata",
     "session.tools.set",
@@ -272,11 +489,14 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.ui.ephemeralQuery",
     "session.ui.elicitation",
     "session.ui.handlePendingElicitation",
+    "session.ui.handleHumanAskUser",
     "session.ui.handlePendingUserInput",
+    "session.ui.handleHumanUserInput",
     "session.ui.handlePendingSampling",
     "session.ui.handlePendingAutoModeSwitch",
     "session.ui.handlePendingSessionLimitsExhausted",
     "session.ui.handlePendingExitPlanMode",
+    "session.ui.handleHumanExitPlanMode",
     "session.ui.registerDirectAutoModeSwitchHandler",
     "session.ui.unregisterDirectAutoModeSwitchHandler",
     "session.permissions.configure",
@@ -334,6 +554,8 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.queue.insertAt",
     "session.queue.removeAt",
     "session.queue.updateText",
+    "session.queue.withdrawMessage",
+    "session.queue.appendSteering",
     "session.queue.duplicateAt",
     "session.queue.setDrainPaused",
     "session.queue.sendNow",
@@ -351,6 +573,10 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "session.eventLog.registerInterest",
     "session.eventLog.releaseInterest",
     "session.usage.getMetrics",
+    "session.usage.setCodeChanges",
+    "session.quota.get",
+    "session.quota.refresh",
+    "session.quota.takeWarnings",
     "session.limitPrediction.predict",
     "session.remote.enable",
     "session.remote.disable",
@@ -369,11 +595,13 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "skillProvider.list",
     "skillProvider.read",
     "providerToken.getToken",
-    "factory.execute",
-    "factory.abort",
+    "workflow.execute",
+    "workflow.abort",
     "tasks.cancel",
     "sessionFs.readFile",
+    "sessionFs.readFileBytes",
     "sessionFs.writeFile",
+    "sessionFs.writeFileBytes",
     "sessionFs.appendFile",
     "sessionFs.exists",
     "sessionFs.stat",
@@ -388,12 +616,20 @@ inline constexpr std::array<std::string_view, 383> kRpcMethods{{
     "canvas.open",
     "canvas.close",
     "canvas.action.invoke",
+    "host.unregisterSession",
+    "host.registerSession",
+    "host.materializeSession",
+    "host.sessionReleased",
+    "host.shutdown",
+    "host.exited",
     "hooks.invoke",
     "extensionLaunchProvider.resolve",
     "llmInference.httpRequestStart",
     "llmInference.httpRequestChunk",
     "gitHubTelemetry.event",
-    "gitHubToken.getToken"
+    "gitHubToken.getToken",
+    "uiThread.run",
+    "installations.confirm"
 }};
 
 
@@ -436,6 +672,19 @@ struct AbortResultSchemaTag
 };
 using AbortResult = detail::SchemaValue<AbortResultSchemaTag>;
 
+struct AcceptedEnqueueCommandResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AcceptedEnqueueCommandResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AcceptedEnqueueCommandResult = detail::SchemaValue<AcceptedEnqueueCommandResultSchemaTag>;
+
 struct AccountAllUsersSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AccountAllUsers";
@@ -449,6 +698,45 @@ struct AccountAllUsersSchemaTag
 };
 using AccountAllUsers = detail::SchemaValue<AccountAllUsersSchemaTag>;
 
+struct AccountAuthInfoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountAuthInfo";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountAuthInfo = detail::SchemaValue<AccountAuthInfoSchemaTag>;
+
+struct AccountDescribeAuthInfoRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountDescribeAuthInfoRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountDescribeAuthInfoRequest = detail::SchemaValue<AccountDescribeAuthInfoRequestSchemaTag>;
+
+struct AccountDescribeAuthInfoResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountDescribeAuthInfoResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountDescribeAuthInfoResult = detail::SchemaValue<AccountDescribeAuthInfoResultSchemaTag>;
+
 struct AccountGetCurrentAuthResultSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AccountGetCurrentAuthResult";
@@ -461,6 +749,32 @@ struct AccountGetCurrentAuthResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AccountGetCurrentAuthResult = detail::SchemaValue<AccountGetCurrentAuthResultSchemaTag>;
+
+struct AccountGetGistSupportRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountGetGistSupportRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountGetGistSupportRequest = detail::SchemaValue<AccountGetGistSupportRequestSchemaTag>;
+
+struct AccountGetGistSupportResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountGetGistSupportResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountGetGistSupportResult = detail::SchemaValue<AccountGetGistSupportResultSchemaTag>;
 
 struct AccountGetQuotaRequestSchemaTag
 {
@@ -487,6 +801,58 @@ struct AccountGetQuotaResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AccountGetQuotaResult = detail::SchemaValue<AccountGetQuotaResultSchemaTag>;
+
+struct AccountGetTokenEnvVarResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountGetTokenEnvVarResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountGetTokenEnvVarResult = detail::SchemaValue<AccountGetTokenEnvVarResultSchemaTag>;
+
+struct AccountGetWebUrlRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountGetWebUrlRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountGetWebUrlRequest = detail::SchemaValue<AccountGetWebUrlRequestSchemaTag>;
+
+struct AccountGetWebUrlResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountGetWebUrlResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountGetWebUrlResult = detail::SchemaValue<AccountGetWebUrlResultSchemaTag>;
+
+struct AccountKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"githubDotCom", "proxima", "entraEmu", "entra", "loki"};
+};
+using AccountKind = detail::SchemaValue<AccountKindSchemaTag>;
 
 struct AccountLoginRequestSchemaTag
 {
@@ -553,6 +919,58 @@ struct AccountQuotaSnapshotSchemaTag
 };
 using AccountQuotaSnapshot = detail::SchemaValue<AccountQuotaSnapshotSchemaTag>;
 
+struct AccountStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountStatus = detail::SchemaValue<AccountStatusSchemaTag>;
+
+struct AccountsEnumerateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountsEnumerateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountsEnumerateRequest = detail::SchemaValue<AccountsEnumerateRequestSchemaTag>;
+
+struct AccountsGetRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountsGetRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountsGetRequest = detail::SchemaValue<AccountsGetRequestSchemaTag>;
+
+struct AccountsSetRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AccountsSetRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AccountsSetRequest = detail::SchemaValue<AccountsSetRequestSchemaTag>;
+
 struct AdaptiveThinkingSupportSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AdaptiveThinkingSupport";
@@ -562,7 +980,7 @@ struct AdaptiveThinkingSupportSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 3> known_string_values{"unsupported", "optional", "required"};
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"unsupported", "optional", "required", "adaptive_only"};
 };
 using AdaptiveThinkingSupport = detail::SchemaValue<AdaptiveThinkingSupportSchemaTag>;
 
@@ -624,7 +1042,7 @@ struct AgentInfoSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 15;
+    inline static constexpr std::size_t property_count = 17;
     inline static constexpr std::size_t required_property_count = 4;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -943,18 +1361,135 @@ struct AgentSetPromptRequestSchemaTag
 };
 using AgentSetPromptRequest = detail::SchemaValue<AgentSetPromptRequestSchemaTag>;
 
+struct AgentsCustomAgentInitialModelDecisionParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsCustomAgentInitialModelDecisionParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsCustomAgentInitialModelDecisionParams = detail::SchemaValue<AgentsCustomAgentInitialModelDecisionParamsSchemaTag>;
+
+struct AgentsCustomAgentInitialModelDecisionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsCustomAgentInitialModelDecisionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsCustomAgentInitialModelDecisionResult = detail::SchemaValue<AgentsCustomAgentInitialModelDecisionResultSchemaTag>;
+
 struct AgentsDiscoverRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AgentsDiscoverRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AgentsDiscoverRequest = detail::SchemaValue<AgentsDiscoverRequestSchemaTag>;
+
+struct AgentsGetAvailableBuiltinsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetAvailableBuiltinsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetAvailableBuiltinsRequest = detail::SchemaValue<AgentsGetAvailableBuiltinsRequestSchemaTag>;
+
+struct AgentsGetAvailableBuiltinsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetAvailableBuiltinsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetAvailableBuiltinsResult = detail::SchemaValue<AgentsGetAvailableBuiltinsResultSchemaTag>;
+
+struct AgentsGetBuiltinDefinitionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetBuiltinDefinitionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetBuiltinDefinitionRequest = detail::SchemaValue<AgentsGetBuiltinDefinitionRequestSchemaTag>;
+
+struct AgentsGetBuiltinDefinitionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetBuiltinDefinitionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetBuiltinDefinitionResult = detail::SchemaValue<AgentsGetBuiltinDefinitionResultSchemaTag>;
+
+struct AgentsGetBuiltinListingDefinitionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetBuiltinListingDefinitionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetBuiltinListingDefinitionRequest = detail::SchemaValue<AgentsGetBuiltinListingDefinitionRequestSchemaTag>;
+
+struct AgentsGetBuiltinListingDefinitionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetBuiltinListingDefinitionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetBuiltinListingDefinitionResult = detail::SchemaValue<AgentsGetBuiltinListingDefinitionResultSchemaTag>;
+
+struct AgentsGetBuiltinsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AgentsGetBuiltinsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AgentsGetBuiltinsResult = detail::SchemaValue<AgentsGetBuiltinsResultSchemaTag>;
 
 struct AgentsGetDiscoveryPathsRequestSchemaTag
 {
@@ -962,12 +1497,25 @@ struct AgentsGetDiscoveryPathsRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AgentsGetDiscoveryPathsRequest = detail::SchemaValue<AgentsGetDiscoveryPathsRequestSchemaTag>;
+
+struct AiCreditsStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AiCreditsStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"complete", "partial", "unavailable"};
+};
+using AiCreditsStatus = detail::SchemaValue<AiCreditsStatusSchemaTag>;
 
 struct ApiKeyAuthInfoSchemaTag
 {
@@ -1281,6 +1829,32 @@ struct AttachmentSelectionDetailsStartSchemaTag
 };
 using AttachmentSelectionDetailsStart = detail::SchemaValue<AttachmentSelectionDetailsStartSchemaTag>;
 
+struct AuthEnumerateQuerySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthEnumerateQuery";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthEnumerateQuery = detail::SchemaValue<AuthEnumerateQuerySchemaTag>;
+
+struct AuthEnumerateValueSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthEnumerateValue";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthEnumerateValue = detail::SchemaValue<AuthEnumerateValueSchemaTag>;
+
 struct AuthIdentitySchemaTag
 {
     inline static constexpr std::string_view schema_name = "AuthIdentity";
@@ -1294,6 +1868,19 @@ struct AuthIdentitySchemaTag
 };
 using AuthIdentity = detail::SchemaValue<AuthIdentitySchemaTag>;
 
+struct AuthIdentityMetadataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthIdentityMetadata";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthIdentityMetadata = detail::SchemaValue<AuthIdentityMetadataSchemaTag>;
+
 struct AuthInfoSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AuthInfo";
@@ -1302,7 +1889,7 @@ struct AuthInfoSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 8;
+    inline static constexpr std::size_t union_variant_count = 9;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AuthInfo = detail::SchemaValue<AuthInfoSchemaTag>;
@@ -1316,9 +1903,178 @@ struct AuthInfoTypeSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 8> known_string_values{"hmac", "env", "user", "gh-cli", "api-key", "token", "token-provider", "copilot-api-token"};
+    inline static constexpr std::array<std::string_view, 9> known_string_values{"hmac", "env", "user", "account", "gh-cli", "api-key", "token", "token-provider", "copilot-api-token"};
 };
 using AuthInfoType = detail::SchemaValue<AuthInfoTypeSchemaTag>;
+
+struct AuthLoginAccountSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginAccount";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginAccount = detail::SchemaValue<AuthLoginAccountSchemaTag>;
+
+struct AuthLoginAdvanceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginAdvanceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginAdvanceRequest = detail::SchemaValue<AuthLoginAdvanceRequestSchemaTag>;
+
+struct AuthLoginBeginRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginBeginRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginBeginRequest = detail::SchemaValue<AuthLoginBeginRequestSchemaTag>;
+
+struct AuthLoginBegunSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginBegun";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginBegun = detail::SchemaValue<AuthLoginBegunSchemaTag>;
+
+struct AuthLoginCancelRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginCancelRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginCancelRequest = detail::SchemaValue<AuthLoginCancelRequestSchemaTag>;
+
+struct AuthLoginIdentitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginIdentity";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginIdentity = detail::SchemaValue<AuthLoginIdentitySchemaTag>;
+
+struct AuthLoginModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"default", "selectAccount"};
+};
+using AuthLoginMode = detail::SchemaValue<AuthLoginModeSchemaTag>;
+
+struct AuthLoginResultDtoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginResultDto";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginResultDto = detail::SchemaValue<AuthLoginResultDtoSchemaTag>;
+
+struct AuthLoginResultStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginResultStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"completed", "needs-plaintext-consent", "needs-account-selection", "declined"};
+};
+using AuthLoginResultStatus = detail::SchemaValue<AuthLoginResultStatusSchemaTag>;
+
+struct AuthLoginStepSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthLoginStep";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 6;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthLoginStep = detail::SchemaValue<AuthLoginStepSchemaTag>;
+
+struct AuthReadQuerySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthReadQuery";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthReadQuery = detail::SchemaValue<AuthReadQuerySchemaTag>;
+
+struct AuthReadValueSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthReadValue";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthReadValue = detail::SchemaValue<AuthReadValueSchemaTag>;
+
+struct AuthStatusDtoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthStatusDto";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthStatusDto = detail::SchemaValue<AuthStatusDtoSchemaTag>;
 
 struct AuthValidationErrorSchemaTag
 {
@@ -1346,18 +2102,109 @@ struct AuthValidationErrorsSchemaTag
 };
 using AuthValidationErrors = detail::SchemaValue<AuthValidationErrorsSchemaTag>;
 
+struct AuthWriteSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthWrite";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthWrite = detail::SchemaValue<AuthWriteSchemaTag>;
+
+struct AuthWriteResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AuthWriteResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AuthWriteResult = detail::SchemaValue<AuthWriteResultSchemaTag>;
+
 struct AutoTierSchemaTag
 {
     inline static constexpr std::string_view schema_name = "AutoTier";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr SchemaKind kind = SchemaKind::String;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"efficiency", "balance", "intelligence", "fast"};
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using AutoTier = detail::SchemaValue<AutoTierSchemaTag>;
+
+struct AutoTierBillingSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutoTierBilling";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutoTierBilling = detail::SchemaValue<AutoTierBillingSchemaTag>;
+
+struct AutoTierBillingPromoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutoTierBillingPromo";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutoTierBillingPromo = detail::SchemaValue<AutoTierBillingPromoSchemaTag>;
+
+struct AutoTierDescriptorSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutoTierDescriptor";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutoTierDescriptor = detail::SchemaValue<AutoTierDescriptorSchemaTag>;
+
+struct AutoTierMetadataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutoTierMetadata";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutoTierMetadata = detail::SchemaValue<AutoTierMetadataSchemaTag>;
+
+struct AutoTierStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutoTierStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutoTierStatus = detail::SchemaValue<AutoTierStatusSchemaTag>;
 
 struct AutopilotObjectiveCreditLimitSchemaTag
 {
@@ -1411,6 +2258,292 @@ struct AutopilotObjectiveStatusSchemaTag
 };
 using AutopilotObjectiveStatus = detail::SchemaValue<AutopilotObjectiveStatusSchemaTag>;
 
+struct AutopilotOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AutopilotOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AutopilotOptions = detail::SchemaValue<AutopilotOptionsSchemaTag>;
+
+struct AzureMlCancelResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlCancelResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Boolean;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlCancelResult = detail::SchemaValue<AzureMlCancelResultSchemaTag>;
+
+struct AzureMlCatalogRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlCatalogRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlCatalogRequest = detail::SchemaValue<AzureMlCatalogRequestSchemaTag>;
+
+struct AzureMlCatalogResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlCatalogResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlCatalogResult = detail::SchemaValue<AzureMlCatalogResultSchemaTag>;
+
+struct AzureMlCatalogRetryModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlCatalogRetryMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"background", "explicit"};
+};
+using AzureMlCatalogRetryMode = detail::SchemaValue<AzureMlCatalogRetryModeSchemaTag>;
+
+struct AzureMlCatalogWarningSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlCatalogWarning";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlCatalogWarning = detail::SchemaValue<AzureMlCatalogWarningSchemaTag>;
+
+struct AzureMlDiscardRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlDiscardRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlDiscardRequest = detail::SchemaValue<AzureMlDiscardRequestSchemaTag>;
+
+struct AzureMlDownloadIdRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlDownloadIdRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlDownloadIdRequest = detail::SchemaValue<AzureMlDownloadIdRequestSchemaTag>;
+
+struct AzureMlDownloadRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlDownloadRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlDownloadRequest = detail::SchemaValue<AzureMlDownloadRequestSchemaTag>;
+
+struct AzureMlDownloadResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlDownloadResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlDownloadResult = detail::SchemaValue<AzureMlDownloadResultSchemaTag>;
+
+struct AzureMlDownloadStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlDownloadStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlDownloadStatus = detail::SchemaValue<AzureMlDownloadStatusSchemaTag>;
+
+struct AzureMlFamilyLeaseResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlFamilyLeaseResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlFamilyLeaseResult = detail::SchemaValue<AzureMlFamilyLeaseResultSchemaTag>;
+
+struct AzureMlFamilyReleaseRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlFamilyReleaseRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlFamilyReleaseRequest = detail::SchemaValue<AzureMlFamilyReleaseRequestSchemaTag>;
+
+struct AzureMlFamilyRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlFamilyRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlFamilyRequest = detail::SchemaValue<AzureMlFamilyRequestSchemaTag>;
+
+struct AzureMlLatestRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlLatestRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlLatestRequest = detail::SchemaValue<AzureMlLatestRequestSchemaTag>;
+
+struct AzureMlLicenseSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlLicense";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlLicense = detail::SchemaValue<AzureMlLicenseSchemaTag>;
+
+struct AzureMlModelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlModel";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlModel = detail::SchemaValue<AzureMlModelSchemaTag>;
+
+struct AzureMlProfileSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlProfile";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlProfile = detail::SchemaValue<AzureMlProfileSchemaTag>;
+
+struct AzureMlRegistrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlRegistry";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"azureml", "azureml-dev"};
+};
+using AzureMlRegistry = detail::SchemaValue<AzureMlRegistrySchemaTag>;
+
+struct AzureMlResolveRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlResolveRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlResolveRequest = detail::SchemaValue<AzureMlResolveRequestSchemaTag>;
+
+struct AzureMlResolveResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlResolveResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlResolveResult = detail::SchemaValue<AzureMlResolveResultSchemaTag>;
+
+struct AzureMlStatusResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "AzureMlStatusResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using AzureMlStatusResult = detail::SchemaValue<AzureMlStatusResultSchemaTag>;
+
 struct BuiltInModelCatalogSchemaTag
 {
     inline static constexpr std::string_view schema_name = "BuiltInModelCatalog";
@@ -1436,6 +2569,19 @@ struct BuiltInModelCatalogEntrySchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using BuiltInModelCatalogEntry = detail::SchemaValue<BuiltInModelCatalogEntrySchemaTag>;
+
+struct BuiltinAgentSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "BuiltinAgentSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using BuiltinAgentSummary = detail::SchemaValue<BuiltinAgentSummarySchemaTag>;
 
 struct BuiltinToolDescriptorSchemaTag
 {
@@ -1814,18 +2960,226 @@ struct CardDigestValueSchemaTag
 };
 using CardDigestValue = detail::SchemaValue<CardDigestValueSchemaTag>;
 
+struct CatalogAgentPluginCandidateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginCandidate";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 19;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginCandidate = detail::SchemaValue<CatalogAgentPluginCandidateSchemaTag>;
+
+struct CatalogAgentPluginCandidateKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginCandidateKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"plugin"};
+};
+using CatalogAgentPluginCandidateKind = detail::SchemaValue<CatalogAgentPluginCandidateKindSchemaTag>;
+
+struct CatalogAgentPluginCandidateProvenanceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginCandidateProvenance";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginCandidateProvenance = detail::SchemaValue<CatalogAgentPluginCandidateProvenanceSchemaTag>;
+
+struct CatalogAgentPluginCompatibilityTagSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginCompatibilityTag";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"canvas", "canvas-only", "github-copilot"};
+};
+using CatalogAgentPluginCompatibilityTag = detail::SchemaValue<CatalogAgentPluginCompatibilityTagSchemaTag>;
+
+struct CatalogAgentPluginComponentSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginComponent";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 8> known_string_values{"agent", "command", "skill", "hook", "mcp-server", "lsp-server", "extension", "canvas"};
+};
+using CatalogAgentPluginComponent = detail::SchemaValue<CatalogAgentPluginComponentSchemaTag>;
+
+struct CatalogAgentPluginInstallPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginInstallPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginInstallPlan = detail::SchemaValue<CatalogAgentPluginInstallPlanSchemaTag>;
+
+struct CatalogAgentPluginInstallSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginInstallSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginInstallSource = detail::SchemaValue<CatalogAgentPluginInstallSourceSchemaTag>;
+
+struct CatalogAgentPluginInstallabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginInstallability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"installable", "install-data-unavailable", "feature-disabled", "not-installable-kind"};
+};
+using CatalogAgentPluginInstallability = detail::SchemaValue<CatalogAgentPluginInstallabilitySchemaTag>;
+
+struct CatalogAgentPluginMarketplaceSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginMarketplaceSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginMarketplaceSource = detail::SchemaValue<CatalogAgentPluginMarketplaceSourceSchemaTag>;
+
+struct CatalogAgentPluginMarketplaceSourceKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginMarketplaceSourceKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"marketplace"};
+};
+using CatalogAgentPluginMarketplaceSourceKind = detail::SchemaValue<CatalogAgentPluginMarketplaceSourceKindSchemaTag>;
+
+struct CatalogAgentPluginMaterializationSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginMaterializationSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginMaterializationSource = detail::SchemaValue<CatalogAgentPluginMaterializationSourceSchemaTag>;
+
+struct CatalogAgentPluginMaterializationSourceKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginMaterializationSourceKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"materialization"};
+};
+using CatalogAgentPluginMaterializationSourceKind = detail::SchemaValue<CatalogAgentPluginMaterializationSourceKindSchemaTag>;
+
+struct CatalogAgentPluginMediaTypeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginMediaType";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"application/vnd.github.copilot-plugin", "application/vnd.anthropic.claude-plugin+json", "application/agent-plugin+json"};
+};
+using CatalogAgentPluginMediaType = detail::SchemaValue<CatalogAgentPluginMediaTypeSchemaTag>;
+
+struct CatalogAgentPluginRepositorySourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginRepositorySource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogAgentPluginRepositorySource = detail::SchemaValue<CatalogAgentPluginRepositorySourceSchemaTag>;
+
+struct CatalogAgentPluginRepositorySourceKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAgentPluginRepositorySourceKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"repository"};
+};
+using CatalogAgentPluginRepositorySourceKind = detail::SchemaValue<CatalogAgentPluginRepositorySourceKindSchemaTag>;
+
 struct CatalogAiSkillCandidateSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogAiSkillCandidate";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t property_count = 15;
     inline static constexpr std::size_t required_property_count = 8;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CatalogAiSkillCandidate = detail::SchemaValue<CatalogAiSkillCandidateSchemaTag>;
+
+struct CatalogAiSkillCandidateKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAiSkillCandidateKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"ai-skill"};
+};
+using CatalogAiSkillCandidateKind = detail::SchemaValue<CatalogAiSkillCandidateKindSchemaTag>;
 
 struct CatalogAiSkillCandidateProvenanceSchemaTag
 {
@@ -1839,6 +3193,32 @@ struct CatalogAiSkillCandidateProvenanceSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CatalogAiSkillCandidateProvenance = detail::SchemaValue<CatalogAiSkillCandidateProvenanceSchemaTag>;
+
+struct CatalogAiSkillInstallabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAiSkillInstallability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"installable", "feature-disabled", "materialisation-unavailable", "policy-forbids", "not-installable-kind"};
+};
+using CatalogAiSkillInstallability = detail::SchemaValue<CatalogAiSkillInstallabilitySchemaTag>;
+
+struct CatalogAiSkillMediaTypeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogAiSkillMediaType";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"application/ai-skill"};
+};
+using CatalogAiSkillMediaType = detail::SchemaValue<CatalogAiSkillMediaTypeSchemaTag>;
 
 struct CatalogAuthenticationRequiredErrorSchemaTag
 {
@@ -1874,7 +3254,7 @@ struct CatalogCandidateSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::size_t union_variant_count = 3;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CatalogCandidate = detail::SchemaValue<CatalogCandidateSchemaTag>;
@@ -1888,7 +3268,7 @@ struct CatalogCandidateKindSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 2> known_string_values{"mcp-server", "ai-skill"};
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"mcp-server", "ai-skill", "plugin"};
 };
 using CatalogCandidateKind = detail::SchemaValue<CatalogCandidateKindSchemaTag>;
 
@@ -1940,7 +3320,7 @@ struct CatalogCapabilitySchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 6> known_string_values{"mcp-server-card", "legacy-mcp-server-card", "ai-skill-discovery", "mcp-install-planning", "multiple-transport-choice", "trust-snapshot"};
+    inline static constexpr std::array<std::string_view, 19> known_string_values{"mcp-server-card", "legacy-mcp-server-card", "ai-skill-discovery", "agent-plugin-discovery", "agent-plugin-formats", "mcp-install-planning", "multiple-transport-choice", "catalog-search-pagination", "trust-snapshot", "catalog-selection", "catalog-search-credential-required", "catalog-search-session-bound", "mcp-confirmed-remote-installation", "mcp-configured-remote-installation", "skill-confirmed-installation", "agent-plugin-confirmed-installation", "catalog-reference-installation", "catalog-feeds", "catalog-search-categories"};
 };
 using CatalogCapability = detail::SchemaValue<CatalogCapabilitySchemaTag>;
 
@@ -1996,6 +3376,175 @@ struct CatalogContractViolationReasonSchemaTag
 };
 using CatalogContractViolationReason = detail::SchemaValue<CatalogContractViolationReasonSchemaTag>;
 
+struct CatalogFeedAvailableEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedAvailableEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogFeedAvailableEntry = detail::SchemaValue<CatalogFeedAvailableEntrySchemaTag>;
+
+struct CatalogFeedAvailableStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedAvailableStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"available"};
+};
+using CatalogFeedAvailableStatus = detail::SchemaValue<CatalogFeedAvailableStatusSchemaTag>;
+
+struct CatalogFeedEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogFeedEntry = detail::SchemaValue<CatalogFeedEntrySchemaTag>;
+
+struct CatalogFeedFilteredEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedFilteredEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogFeedFilteredEntry = detail::SchemaValue<CatalogFeedFilteredEntrySchemaTag>;
+
+struct CatalogFeedFilteredStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedFilteredStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"filtered"};
+};
+using CatalogFeedFilteredStatus = detail::SchemaValue<CatalogFeedFilteredStatusSchemaTag>;
+
+struct CatalogFeedUnavailableEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedUnavailableEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogFeedUnavailableEntry = detail::SchemaValue<CatalogFeedUnavailableEntrySchemaTag>;
+
+struct CatalogFeedUnavailableReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedUnavailableReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"not-found", "unsupported-kind", "invalid-resource"};
+};
+using CatalogFeedUnavailableReason = detail::SchemaValue<CatalogFeedUnavailableReasonSchemaTag>;
+
+struct CatalogFeedUnavailableStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogFeedUnavailableStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"unavailable"};
+};
+using CatalogFeedUnavailableStatus = detail::SchemaValue<CatalogFeedUnavailableStatusSchemaTag>;
+
+struct CatalogGeneratedFeedDescriptionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogGeneratedFeedDescription";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogGeneratedFeedDescription = detail::SchemaValue<CatalogGeneratedFeedDescriptionSchemaTag>;
+
+struct CatalogGetGeneratedFeedRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogGetGeneratedFeedRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogGetGeneratedFeedRequest = detail::SchemaValue<CatalogGetGeneratedFeedRequestSchemaTag>;
+
+struct CatalogGetGeneratedFeedSucceededSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogGetGeneratedFeedSucceeded";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogGetGeneratedFeedSucceeded = detail::SchemaValue<CatalogGetGeneratedFeedSucceededSchemaTag>;
+
+struct CatalogGetSavedFeedRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogGetSavedFeedRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogGetSavedFeedRequest = detail::SchemaValue<CatalogGetSavedFeedRequestSchemaTag>;
+
+struct CatalogGetSavedFeedSucceededSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogGetSavedFeedSucceeded";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogGetSavedFeedSucceeded = detail::SchemaValue<CatalogGetSavedFeedSucceededSchemaTag>;
+
 struct CatalogHandleRejectedErrorSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogHandleRejectedError";
@@ -2018,7 +3567,7 @@ struct CatalogHandleRejectionReasonSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"invalid", "stale", "replayed", "foreign"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"invalid", "stale", "replayed", "foreign", "wrong-kind", "search-mismatch"};
 };
 using CatalogHandleRejectionReason = detail::SchemaValue<CatalogHandleRejectionReasonSchemaTag>;
 
@@ -2031,7 +3580,7 @@ struct CatalogHandleTypeSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 2> known_string_values{"candidate", "plan"};
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"candidate", "plan", "selection"};
 };
 using CatalogHandleType = detail::SchemaValue<CatalogHandleTypeSchemaTag>;
 
@@ -2057,7 +3606,7 @@ struct CatalogInvalidRequestFieldSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 7> known_string_values{"query", "limit", "kinds", "contract", "source", "card", "scope"};
+    inline static constexpr std::array<std::string_view, 15> known_string_values{"policySessionId", "query", "limit", "kinds", "contract", "source", "card", "scope", "page", "sessionId", "selectionRef", "outcome", "feed", "trustTiers", "categories"};
 };
 using CatalogInvalidRequestField = detail::SchemaValue<CatalogInvalidRequestFieldSchemaTag>;
 
@@ -2087,18 +3636,44 @@ struct CatalogMalformedCardReasonSchemaTag
 };
 using CatalogMalformedCardReason = detail::SchemaValue<CatalogMalformedCardReasonSchemaTag>;
 
+struct CatalogMaterializationReferenceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogMaterializationReference";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogMaterializationReference = detail::SchemaValue<CatalogMaterializationReferenceSchemaTag>;
+
 struct CatalogMcpServerCandidateSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogMcpServerCandidate";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t property_count = 15;
     inline static constexpr std::size_t required_property_count = 8;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CatalogMcpServerCandidate = detail::SchemaValue<CatalogMcpServerCandidateSchemaTag>;
+
+struct CatalogMcpServerCandidateKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogMcpServerCandidateKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"mcp-server"};
+};
+using CatalogMcpServerCandidateKind = detail::SchemaValue<CatalogMcpServerCandidateKindSchemaTag>;
 
 struct CatalogMcpServerCandidateProvenanceSchemaTag
 {
@@ -2135,7 +3710,7 @@ struct CatalogMediaTypeSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 3> known_string_values{"application/mcp-server-card+json", "application/mcp-server+json", "application/ai-skill"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"application/mcp-server-card+json", "application/mcp-server+json", "application/ai-skill", "application/vnd.github.copilot-plugin", "application/vnd.anthropic.claude-plugin+json", "application/agent-plugin+json"};
 };
 using CatalogMediaType = detail::SchemaValue<CatalogMediaTypeSchemaTag>;
 
@@ -2230,6 +3805,32 @@ struct CatalogNotInstallableReasonSchemaTag
 };
 using CatalogNotInstallableReason = detail::SchemaValue<CatalogNotInstallableReasonSchemaTag>;
 
+struct CatalogPlanInstallFromReferenceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogPlanInstallFromReferenceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogPlanInstallFromReferenceRequest = detail::SchemaValue<CatalogPlanInstallFromReferenceRequestSchemaTag>;
+
+struct CatalogPluginRepositorySourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogPluginRepositorySource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogPluginRepositorySource = detail::SchemaValue<CatalogPluginRepositorySourceSchemaTag>;
+
 struct CatalogPolicyRejectedErrorSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogPolicyRejectedError";
@@ -2243,13 +3844,143 @@ struct CatalogPolicyRejectedErrorSchemaTag
 };
 using CatalogPolicyRejectedError = detail::SchemaValue<CatalogPolicyRejectedErrorSchemaTag>;
 
+struct CatalogReferenceInstallationFailureReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogReferenceInstallationFailureReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 23> known_string_values{"feature-disabled", "invalid-request", "operation-limit", "busy", "confirmation-unavailable", "policy-context-unavailable", "policy-blocked", "invalid-reference", "descriptor-unavailable", "descriptor-not-found", "descriptor-withdrawn", "descriptor-invalid", "digest-mismatch", "unsupported-resource", "entrypoint-unavailable", "source-rate-limited", "no-credential", "credential-rejected", "invalid-skill", "invalid-plugin", "review-too-large", "already-installed", "write-failed"};
+};
+using CatalogReferenceInstallationFailureReason = detail::SchemaValue<CatalogReferenceInstallationFailureReasonSchemaTag>;
+
+struct CatalogReferenceInstallationOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogReferenceInstallationOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogReferenceInstallationOutcome = detail::SchemaValue<CatalogReferenceInstallationOutcomeSchemaTag>;
+
+struct CatalogReferenceInstallationResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogReferenceInstallationResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogReferenceInstallationResult = detail::SchemaValue<CatalogReferenceInstallationResultSchemaTag>;
+
+struct CatalogResourceGeneratedFeedResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogResourceGeneratedFeedResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 9;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogResourceGeneratedFeedResult = detail::SchemaValue<CatalogResourceGeneratedFeedResultSchemaTag>;
+
+struct CatalogResourceIdentitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogResourceIdentity";
+    inline static constexpr SchemaKind kind = SchemaKind::String;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogResourceIdentity = detail::SchemaValue<CatalogResourceIdentitySchemaTag>;
+
+struct CatalogResourceSavedFeedResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogResourceSavedFeedResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 9;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogResourceSavedFeedResult = detail::SchemaValue<CatalogResourceSavedFeedResultSchemaTag>;
+
+struct CatalogResourceVersionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogResourceVersion";
+    inline static constexpr SchemaKind kind = SchemaKind::String;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogResourceVersion = detail::SchemaValue<CatalogResourceVersionSchemaTag>;
+
+struct CatalogSavedFeedDescriptionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSavedFeedDescription";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSavedFeedDescription = detail::SchemaValue<CatalogSavedFeedDescriptionSchemaTag>;
+
+struct CatalogSearchPageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSearchPage";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSearchPage = detail::SchemaValue<CatalogSearchPageSchemaTag>;
+
+struct CatalogSearchPaginationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSearchPagination";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 8;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSearchPagination = detail::SchemaValue<CatalogSearchPaginationSchemaTag>;
+
 struct CatalogSearchRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogSearchRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t property_count = 7;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2273,14 +4004,183 @@ struct CatalogSearchSucceededSchemaTag
 {
     inline static constexpr std::string_view schema_name = "CatalogSearchSucceeded";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CatalogSearchSucceeded = detail::SchemaValue<CatalogSearchSucceededSchemaTag>;
+
+struct CatalogSearchTotalCountRelationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSearchTotalCountRelation";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"unknown"};
+};
+using CatalogSearchTotalCountRelation = detail::SchemaValue<CatalogSearchTotalCountRelationSchemaTag>;
+
+struct CatalogSelectionCancelledSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionCancelled";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionCancelled = detail::SchemaValue<CatalogSelectionCancelledSchemaTag>;
+
+struct CatalogSelectionDecisionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionDecision";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"selected", "declined", "cancelled", "timed-out"};
+};
+using CatalogSelectionDecision = detail::SchemaValue<CatalogSelectionDecisionSchemaTag>;
+
+struct CatalogSelectionDeclinedSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionDeclined";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionDeclined = detail::SchemaValue<CatalogSelectionDeclinedSchemaTag>;
+
+struct CatalogSelectionForeignSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionForeign";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionForeign = detail::SchemaValue<CatalogSelectionForeignSchemaTag>;
+
+struct CatalogSelectionInvalidSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionInvalid";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionInvalid = detail::SchemaValue<CatalogSelectionInvalidSchemaTag>;
+
+struct CatalogSelectionReplayedSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionReplayed";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionReplayed = detail::SchemaValue<CatalogSelectionReplayedSchemaTag>;
+
+struct CatalogSelectionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionRequest = detail::SchemaValue<CatalogSelectionRequestSchemaTag>;
+
+struct CatalogSelectionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 12;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionResult = detail::SchemaValue<CatalogSelectionResultSchemaTag>;
+
+struct CatalogSelectionSelectedSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionSelected";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionSelected = detail::SchemaValue<CatalogSelectionSelectedSchemaTag>;
+
+struct CatalogSelectionStaleSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionStale";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionStale = detail::SchemaValue<CatalogSelectionStaleSchemaTag>;
+
+struct CatalogSelectionTimedOutSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionTimedOut";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionTimedOut = detail::SchemaValue<CatalogSelectionTimedOutSchemaTag>;
+
+struct CatalogSelectionWrongKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CatalogSelectionWrongKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CatalogSelectionWrongKind = detail::SchemaValue<CatalogSelectionWrongKindSchemaTag>;
 
 struct CatalogTrustEligibilitySchemaTag
 {
@@ -2564,7 +4464,7 @@ struct CatalogUnavailableReasonSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"search-unavailable", "planning-unavailable", "authority-not-configured", "disabled-by-policy"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"search-unavailable", "planning-unavailable", "selection-unavailable", "authority-not-configured", "disabled-by-policy", "feed-not-found"};
 };
 using CatalogUnavailableReason = detail::SchemaValue<CatalogUnavailableReasonSchemaTag>;
 
@@ -2971,6 +4871,344 @@ struct ConnectedRemoteSessionMetadataRepositorySchemaTag
 };
 using ConnectedRemoteSessionMetadataRepository = detail::SchemaValue<ConnectedRemoteSessionMetadataRepositorySchemaTag>;
 
+struct ConnectorAccountRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorAccountRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorAccountRequest = detail::SchemaValue<ConnectorAccountRequestSchemaTag>;
+
+struct ConnectorAuthorizationRequirementSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorAuthorizationRequirement";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorAuthorizationRequirement = detail::SchemaValue<ConnectorAuthorizationRequirementSchemaTag>;
+
+struct ConnectorAuthorizationScopeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorAuthorizationScope";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"write_plugin_gateway_connections"};
+};
+using ConnectorAuthorizationScope = detail::SchemaValue<ConnectorAuthorizationScopeSchemaTag>;
+
+struct ConnectorAvailabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorAvailability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"enabled", "disabled", "unavailable"};
+};
+using ConnectorAvailability = detail::SchemaValue<ConnectorAvailabilitySchemaTag>;
+
+struct ConnectorCapabilitiesSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorCapabilities";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorCapabilities = detail::SchemaValue<ConnectorCapabilitiesSchemaTag>;
+
+struct ConnectorCatalogEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorCatalogEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorCatalogEntry = detail::SchemaValue<ConnectorCatalogEntrySchemaTag>;
+
+struct ConnectorCatalogResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorCatalogResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorCatalogResult = detail::SchemaValue<ConnectorCatalogResultSchemaTag>;
+
+struct ConnectorCatalogStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorCatalogStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"not_connected", "pending", "connected", "error", "unknown"};
+};
+using ConnectorCatalogStatus = detail::SchemaValue<ConnectorCatalogStatusSchemaTag>;
+
+struct ConnectorConnectRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorConnectRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorConnectRequest = detail::SchemaValue<ConnectorConnectRequestSchemaTag>;
+
+struct ConnectorConnectResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorConnectResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorConnectResult = detail::SchemaValue<ConnectorConnectResultSchemaTag>;
+
+struct ConnectorContinueRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorContinueRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorContinueRequest = detail::SchemaValue<ConnectorContinueRequestSchemaTag>;
+
+struct ConnectorDisconnectResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDisconnectResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDisconnectResult = detail::SchemaValue<ConnectorDisconnectResultSchemaTag>;
+
+struct ConnectorDiscoveryAccountSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryAccount";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryAccount = detail::SchemaValue<ConnectorDiscoveryAccountSchemaTag>;
+
+struct ConnectorDiscoveryAccountListSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryAccountList";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryAccountList = detail::SchemaValue<ConnectorDiscoveryAccountListSchemaTag>;
+
+struct ConnectorDiscoveryAccountRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryAccountRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryAccountRequest = detail::SchemaValue<ConnectorDiscoveryAccountRequestSchemaTag>;
+
+struct ConnectorDiscoveryAuthInfoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryAuthInfo";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryAuthInfo = detail::SchemaValue<ConnectorDiscoveryAuthInfoSchemaTag>;
+
+struct ConnectorDiscoveryAvailabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryAvailability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"enabled", "disabled", "unavailable"};
+};
+using ConnectorDiscoveryAvailability = detail::SchemaValue<ConnectorDiscoveryAvailabilitySchemaTag>;
+
+struct ConnectorDiscoveryCapabilitiesSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryCapabilities";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryCapabilities = detail::SchemaValue<ConnectorDiscoveryCapabilitiesSchemaTag>;
+
+struct ConnectorDiscoveryCatalogEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryCatalogEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryCatalogEntry = detail::SchemaValue<ConnectorDiscoveryCatalogEntrySchemaTag>;
+
+struct ConnectorDiscoveryCatalogResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorDiscoveryCatalogResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorDiscoveryCatalogResult = detail::SchemaValue<ConnectorDiscoveryCatalogResultSchemaTag>;
+
+struct ConnectorMcpStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorMcpStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"connected", "pending", "needs_auth", "failed", "stopped", "disabled", "not_configured"};
+};
+using ConnectorMcpStatus = detail::SchemaValue<ConnectorMcpStatusSchemaTag>;
+
+struct ConnectorReconcileRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorReconcileRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorReconcileRequest = detail::SchemaValue<ConnectorReconcileRequestSchemaTag>;
+
+struct ConnectorRuntimeStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorRuntimeStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorRuntimeStatus = detail::SchemaValue<ConnectorRuntimeStatusSchemaTag>;
+
+struct ConnectorSessionAccountSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorSessionAccount";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorSessionAccount = detail::SchemaValue<ConnectorSessionAccountSchemaTag>;
+
+struct ConnectorSessionAccountResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorSessionAccountResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorSessionAccountResult = detail::SchemaValue<ConnectorSessionAccountResultSchemaTag>;
+
+struct ConnectorStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ConnectorStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ConnectorStatus = detail::SchemaValue<ConnectorStatusSchemaTag>;
+
 struct ContentExclusionCheckPathsRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ContentExclusionCheckPathsRequest";
@@ -3009,6 +5247,32 @@ struct ContentExclusionPathCheckSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ContentExclusionPathCheck = detail::SchemaValue<ContentExclusionPathCheckSchemaTag>;
+
+struct ContentExclusionValidatePoliciesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ContentExclusionValidatePoliciesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ContentExclusionValidatePoliciesRequest = detail::SchemaValue<ContentExclusionValidatePoliciesRequestSchemaTag>;
+
+struct ContentExclusionValidatePoliciesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ContentExclusionValidatePoliciesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ContentExclusionValidatePoliciesResult = detail::SchemaValue<ContentExclusionValidatePoliciesResultSchemaTag>;
 
 struct ContentFilterModeSchemaTag
 {
@@ -3068,7 +5332,7 @@ struct CopilotUserResponseSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 26;
+    inline static constexpr std::size_t property_count = 27;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3146,7 +5410,7 @@ struct CurrentModelSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3165,6 +5429,58 @@ struct CurrentToolMetadataSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using CurrentToolMetadata = detail::SchemaValue<CurrentToolMetadataSchemaTag>;
+
+struct CustomizationReloadOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CustomizationReloadOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CustomizationReloadOutcome = detail::SchemaValue<CustomizationReloadOutcomeSchemaTag>;
+
+struct CustomizationReloadStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CustomizationReloadStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"reloaded", "skipped", "failed"};
+};
+using CustomizationReloadStatus = detail::SchemaValue<CustomizationReloadStatusSchemaTag>;
+
+struct CustomizationReloadSubsystemSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CustomizationReloadSubsystem";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 8> known_string_values{"repositoryContext", "instructions", "plugins", "hooks", "skills", "agents", "mcp", "extensions"};
+};
+using CustomizationReloadSubsystem = detail::SchemaValue<CustomizationReloadSubsystemSchemaTag>;
+
+struct CustomizationsReloadResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "CustomizationsReloadResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using CustomizationsReloadResult = detail::SchemaValue<CustomizationsReloadResultSchemaTag>;
 
 struct DebugCollectLogsCollectedEntrySchemaTag
 {
@@ -3309,6 +5625,136 @@ struct DebugCollectLogsSourceSchemaTag
 };
 using DebugCollectLogsSource = detail::SchemaValue<DebugCollectLogsSourceSchemaTag>;
 
+struct DiagnosticCursorStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticCursorStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"ok", "expired"};
+};
+using DiagnosticCursorStatus = detail::SchemaValue<DiagnosticCursorStatusSchemaTag>;
+
+struct DiagnosticEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 1;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticEntry = detail::SchemaValue<DiagnosticEntrySchemaTag>;
+
+struct DiagnosticLogLevelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticLogLevel";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"off", "error", "warning", "info", "debug", "trace"};
+};
+using DiagnosticLogLevel = detail::SchemaValue<DiagnosticLogLevelSchemaTag>;
+
+struct DiagnosticSeveritySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticSeverity";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"error", "warning", "info", "debug", "trace"};
+};
+using DiagnosticSeverity = detail::SchemaValue<DiagnosticSeveritySchemaTag>;
+
+struct DiagnosticSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"mcp"};
+};
+using DiagnosticSource = detail::SchemaValue<DiagnosticSourceSchemaTag>;
+
+struct DiagnosticSourcesConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticSourcesConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticSourcesConfiguration = detail::SchemaValue<DiagnosticSourcesConfigurationSchemaTag>;
+
+struct DiagnosticsConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticsConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticsConfiguration = detail::SchemaValue<DiagnosticsConfigurationSchemaTag>;
+
+struct DiagnosticsConfigureRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticsConfigureRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticsConfigureRequest = detail::SchemaValue<DiagnosticsConfigureRequestSchemaTag>;
+
+struct DiagnosticsReadRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticsReadRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticsReadRequest = detail::SchemaValue<DiagnosticsReadRequestSchemaTag>;
+
+struct DiagnosticsReadResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiagnosticsReadResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiagnosticsReadResult = detail::SchemaValue<DiagnosticsReadResultSchemaTag>;
+
 struct DiscoveredCanvasSchemaTag
 {
     inline static constexpr std::string_view schema_name = "DiscoveredCanvas";
@@ -3452,6 +5898,32 @@ struct DiscoveredMcpServerTypeSchemaTag
 };
 using DiscoveredMcpServerType = detail::SchemaValue<DiscoveredMcpServerTypeSchemaTag>;
 
+struct DiscoveredModelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiscoveredModel";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiscoveredModel = detail::SchemaValue<DiscoveredModelSchemaTag>;
+
+struct DiscoveredModelListSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "DiscoveredModelList";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using DiscoveredModelList = detail::SchemaValue<DiscoveredModelListSchemaTag>;
+
 struct EmbeddedBlobResourceContentsSchemaTag
 {
     inline static constexpr std::string_view schema_name = "EmbeddedBlobResourceContents";
@@ -3494,12 +5966,12 @@ using EnqueueCommandParams = detail::SchemaValue<EnqueueCommandParamsSchemaTag>;
 struct EnqueueCommandResultSchemaTag
 {
     inline static constexpr std::string_view schema_name = "EnqueueCommandResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using EnqueueCommandResult = detail::SchemaValue<EnqueueCommandResultSchemaTag>;
@@ -3516,6 +5988,110 @@ struct EnvAuthInfoSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using EnvAuthInfo = detail::SchemaValue<EnvAuthInfoSchemaTag>;
+
+struct EnvironmentCapabilitiesSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentCapabilities";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentCapabilities = detail::SchemaValue<EnvironmentCapabilitiesSchemaTag>;
+
+struct EnvironmentKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"user-local", "user-codespace", "managed-actions", "managed-sandbox", "managed-cca"};
+};
+using EnvironmentKind = detail::SchemaValue<EnvironmentKindSchemaTag>;
+
+struct EnvironmentsDeleteRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsDeleteRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsDeleteRequest = detail::SchemaValue<EnvironmentsDeleteRequestSchemaTag>;
+
+struct EnvironmentsDeleteResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsDeleteResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsDeleteResult = detail::SchemaValue<EnvironmentsDeleteResultSchemaTag>;
+
+struct EnvironmentsGetRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsGetRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsGetRequest = detail::SchemaValue<EnvironmentsGetRequestSchemaTag>;
+
+struct EnvironmentsGetResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsGetResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsGetResult = detail::SchemaValue<EnvironmentsGetResultSchemaTag>;
+
+struct EnvironmentsListRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsListRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsListRequest = detail::SchemaValue<EnvironmentsListRequestSchemaTag>;
+
+struct EnvironmentsListResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "EnvironmentsListResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using EnvironmentsListResult = detail::SchemaValue<EnvironmentsListResultSchemaTag>;
 
 struct EventLogReadRequestSchemaTag
 {
@@ -3972,321 +6548,35 @@ struct ExternalToolTextResultForLlmContentTextSchemaTag
 };
 using ExternalToolTextResultForLlmContentText = detail::SchemaValue<ExternalToolTextResultForLlmContentTextSchemaTag>;
 
-struct FactoryAbortRequestSchemaTag
+struct FeatureFlagAvailabilitySchemaTag
 {
-    inline static constexpr std::string_view schema_name = "FactoryAbortRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryAbortRequest = detail::SchemaValue<FactoryAbortRequestSchemaTag>;
-
-struct FactoryAckResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryAckResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr std::string_view schema_name = "FeatureFlagAvailability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+    inline static constexpr std::array<std::string_view, 9> known_string_values{"on", "team", "staff-and-experimental", "staff-or-experimental", "staff", "staff-github", "staff-microsoft", "experimental", "off"};
 };
-using FactoryAckResult = detail::SchemaValue<FactoryAckResultSchemaTag>;
+using FeatureFlagAvailability = detail::SchemaValue<FeatureFlagAvailabilitySchemaTag>;
 
-struct FactoryAgentOptionsSchemaTag
+struct FeatureFlagMetadataSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "FactoryAgentOptions";
+    inline static constexpr std::string_view schema_name = "FeatureFlagMetadata";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 6;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryAgentOptions = detail::SchemaValue<FactoryAgentOptionsSchemaTag>;
-
-struct FactoryAgentRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryAgentRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 4;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryAgentRequest = detail::SchemaValue<FactoryAgentRequestSchemaTag>;
-
-struct FactoryAgentResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryAgentResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryAgentResult = detail::SchemaValue<FactoryAgentResultSchemaTag>;
-
-struct FactoryAgentSummarySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryAgentSummary";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 14;
-    inline static constexpr std::size_t required_property_count = 8;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryAgentSummary = detail::SchemaValue<FactoryAgentSummarySchemaTag>;
-
-struct FactoryCancelRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryCancelRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryCancelRequest = detail::SchemaValue<FactoryCancelRequestSchemaTag>;
-
-struct FactoryCurrentPhaseSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryCurrentPhase";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryCurrentPhase = detail::SchemaValue<FactoryCurrentPhaseSchemaTag>;
-
-struct FactoryDeclaredLimitsSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryDeclaredLimits";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryDeclaredLimits = detail::SchemaValue<FactoryDeclaredLimitsSchemaTag>;
-
-struct FactoryDurableOperationSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryDurableOperation";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 11> known_string_values{"createRun", "markRunStarted", "finishRun", "reserveAgent", "releaseAgent", "chargeCredit", "addElapsed", "reconcileCreditTotal", "journalGet", "journalPut", "refreshLease"};
-};
-using FactoryDurableOperation = detail::SchemaValue<FactoryDurableOperationSchemaTag>;
-
-struct FactoryExecuteRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryExecuteRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 4;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryExecuteRequest = detail::SchemaValue<FactoryExecuteRequestSchemaTag>;
-
-struct FactoryExecuteResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryExecuteResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryExecuteResult = detail::SchemaValue<FactoryExecuteResultSchemaTag>;
-
-struct FactoryGetRunProgressRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryGetRunProgressRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryGetRunProgressRequest = detail::SchemaValue<FactoryGetRunProgressRequestSchemaTag>;
-
-struct FactoryGetRunRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryGetRunRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryGetRunRequest = detail::SchemaValue<FactoryGetRunRequestSchemaTag>;
-
-struct FactoryJournalGetRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryJournalGetRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using FactoryJournalGetRequest = detail::SchemaValue<FactoryJournalGetRequestSchemaTag>;
+using FeatureFlagMetadata = detail::SchemaValue<FeatureFlagMetadataSchemaTag>;
 
-struct FactoryJournalGetResultSchemaTag
+struct FeatureFlagsMetadataResultSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "FactoryJournalGetResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryJournalGetResult = detail::SchemaValue<FactoryJournalGetResultSchemaTag>;
-
-struct FactoryJournalPutRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryJournalPutRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 4;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryJournalPutRequest = detail::SchemaValue<FactoryJournalPutRequestSchemaTag>;
-
-struct FactoryListRunsRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryListRunsRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryListRunsRequest = detail::SchemaValue<FactoryListRunsRequestSchemaTag>;
-
-struct FactoryListRunsResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryListRunsResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryListRunsResult = detail::SchemaValue<FactoryListRunsResultSchemaTag>;
-
-struct FactoryLogLineSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryLogLine";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 3;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryLogLine = detail::SchemaValue<FactoryLogLineSchemaTag>;
-
-struct FactoryLogLineKindSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryLogLineKind";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 2> known_string_values{"log", "phase"};
-};
-using FactoryLogLineKind = detail::SchemaValue<FactoryLogLineKindSchemaTag>;
-
-struct FactoryLogRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryLogRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 3;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryLogRequest = detail::SchemaValue<FactoryLogRequestSchemaTag>;
-
-struct FactoryPauseCheckpointActionSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPauseCheckpointAction";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 2> known_string_values{"continue", "pause"};
-};
-using FactoryPauseCheckpointAction = detail::SchemaValue<FactoryPauseCheckpointActionSchemaTag>;
-
-struct FactoryPauseCheckpointRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPauseCheckpointRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 3;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryPauseCheckpointRequest = detail::SchemaValue<FactoryPauseCheckpointRequestSchemaTag>;
-
-struct FactoryPauseCheckpointResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPauseCheckpointResult";
+    inline static constexpr std::string_view schema_name = "FeatureFlagsMetadataResult";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
@@ -4295,280 +6585,33 @@ struct FactoryPauseCheckpointResultSchemaTag
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using FactoryPauseCheckpointResult = detail::SchemaValue<FactoryPauseCheckpointResultSchemaTag>;
+using FeatureFlagsMetadataResult = detail::SchemaValue<FeatureFlagsMetadataResultSchemaTag>;
 
-struct FactoryPauseInfoSchemaTag
+struct FeatureFlagsResolveRequestSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "FactoryPauseInfo";
-    inline static constexpr SchemaKind kind = SchemaKind::Union;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 2;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryPauseInfo = detail::SchemaValue<FactoryPauseInfoSchemaTag>;
-
-struct FactoryPauseRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPauseRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryPauseRequest = detail::SchemaValue<FactoryPauseRequestSchemaTag>;
-
-struct FactoryPhaseObservationSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPhaseObservation";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 13;
-    inline static constexpr std::size_t required_property_count = 10;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryPhaseObservation = detail::SchemaValue<FactoryPhaseObservationSchemaTag>;
-
-struct FactoryPhaseStatusSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryPhaseStatus";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"pending", "active", "completed", "skipped"};
-};
-using FactoryPhaseStatus = detail::SchemaValue<FactoryPhaseStatusSchemaTag>;
-
-struct FactoryProgressLineSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryProgressLine";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
-    inline static constexpr std::size_t required_property_count = 6;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryProgressLine = detail::SchemaValue<FactoryProgressLineSchemaTag>;
-
-struct FactoryProgressPageSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryProgressPage";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
-    inline static constexpr std::size_t required_property_count = 6;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryProgressPage = detail::SchemaValue<FactoryProgressPageSchemaTag>;
-
-struct FactoryResumeRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryResumeRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryResumeRequest = detail::SchemaValue<FactoryResumeRequestSchemaTag>;
-
-struct FactoryResumeResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryResumeResult";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryResumeResult = detail::SchemaValue<FactoryResumeResultSchemaTag>;
-
-struct FactoryRunConsumedSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunConsumed";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 3;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunConsumed = detail::SchemaValue<FactoryRunConsumedSchemaTag>;
-
-struct FactoryRunDetailSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunDetail";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 23;
-    inline static constexpr std::size_t required_property_count = 23;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunDetail = detail::SchemaValue<FactoryRunDetailSchemaTag>;
-
-struct FactoryRunFailureSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunFailure";
-    inline static constexpr SchemaKind kind = SchemaKind::Union;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 5;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunFailure = detail::SchemaValue<FactoryRunFailureSchemaTag>;
-
-struct FactoryRunFailureKindSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunFailureKind";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 3> known_string_values{"maxTotalSubagents", "timeoutSeconds", "maxAiCredits"};
-};
-using FactoryRunFailureKind = detail::SchemaValue<FactoryRunFailureKindSchemaTag>;
-
-struct FactoryRunLimitsSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunLimits";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunLimits = detail::SchemaValue<FactoryRunLimitsSchemaTag>;
-
-struct FactoryRunRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunRequest = detail::SchemaValue<FactoryRunRequestSchemaTag>;
-
-struct FactoryRunResultSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunResult";
+    inline static constexpr std::string_view schema_name = "FeatureFlagsResolveRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 9;
-    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using FactoryRunResult = detail::SchemaValue<FactoryRunResultSchemaTag>;
+using FeatureFlagsResolveRequest = detail::SchemaValue<FeatureFlagsResolveRequestSchemaTag>;
 
-struct FactoryRunStatusSchemaTag
+struct FeatureFlagsResolveStartupGatesRequestSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "FactoryRunStatus";
-    inline static constexpr SchemaKind kind = SchemaKind::Enum;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 0;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 7> known_string_values{"pending", "running", "completed", "halted", "paused", "cancelled", "error"};
-};
-using FactoryRunStatus = detail::SchemaValue<FactoryRunStatusSchemaTag>;
-
-struct FactoryRunSummarySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunSummary";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 20;
-    inline static constexpr std::size_t required_property_count = 20;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryRunSummary = detail::SchemaValue<FactoryRunSummarySchemaTag>;
-
-struct FactoryRunTerminalSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryRunTerminal";
+    inline static constexpr std::string_view schema_name = "FeatureFlagsResolveStartupGatesRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
-    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using FactoryRunTerminal = detail::SchemaValue<FactoryRunTerminalSchemaTag>;
-
-struct FactoryToolResumeRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryToolResumeRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryToolResumeRequest = detail::SchemaValue<FactoryToolResumeRequestSchemaTag>;
-
-struct FactoryToolRunOptionsSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryToolRunOptions";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryToolRunOptions = detail::SchemaValue<FactoryToolRunOptionsSchemaTag>;
-
-struct FactoryToolRunRequestSchemaTag
-{
-    inline static constexpr std::string_view schema_name = "FactoryToolRunRequest";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 2;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using FactoryToolRunRequest = detail::SchemaValue<FactoryToolRunRequestSchemaTag>;
+using FeatureFlagsResolveStartupGatesRequest = detail::SchemaValue<FeatureFlagsResolveStartupGatesRequestSchemaTag>;
 
 struct FilterMappingSchemaTag
 {
@@ -4648,6 +6691,32 @@ struct FolderTrustCheckResultSchemaTag
 };
 using FolderTrustCheckResult = detail::SchemaValue<FolderTrustCheckResultSchemaTag>;
 
+struct FolderTrustIsTrustedParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "FolderTrustIsTrustedParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using FolderTrustIsTrustedParams = detail::SchemaValue<FolderTrustIsTrustedParamsSchemaTag>;
+
+struct ForceLoginOrgsDecisionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ForceLoginOrgsDecision";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ForceLoginOrgsDecision = detail::SchemaValue<ForceLoginOrgsDecisionSchemaTag>;
+
 struct GhCliAuthInfoSchemaTag
 {
     inline static constexpr std::string_view schema_name = "GhCliAuthInfo";
@@ -4661,6 +6730,123 @@ struct GhCliAuthInfoSchemaTag
 };
 using GhCliAuthInfo = detail::SchemaValue<GhCliAuthInfoSchemaTag>;
 
+struct GitCurrentBranchRemoteResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitCurrentBranchRemoteResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitCurrentBranchRemoteResult = detail::SchemaValue<GitCurrentBranchRemoteResultSchemaTag>;
+
+struct GitCwdRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitCwdRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitCwdRequest = detail::SchemaValue<GitCwdRequestSchemaTag>;
+
+struct GitHubEnvironmentSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubEnvironment";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubEnvironment = detail::SchemaValue<GitHubEnvironmentSchemaTag>;
+
+struct GitHubOwnerOptionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnerOption";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnerOption = detail::SchemaValue<GitHubOwnerOptionSchemaTag>;
+
+struct GitHubOwnersCancelRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnersCancelRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnersCancelRequest = detail::SchemaValue<GitHubOwnersCancelRequestSchemaTag>;
+
+struct GitHubOwnersCancelResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnersCancelResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnersCancelResult = detail::SchemaValue<GitHubOwnersCancelResultSchemaTag>;
+
+struct GitHubOwnersListRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnersListRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnersListRequest = detail::SchemaValue<GitHubOwnersListRequestSchemaTag>;
+
+struct GitHubOwnersListResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnersListResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnersListResult = detail::SchemaValue<GitHubOwnersListResultSchemaTag>;
+
+struct GitHubOwnersRequestIdResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubOwnersRequestIdResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubOwnersRequestIdResult = detail::SchemaValue<GitHubOwnersRequestIdResultSchemaTag>;
+
 struct GitHubRepoRefSchemaTag
 {
     inline static constexpr std::string_view schema_name = "GitHubRepoRef";
@@ -4673,6 +6859,45 @@ struct GitHubRepoRefSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using GitHubRepoRef = detail::SchemaValue<GitHubRepoRefSchemaTag>;
+
+struct GitHubRepositoryAtPathRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubRepositoryAtPathRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubRepositoryAtPathRequest = detail::SchemaValue<GitHubRepositoryAtPathRequestSchemaTag>;
+
+struct GitHubRepositoryAtPathResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubRepositoryAtPathResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubRepositoryAtPathResult = detail::SchemaValue<GitHubRepositoryAtPathResultSchemaTag>;
+
+struct GitHubRepositoryIdentitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitHubRepositoryIdentity";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitHubRepositoryIdentity = detail::SchemaValue<GitHubRepositoryIdentitySchemaTag>;
 
 struct GitHubTelemetryClientInfoSchemaTag
 {
@@ -4751,6 +6976,84 @@ struct GitHubTokenAcquireResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using GitHubTokenAcquireResult = detail::SchemaValue<GitHubTokenAcquireResultSchemaTag>;
+
+struct GitRemoteRepositorySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitRemoteRepository";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitRemoteRepository = detail::SchemaValue<GitRemoteRepositorySchemaTag>;
+
+struct GitReposFromRemotesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitReposFromRemotesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitReposFromRemotesRequest = detail::SchemaValue<GitReposFromRemotesRequestSchemaTag>;
+
+struct GitReposFromRemotesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GitReposFromRemotesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GitReposFromRemotesResult = detail::SchemaValue<GitReposFromRemotesResultSchemaTag>;
+
+struct GlobalStateLoadForConfigDirRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GlobalStateLoadForConfigDirRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GlobalStateLoadForConfigDirRequest = detail::SchemaValue<GlobalStateLoadForConfigDirRequestSchemaTag>;
+
+struct GlobalStateLoadResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GlobalStateLoadResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 19;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GlobalStateLoadResult = detail::SchemaValue<GlobalStateLoadResultSchemaTag>;
+
+struct GlobalStateWriteKeyRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "GlobalStateWriteKeyRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using GlobalStateWriteKeyRequest = detail::SchemaValue<GlobalStateWriteKeyRequestSchemaTag>;
 
 struct HMACAuthInfoSchemaTag
 {
@@ -5148,7 +7451,7 @@ struct HooksDiscoverRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5167,6 +7470,474 @@ struct HooksDiscoverResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using HooksDiscoverResult = detail::SchemaValue<HooksDiscoverResultSchemaTag>;
+
+struct HostConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostConfiguration = detail::SchemaValue<HostConfigurationSchemaTag>;
+
+struct HostDisposeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostDisposeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostDisposeRequest = detail::SchemaValue<HostDisposeRequestSchemaTag>;
+
+struct HostEmptyResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostEmptyResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostEmptyResult = detail::SchemaValue<HostEmptyResultSchemaTag>;
+
+struct HostEnvironmentCredentialsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostEnvironmentCredentials";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostEnvironmentCredentials = detail::SchemaValue<HostEnvironmentCredentialsSchemaTag>;
+
+struct HostExitReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostExitReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"disposed", "exited", "ownerDisconnected", "runtimeShutdown"};
+};
+using HostExitReason = detail::SchemaValue<HostExitReasonSchemaTag>;
+
+struct HostExitedNotificationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostExitedNotification";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostExitedNotification = detail::SchemaValue<HostExitedNotificationSchemaTag>;
+
+struct HostGithubEnvironmentOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostGithubEnvironmentOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostGithubEnvironmentOptions = detail::SchemaValue<HostGithubEnvironmentOptionsSchemaTag>;
+
+struct HostListSessionsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostListSessionsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostListSessionsRequest = detail::SchemaValue<HostListSessionsRequestSchemaTag>;
+
+struct HostListSessionsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostListSessionsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostListSessionsResult = detail::SchemaValue<HostListSessionsResultSchemaTag>;
+
+struct HostLocalServerConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostLocalServerConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostLocalServerConfiguration = detail::SchemaValue<HostLocalServerConfigurationSchemaTag>;
+
+struct HostLocalServerOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostLocalServerOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostLocalServerOptions = detail::SchemaValue<HostLocalServerOptionsSchemaTag>;
+
+struct HostPublishSessionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostPublishSessionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostPublishSessionRequest = detail::SchemaValue<HostPublishSessionRequestSchemaTag>;
+
+struct HostPublishSessionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostPublishSessionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostPublishSessionResult = detail::SchemaValue<HostPublishSessionResultSchemaTag>;
+
+struct HostReadyRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostReadyRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostReadyRequest = detail::SchemaValue<HostReadyRequestSchemaTag>;
+
+struct HostRegisterSessionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostRegisterSessionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostRegisterSessionRequest = detail::SchemaValue<HostRegisterSessionRequestSchemaTag>;
+
+struct HostSessionCreateCallbackSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionCreateCallback";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionCreateCallback = detail::SchemaValue<HostSessionCreateCallbackSchemaTag>;
+
+struct HostSessionCreateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionCreateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionCreateRequest = detail::SchemaValue<HostSessionCreateRequestSchemaTag>;
+
+struct HostSessionCreateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionCreateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionCreateResult = detail::SchemaValue<HostSessionCreateResultSchemaTag>;
+
+struct HostSessionReleaseRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionReleaseRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionReleaseRequest = detail::SchemaValue<HostSessionReleaseRequestSchemaTag>;
+
+struct HostSessionReleasedNotificationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionReleasedNotification";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionReleasedNotification = detail::SchemaValue<HostSessionReleasedNotificationSchemaTag>;
+
+struct HostSessionSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostSessionSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostSessionSummary = detail::SchemaValue<HostSessionSummarySchemaTag>;
+
+struct HostStartRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostStartRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostStartRequest = detail::SchemaValue<HostStartRequestSchemaTag>;
+
+struct HostStartResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostStartResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostStartResult = detail::SchemaValue<HostStartResultSchemaTag>;
+
+struct HostUnpublishSessionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostUnpublishSessionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostUnpublishSessionRequest = detail::SchemaValue<HostUnpublishSessionRequestSchemaTag>;
+
+struct HostUnpublishSessionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostUnpublishSessionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostUnpublishSessionResult = detail::SchemaValue<HostUnpublishSessionResultSchemaTag>;
+
+struct HostUnregisterSessionRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "HostUnregisterSessionRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using HostUnregisterSessionRequest = detail::SchemaValue<HostUnregisterSessionRequestSchemaTag>;
+
+struct ImageToolModelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ImageToolModel";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ImageToolModel = detail::SchemaValue<ImageToolModelSchemaTag>;
+
+struct ImageToolModelAvailabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ImageToolModelAvailability";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"available", "unavailable"};
+};
+using ImageToolModelAvailability = detail::SchemaValue<ImageToolModelAvailabilitySchemaTag>;
+
+struct ImageToolModelOperationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ImageToolModelOperation";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"generate", "edit"};
+};
+using ImageToolModelOperation = detail::SchemaValue<ImageToolModelOperationSchemaTag>;
+
+struct ImageToolModelPricingSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ImageToolModelPricing";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ImageToolModelPricing = detail::SchemaValue<ImageToolModelPricingSchemaTag>;
+
+struct IndexedSearchStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "IndexedSearchState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"disabled", "starting", "enabled", "ready", "failed"};
+};
+using IndexedSearchState = detail::SchemaValue<IndexedSearchStateSchemaTag>;
+
+struct InstallationCatalogueIdentitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstallationCatalogueIdentity";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstallationCatalogueIdentity = detail::SchemaValue<InstallationCatalogueIdentitySchemaTag>;
+
+struct InstallationConfirmationRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstallationConfirmationRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstallationConfirmationRequest = detail::SchemaValue<InstallationConfirmationRequestSchemaTag>;
+
+struct InstallationConfirmationResponseSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstallationConfirmationResponse";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstallationConfirmationResponse = detail::SchemaValue<InstallationConfirmationResponseSchemaTag>;
+
+struct InstallationDecisionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstallationDecision";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"confirm", "decline", "cancel"};
+};
+using InstallationDecision = detail::SchemaValue<InstallationDecisionSchemaTag>;
+
+struct InstallationReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstallationReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstallationReview = detail::SchemaValue<InstallationReviewSchemaTag>;
 
 struct InstalledPluginSchemaTag
 {
@@ -5187,7 +7958,7 @@ struct InstalledPluginInfoSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t property_count = 13;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5245,6 +8016,19 @@ struct InstalledPluginSourceUrlSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using InstalledPluginSourceUrl = detail::SchemaValue<InstalledPluginSourceUrlSchemaTag>;
+
+struct InstalledPluginVerifiedSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstalledPluginVerifiedSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstalledPluginVerifiedSource = detail::SchemaValue<InstalledPluginVerifiedSourceSchemaTag>;
 
 struct InstructionDiscoveryPathSchemaTag
 {
@@ -5337,13 +8121,26 @@ struct InstructionSourceTypeSchemaTag
 };
 using InstructionSourceType = detail::SchemaValue<InstructionSourceTypeSchemaTag>;
 
+struct InstructionsDiscoverRepoSourcesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstructionsDiscoverRepoSourcesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstructionsDiscoverRepoSourcesRequest = detail::SchemaValue<InstructionsDiscoverRepoSourcesRequestSchemaTag>;
+
 struct InstructionsDiscoverRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "InstructionsDiscoverRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5356,7 +8153,7 @@ struct InstructionsGetDiscoveryPathsRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5375,6 +8172,19 @@ struct InstructionsGetSourcesResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using InstructionsGetSourcesResult = detail::SchemaValue<InstructionsGetSourcesResultSchemaTag>;
+
+struct InstructionsInitPromptResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "InstructionsInitPromptResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using InstructionsInitPromptResult = detail::SchemaValue<InstructionsInitPromptResultSchemaTag>;
 
 struct InterruptMainTurnRequestSchemaTag
 {
@@ -5584,6 +8394,19 @@ struct LocalSessionMetadataValueSchemaTag
 };
 using LocalSessionMetadataValue = detail::SchemaValue<LocalSessionMetadataValueSchemaTag>;
 
+struct LocationPermissionsCleanupResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "LocationPermissionsCleanupResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using LocationPermissionsCleanupResult = detail::SchemaValue<LocationPermissionsCleanupResultSchemaTag>;
+
 struct LogRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "LogRequest";
@@ -5610,6 +8433,32 @@ struct LogResultSchemaTag
 };
 using LogResult = detail::SchemaValue<LogResultSchemaTag>;
 
+struct LoggedInUserSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "LoggedInUser";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using LoggedInUser = detail::SchemaValue<LoggedInUserSchemaTag>;
+
+struct LoginProviderKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "LoginProviderKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"githubDotCom", "proxima", "entra"};
+};
+using LoginProviderKind = detail::SchemaValue<LoginProviderKindSchemaTag>;
+
 struct LspInitializeRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "LspInitializeRequest";
@@ -5622,6 +8471,19 @@ struct LspInitializeRequestSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using LspInitializeRequest = detail::SchemaValue<LspInitializeRequestSchemaTag>;
+
+struct ManagedFusionTierSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedFusionTier";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"standard", "high", "max", "unmanaged"};
+};
+using ManagedFusionTier = detail::SchemaValue<ManagedFusionTierSchemaTag>;
 
 struct ManagedMcpServerConfigSchemaTag
 {
@@ -5636,6 +8498,422 @@ struct ManagedMcpServerConfigSchemaTag
 };
 using ManagedMcpServerConfig = detail::SchemaValue<ManagedMcpServerConfigSchemaTag>;
 
+struct ManagedPermissionEvaluationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionEvaluation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPermissionEvaluation = detail::SchemaValue<ManagedPermissionEvaluationSchemaTag>;
+
+struct ManagedPermissionOperationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionOperation";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 1;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPermissionOperation = detail::SchemaValue<ManagedPermissionOperationSchemaTag>;
+
+struct ManagedPermissionVerdictSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionVerdict";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"deny", "ask", "allow", "unmanaged"};
+};
+using ManagedPermissionVerdict = detail::SchemaValue<ManagedPermissionVerdictSchemaTag>;
+
+struct ManagedPermissionsContextSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionsContext";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPermissionsContext = detail::SchemaValue<ManagedPermissionsContextSchemaTag>;
+
+struct ManagedPermissionsEvaluateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionsEvaluateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPermissionsEvaluateRequest = detail::SchemaValue<ManagedPermissionsEvaluateRequestSchemaTag>;
+
+struct ManagedPermissionsEvaluateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPermissionsEvaluateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPermissionsEvaluateResult = detail::SchemaValue<ManagedPermissionsEvaluateResultSchemaTag>;
+
+struct ManagedPluginRetryEntrySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPluginRetryEntry";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedPluginRetryEntry = detail::SchemaValue<ManagedPluginRetryEntrySchemaTag>;
+
+struct ManagedPluginRetryStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedPluginRetryStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"installed", "updated", "already_present", "failed", "deferred", "not_required"};
+};
+using ManagedPluginRetryStatus = detail::SchemaValue<ManagedPluginRetryStatusSchemaTag>;
+
+struct ManagedSettingMetaSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingMeta";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingMeta = detail::SchemaValue<ManagedSettingMetaSchemaTag>;
+
+struct ManagedSettingsApplyControlsParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsApplyControlsParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsApplyControlsParams = detail::SchemaValue<ManagedSettingsApplyControlsParamsSchemaTag>;
+
+struct ManagedSettingsApplyControlsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsApplyControlsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsApplyControlsResult = detail::SchemaValue<ManagedSettingsApplyControlsResultSchemaTag>;
+
+struct ManagedSettingsBypassDisableSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsBypassDisableSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"user", "managed", "mdm"};
+};
+using ManagedSettingsBypassDisableSource = detail::SchemaValue<ManagedSettingsBypassDisableSourceSchemaTag>;
+
+struct ManagedSettingsBypassPolicyResolutionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsBypassPolicyResolution";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"allowed", "disabled", "unknown"};
+};
+using ManagedSettingsBypassPolicyResolution = detail::SchemaValue<ManagedSettingsBypassPolicyResolutionSchemaTag>;
+
+struct ManagedSettingsChannelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsChannel";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"device", "server", "policyHelper"};
+};
+using ManagedSettingsChannel = detail::SchemaValue<ManagedSettingsChannelSchemaTag>;
+
+struct ManagedSettingsComposeLayerSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsComposeLayer";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsComposeLayer = detail::SchemaValue<ManagedSettingsComposeLayerSchemaTag>;
+
+struct ManagedSettingsComposeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsComposeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsComposeRequest = detail::SchemaValue<ManagedSettingsComposeRequestSchemaTag>;
+
+struct ManagedSettingsComposeResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsComposeResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsComposeResult = detail::SchemaValue<ManagedSettingsComposeResultSchemaTag>;
+
+struct ManagedSettingsDiagnosticSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsDiagnostic";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsDiagnostic = detail::SchemaValue<ManagedSettingsDiagnosticSchemaTag>;
+
+struct ManagedSettingsDiagnosticSeveritySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsDiagnosticSeverity";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"error", "warning"};
+};
+using ManagedSettingsDiagnosticSeverity = detail::SchemaValue<ManagedSettingsDiagnosticSeveritySchemaTag>;
+
+struct ManagedSettingsIngestParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsIngestParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 15;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsIngestParams = detail::SchemaValue<ManagedSettingsIngestParamsSchemaTag>;
+
+struct ManagedSettingsIngestResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsIngestResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 26;
+    inline static constexpr std::size_t required_property_count = 14;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsIngestResult = detail::SchemaValue<ManagedSettingsIngestResultSchemaTag>;
+
+struct ManagedSettingsLayerSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsLayer";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsLayer = detail::SchemaValue<ManagedSettingsLayerSchemaTag>;
+
+struct ManagedSettingsLoadRemoteControlParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsLoadRemoteControlParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsLoadRemoteControlParams = detail::SchemaValue<ManagedSettingsLoadRemoteControlParamsSchemaTag>;
+
+struct ManagedSettingsLoadRemoteControlResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsLoadRemoteControlResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsLoadRemoteControlResult = detail::SchemaValue<ManagedSettingsLoadRemoteControlResultSchemaTag>;
+
+struct ManagedSettingsLogLevelSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsLogLevel";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"debug", "info", "warning", "error"};
+};
+using ManagedSettingsLogLevel = detail::SchemaValue<ManagedSettingsLogLevelSchemaTag>;
+
+struct ManagedSettingsLogMessageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsLogMessage";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsLogMessage = detail::SchemaValue<ManagedSettingsLogMessageSchemaTag>;
+
+struct ManagedSettingsMetaSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsMeta";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsMeta = detail::SchemaValue<ManagedSettingsMetaSchemaTag>;
+
+struct ManagedSettingsParseClientValueParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsParseClientValueParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsParseClientValueParams = detail::SchemaValue<ManagedSettingsParseClientValueParamsSchemaTag>;
+
+struct ManagedSettingsParseClientValueResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsParseClientValueResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsParseClientValueResult = detail::SchemaValue<ManagedSettingsParseClientValueResultSchemaTag>;
+
+struct ManagedSettingsPolicyHelperAuthoritySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsPolicyHelperAuthority";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"device", "server", "environment"};
+};
+using ManagedSettingsPolicyHelperAuthority = detail::SchemaValue<ManagedSettingsPolicyHelperAuthoritySchemaTag>;
+
+struct ManagedSettingsPolicyHelperReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsPolicyHelperReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"sessionStart", "pluginActivation"};
+};
+using ManagedSettingsPolicyHelperReason = detail::SchemaValue<ManagedSettingsPolicyHelperReasonSchemaTag>;
+
+struct ManagedSettingsReadDeviceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsReadDeviceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsReadDeviceResult = detail::SchemaValue<ManagedSettingsReadDeviceResultSchemaTag>;
+
 struct ManagedSettingsReadResultSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ManagedSettingsReadResult";
@@ -5648,6 +8926,240 @@ struct ManagedSettingsReadResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ManagedSettingsReadResult = detail::SchemaValue<ManagedSettingsReadResultSchemaTag>;
+
+struct ManagedSettingsResolveBypassDisableTransitionParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveBypassDisableTransitionParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveBypassDisableTransitionParams = detail::SchemaValue<ManagedSettingsResolveBypassDisableTransitionParamsSchemaTag>;
+
+struct ManagedSettingsResolveBypassDisableTransitionResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveBypassDisableTransitionResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveBypassDisableTransitionResult = detail::SchemaValue<ManagedSettingsResolveBypassDisableTransitionResultSchemaTag>;
+
+struct ManagedSettingsResolveDeviceForceLoginOrgsGateParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveDeviceForceLoginOrgsGateParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveDeviceForceLoginOrgsGateParams = detail::SchemaValue<ManagedSettingsResolveDeviceForceLoginOrgsGateParamsSchemaTag>;
+
+struct ManagedSettingsResolveEffectiveValueParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveEffectiveValueParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveEffectiveValueParams = detail::SchemaValue<ManagedSettingsResolveEffectiveValueParamsSchemaTag>;
+
+struct ManagedSettingsResolveEffectiveValueResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveEffectiveValueResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveEffectiveValueResult = detail::SchemaValue<ManagedSettingsResolveEffectiveValueResultSchemaTag>;
+
+struct ManagedSettingsResolveRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveRequest = detail::SchemaValue<ManagedSettingsResolveRequestSchemaTag>;
+
+struct ManagedSettingsResolveResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveResult = detail::SchemaValue<ManagedSettingsResolveResultSchemaTag>;
+
+struct ManagedSettingsResolveStartupPolicyParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveStartupPolicyParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 16;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveStartupPolicyParams = detail::SchemaValue<ManagedSettingsResolveStartupPolicyParamsSchemaTag>;
+
+struct ManagedSettingsResolveStartupPolicyResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolveStartupPolicyResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 18;
+    inline static constexpr std::size_t required_property_count = 11;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolveStartupPolicyResult = detail::SchemaValue<ManagedSettingsResolveStartupPolicyResultSchemaTag>;
+
+struct ManagedSettingsResolvedDataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolvedData";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 12;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsResolvedData = detail::SchemaValue<ManagedSettingsResolvedDataSchemaTag>;
+
+struct ManagedSettingsResolvedSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsResolvedSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"server", "device", "client", "policyHelper", "mixed", "none"};
+};
+using ManagedSettingsResolvedSource = detail::SchemaValue<ManagedSettingsResolvedSourceSchemaTag>;
+
+struct ManagedSettingsRetainPolicyParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsRetainPolicyParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 16;
+    inline static constexpr std::size_t required_property_count = 11;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsRetainPolicyParams = detail::SchemaValue<ManagedSettingsRetainPolicyParamsSchemaTag>;
+
+struct ManagedSettingsSchemaResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsSchemaResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsSchemaResult = detail::SchemaValue<ManagedSettingsSchemaResultSchemaTag>;
+
+struct ManagedSettingsServerPolicyCacheModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsServerPolicyCacheMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"preferFresh", "cacheOnly", "fallbackOnly", "disabled"};
+};
+using ManagedSettingsServerPolicyCacheMode = detail::SchemaValue<ManagedSettingsServerPolicyCacheModeSchemaTag>;
+
+struct ManagedSettingsServerPolicyResolutionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsServerPolicyResolution";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"live", "freshCache", "cacheMiss", "fallbackCache", "failOpen", "failClosed", "skippedNoToken"};
+};
+using ManagedSettingsServerPolicyResolution = detail::SchemaValue<ManagedSettingsServerPolicyResolutionSchemaTag>;
+
+struct ManagedSettingsValidateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsValidateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsValidateRequest = detail::SchemaValue<ManagedSettingsValidateRequestSchemaTag>;
+
+struct ManagedSettingsValidateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsValidateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsValidateResult = detail::SchemaValue<ManagedSettingsValidateResultSchemaTag>;
+
+struct ManagedSettingsValuesSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ManagedSettingsValues";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ManagedSettingsValues = detail::SchemaValue<ManagedSettingsValuesSchemaTag>;
 
 struct MarketplaceAddResultSchemaTag
 {
@@ -5681,7 +9193,7 @@ struct MarketplaceInfoSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5765,6 +9277,32 @@ struct McpAllowedServerSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using McpAllowedServer = detail::SchemaValue<McpAllowedServerSchemaTag>;
+
+struct McpApplyInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpApplyInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpApplyInstallRequest = detail::SchemaValue<McpApplyInstallRequestSchemaTag>;
+
+struct McpApplyUninstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpApplyUninstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpApplyUninstallRequest = detail::SchemaValue<McpApplyUninstallRequestSchemaTag>;
 
 struct McpAppsCallToolRequestSchemaTag
 {
@@ -6182,13 +9720,104 @@ struct McpConfigureGitHubResultSchemaTag
 };
 using McpConfigureGitHubResult = detail::SchemaValue<McpConfigureGitHubResultSchemaTag>;
 
-struct McpDisableRequestSchemaTag
+struct McpConfiguredServerSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "McpDisableRequest";
+    inline static constexpr std::string_view schema_name = "McpConfiguredServer";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpConfiguredServer = detail::SchemaValue<McpConfiguredServerSchemaTag>;
+
+struct McpConfiguredServerListSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpConfiguredServerList";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpConfiguredServerList = detail::SchemaValue<McpConfiguredServerListSchemaTag>;
+
+struct McpConfiguredServerStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpConfiguredServerState";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpConfiguredServerState = detail::SchemaValue<McpConfiguredServerStateSchemaTag>;
+
+struct McpDiagnosticDetailsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpDiagnosticDetails";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpDiagnosticDetails = detail::SchemaValue<McpDiagnosticDetailsSchemaTag>;
+
+struct McpDiagnosticDirectionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpDiagnosticDirection";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"client-to-server", "server-to-client"};
+};
+using McpDiagnosticDirection = detail::SchemaValue<McpDiagnosticDirectionSchemaTag>;
+
+struct McpDiagnosticKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpDiagnosticKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"lifecycle", "protocol", "http", "stderr"};
+};
+using McpDiagnosticKind = detail::SchemaValue<McpDiagnosticKindSchemaTag>;
+
+struct McpDiagnosticSourceConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpDiagnosticSourceConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpDiagnosticSourceConfiguration = detail::SchemaValue<McpDiagnosticSourceConfigurationSchemaTag>;
+
+struct McpDisableRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpDisableRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6238,9 +9867,9 @@ struct McpEnableRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpEnableRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6377,6 +10006,201 @@ struct McpInstallPlanSchemaTag
 };
 using McpInstallPlan = detail::SchemaValue<McpInstallPlanSchemaTag>;
 
+struct McpInstallationFailureReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationFailureReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 23> known_string_values{"invalid-request", "operation-limit", "cancelled", "capability-required", "confirmation-unavailable", "confirmation-invalid", "policy-context-unavailable", "policy-changed", "policy-denied", "configuration-changed", "configuration-modified", "resource-not-found", "plan-expired", "plan-replayed", "foreign-runtime", "replan-required", "source-revalidation-unavailable", "source-changed", "source-unavailable", "registry-unavailable", "secret-store-unavailable", "lifecycle-unavailable", "write-failed"};
+};
+using McpInstallationFailureReason = detail::SchemaValue<McpInstallationFailureReasonSchemaTag>;
+
+struct McpInstallationInputSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationInput";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationInput = detail::SchemaValue<McpInstallationInputSchemaTag>;
+
+struct McpInstallationManagementOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationManagementOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 7;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationManagementOutcome = detail::SchemaValue<McpInstallationManagementOutcomeSchemaTag>;
+
+struct McpInstallationManagementResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationManagementResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationManagementResult = detail::SchemaValue<McpInstallationManagementResultSchemaTag>;
+
+struct McpInstallationOperationRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationOperationRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationOperationRequest = detail::SchemaValue<McpInstallationOperationRequestSchemaTag>;
+
+struct McpInstallationOperationStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationOperationStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 6;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationOperationStatus = detail::SchemaValue<McpInstallationOperationStatusSchemaTag>;
+
+struct McpInstallationOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 7;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationOutcome = detail::SchemaValue<McpInstallationOutcomeSchemaTag>;
+
+struct McpInstallationRemoteConfigurationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationRemoteConfiguration";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationRemoteConfiguration = detail::SchemaValue<McpInstallationRemoteConfigurationSchemaTag>;
+
+struct McpInstallationResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 3;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationResult = detail::SchemaValue<McpInstallationResultSchemaTag>;
+
+struct McpInstallationReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationReview = detail::SchemaValue<McpInstallationReviewSchemaTag>;
+
+struct McpInstallationSecretSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationSecret";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationSecret = detail::SchemaValue<McpInstallationSecretSchemaTag>;
+
+struct McpInstallationSecretStorageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationSecretStorage";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"keychain", "private-file"};
+};
+using McpInstallationSecretStorage = detail::SchemaValue<McpInstallationSecretStorageSchemaTag>;
+
+struct McpInstallationStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"needs-setup", "active", "authentication-required", "activation-failed", "configuration-modified", "recovery-required"};
+};
+using McpInstallationState = detail::SchemaValue<McpInstallationStateSchemaTag>;
+
+struct McpInstallationSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationSummary = detail::SchemaValue<McpInstallationSummarySchemaTag>;
+
+struct McpInstallationsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpInstallationsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpInstallationsRequest = detail::SchemaValue<McpInstallationsRequestSchemaTag>;
+
 struct McpIsServerRunningRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpIsServerRunningRequest";
@@ -6402,6 +10226,19 @@ struct McpIsServerRunningResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using McpIsServerRunningResult = detail::SchemaValue<McpIsServerRunningResultSchemaTag>;
+
+struct McpListBuiltinServerNamesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpListBuiltinServerNamesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpListBuiltinServerNamesResult = detail::SchemaValue<McpListBuiltinServerNamesResultSchemaTag>;
 
 struct McpListToolsRequestSchemaTag
 {
@@ -6442,6 +10279,97 @@ struct McpOauthAuthenticationStateChangedRequestSchemaTag
 };
 using McpOauthAuthenticationStateChangedRequest = detail::SchemaValue<McpOauthAuthenticationStateChangedRequestSchemaTag>;
 
+struct McpOauthCancelLoginRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthCancelLoginRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthCancelLoginRequest = detail::SchemaValue<McpOauthCancelLoginRequestSchemaTag>;
+
+struct McpOauthCancelLoginResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthCancelLoginResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthCancelLoginResult = detail::SchemaValue<McpOauthCancelLoginResultSchemaTag>;
+
+struct McpOauthCheckDcrSupportRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthCheckDcrSupportRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthCheckDcrSupportRequest = detail::SchemaValue<McpOauthCheckDcrSupportRequestSchemaTag>;
+
+struct McpOauthCheckDcrSupportResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthCheckDcrSupportResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthCheckDcrSupportResult = detail::SchemaValue<McpOauthCheckDcrSupportResultSchemaTag>;
+
+struct McpOauthCompleteRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthCompleteRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthCompleteRequest = detail::SchemaValue<McpOauthCompleteRequestSchemaTag>;
+
+struct McpOauthFetchProtectedResourceMetadataRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthFetchProtectedResourceMetadataRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthFetchProtectedResourceMetadataRequest = detail::SchemaValue<McpOauthFetchProtectedResourceMetadataRequestSchemaTag>;
+
+struct McpOauthFetchProtectedResourceMetadataResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthFetchProtectedResourceMetadataResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthFetchProtectedResourceMetadataResult = detail::SchemaValue<McpOauthFetchProtectedResourceMetadataResultSchemaTag>;
+
 struct McpOauthHandlePendingRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpOauthHandlePendingRequest";
@@ -6468,6 +10396,32 @@ struct McpOauthHandlePendingResultSchemaTag
 };
 using McpOauthHandlePendingResult = detail::SchemaValue<McpOauthHandlePendingResultSchemaTag>;
 
+struct McpOauthIsMicrosoftAuthorizationServerRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthIsMicrosoftAuthorizationServerRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthIsMicrosoftAuthorizationServerRequest = detail::SchemaValue<McpOauthIsMicrosoftAuthorizationServerRequestSchemaTag>;
+
+struct McpOauthIsMicrosoftAuthorizationServerResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthIsMicrosoftAuthorizationServerResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthIsMicrosoftAuthorizationServerResult = detail::SchemaValue<McpOauthIsMicrosoftAuthorizationServerResultSchemaTag>;
+
 struct McpOauthLoginGrantTypeSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpOauthLoginGrantType";
@@ -6487,7 +10441,7 @@ struct McpOauthLoginRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 11;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6500,7 +10454,7 @@ struct McpOauthLoginResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6515,10 +10469,36 @@ struct McpOauthPendingRequestResponseSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::size_t union_variant_count = 3;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using McpOauthPendingRequestResponse = detail::SchemaValue<McpOauthPendingRequestResponseSchemaTag>;
+
+struct McpOauthPrepareLoginRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthPrepareLoginRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthPrepareLoginRequest = detail::SchemaValue<McpOauthPrepareLoginRequestSchemaTag>;
+
+struct McpOauthPrepareLoginResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthPrepareLoginResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthPrepareLoginResult = detail::SchemaValue<McpOauthPrepareLoginResultSchemaTag>;
 
 struct McpOauthProbeNeedsAuthReasonSchemaTag
 {
@@ -6537,9 +10517,9 @@ struct McpOauthProbeRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpOauthProbeRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6584,6 +10564,58 @@ struct McpOauthRespondResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using McpOauthRespondResult = detail::SchemaValue<McpOauthRespondResultSchemaTag>;
+
+struct McpOauthStaticClientConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthStaticClientConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthStaticClientConfig = detail::SchemaValue<McpOauthStaticClientConfigSchemaTag>;
+
+struct McpOauthStaticClientConfigRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthStaticClientConfigRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthStaticClientConfigRequest = detail::SchemaValue<McpOauthStaticClientConfigRequestSchemaTag>;
+
+struct McpOauthStaticClientConfigResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOauthStaticClientConfigResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpOauthStaticClientConfigResult = detail::SchemaValue<McpOauthStaticClientConfigResultSchemaTag>;
+
+struct McpOwnedOauthLoginStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpOwnedOauthLoginStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"awaiting-browser", "connected"};
+};
+using McpOwnedOauthLoginStatus = detail::SchemaValue<McpOwnedOauthLoginStatusSchemaTag>;
 
 struct McpPlanConfigurationChangeSchemaTag
 {
@@ -6643,7 +10675,7 @@ struct McpPlanInstallRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7014,6 +11046,19 @@ struct McpPlanTransportChoiceRemoteSchemaTag
 };
 using McpPlanTransportChoiceRemote = detail::SchemaValue<McpPlanTransportChoiceRemoteSchemaTag>;
 
+struct McpPlanUninstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPlanUninstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPlanUninstallRequest = detail::SchemaValue<McpPlanUninstallRequestSchemaTag>;
+
 struct McpPlanValueCategorySchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpPlanValueCategory";
@@ -7026,6 +11071,149 @@ struct McpPlanValueCategorySchemaTag
     inline static constexpr std::array<std::string_view, 5> known_string_values{"environment-variable", "runtime-argument", "package-argument", "header", "url-variable"};
 };
 using McpPlanValueCategory = detail::SchemaValue<McpPlanValueCategorySchemaTag>;
+
+struct McpPrepareInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPrepareInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 8;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPrepareInstallRequest = detail::SchemaValue<McpPrepareInstallRequestSchemaTag>;
+
+struct McpPreparedInstallSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPreparedInstall";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPreparedInstall = detail::SchemaValue<McpPreparedInstallSchemaTag>;
+
+struct McpPromptSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPrompt";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPrompt = detail::SchemaValue<McpPromptSchemaTag>;
+
+struct McpPromptArgumentSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptArgument";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptArgument = detail::SchemaValue<McpPromptArgumentSchemaTag>;
+
+struct McpPromptIconSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptIcon";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptIcon = detail::SchemaValue<McpPromptIconSchemaTag>;
+
+struct McpPromptMessageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptMessage";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptMessage = detail::SchemaValue<McpPromptMessageSchemaTag>;
+
+struct McpPromptRoleSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptRole";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"user", "assistant"};
+};
+using McpPromptRole = detail::SchemaValue<McpPromptRoleSchemaTag>;
+
+struct McpPromptsGetRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptsGetRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptsGetRequest = detail::SchemaValue<McpPromptsGetRequestSchemaTag>;
+
+struct McpPromptsGetResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptsGetResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptsGetResult = detail::SchemaValue<McpPromptsGetResultSchemaTag>;
+
+struct McpPromptsListRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptsListRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptsListRequest = detail::SchemaValue<McpPromptsListRequestSchemaTag>;
+
+struct McpPromptsListResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpPromptsListResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpPromptsListResult = detail::SchemaValue<McpPromptsListResultSchemaTag>;
 
 struct McpRegisterExternalClientRequestSchemaTag
 {
@@ -7040,13 +11228,78 @@ struct McpRegisterExternalClientRequestSchemaTag
 };
 using McpRegisterExternalClientRequest = detail::SchemaValue<McpRegisterExternalClientRequestSchemaTag>;
 
+struct McpRegistryCancelRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpRegistryCancelRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpRegistryCancelRequest = detail::SchemaValue<McpRegistryCancelRequestSchemaTag>;
+
+struct McpRegistryCancelResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpRegistryCancelResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpRegistryCancelResult = detail::SchemaValue<McpRegistryCancelResultSchemaTag>;
+
+struct McpRegistryRequestIdResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpRegistryRequestIdResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpRegistryRequestIdResult = detail::SchemaValue<McpRegistryRequestIdResultSchemaTag>;
+
+struct McpRegistrySearchRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpRegistrySearchRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpRegistrySearchRequest = detail::SchemaValue<McpRegistrySearchRequestSchemaTag>;
+
+struct McpRegistrySearchResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpRegistrySearchResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpRegistrySearchResult = detail::SchemaValue<McpRegistrySearchResultSchemaTag>;
+
 struct McpReloadConfigSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpReloadConfig";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 13;
+    inline static constexpr std::size_t property_count = 14;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7228,7 +11481,7 @@ struct McpRestartServerRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7306,7 +11559,7 @@ struct McpServerSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 10;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7449,7 +11702,7 @@ struct McpServerConfigHttpSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 27;
+    inline static constexpr std::size_t property_count = 29;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7488,7 +11741,7 @@ struct McpServerConfigMemorySchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 21;
+    inline static constexpr std::size_t property_count = 22;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7514,7 +11767,7 @@ struct McpServerConfigStdioSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 25;
+    inline static constexpr std::size_t property_count = 26;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7586,6 +11839,19 @@ struct McpServerNeedsAuthInfoSchemaTag
 };
 using McpServerNeedsAuthInfo = detail::SchemaValue<McpServerNeedsAuthInfoSchemaTag>;
 
+struct McpServerOwnershipSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpServerOwnership";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpServerOwnership = detail::SchemaValue<McpServerOwnershipSchemaTag>;
+
 struct McpServerSourceSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpServerSource";
@@ -7595,7 +11861,7 @@ struct McpServerSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 5> known_string_values{"user", "workspace", "plugin", "builtin", "managed"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"user", "workspace", "plugin", "builtin", "managed", "account"};
 };
 using McpServerSource = detail::SchemaValue<McpServerSourceSchemaTag>;
 
@@ -7651,6 +11917,32 @@ struct McpSetEnvValueModeResultSchemaTag
 };
 using McpSetEnvValueModeResult = detail::SchemaValue<McpSetEnvValueModeResultSchemaTag>;
 
+struct McpShouldExcludeGitHubToolsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpShouldExcludeGitHubToolsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpShouldExcludeGitHubToolsRequest = detail::SchemaValue<McpShouldExcludeGitHubToolsRequestSchemaTag>;
+
+struct McpShouldExcludeGitHubToolsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpShouldExcludeGitHubToolsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpShouldExcludeGitHubToolsResult = detail::SchemaValue<McpShouldExcludeGitHubToolsResultSchemaTag>;
+
 struct McpSourceFileSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpSourceFile";
@@ -7696,7 +11988,7 @@ struct McpStartServerRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7720,9 +12012,9 @@ struct McpStopServerRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpStopServerRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7781,6 +12073,19 @@ struct McpToolsSchemaTag
 };
 using McpTools = detail::SchemaValue<McpToolsSchemaTag>;
 
+struct McpUninstallPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "McpUninstallPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using McpUninstallPlan = detail::SchemaValue<McpUninstallPlanSchemaTag>;
+
 struct McpUnregisterExternalClientRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "McpUnregisterExternalClientRequest";
@@ -7798,14 +12103,27 @@ struct MemoryConfigurationSchemaTag
 {
     inline static constexpr std::string_view schema_name = "MemoryConfiguration";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using MemoryConfiguration = detail::SchemaValue<MemoryConfigurationSchemaTag>;
+
+struct MemoryModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "MemoryMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"system-prompt", "user-prompt"};
+};
+using MemoryMode = detail::SchemaValue<MemoryModeSchemaTag>;
 
 struct MetadataContextAttributionResultSchemaTag
 {
@@ -7852,7 +12170,7 @@ struct MetadataContextInfoRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8034,7 +12352,7 @@ struct ModeSetRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 12;
+    inline static constexpr std::size_t property_count = 13;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8060,7 +12378,7 @@ struct ModelSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 14;
+    inline static constexpr std::size_t property_count = 16;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8073,12 +12391,25 @@ struct ModelApplyStartupOverlayRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t property_count = 13;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ModelApplyStartupOverlayRequest = detail::SchemaValue<ModelApplyStartupOverlayRequestSchemaTag>;
+
+struct ModelArtifactDetailsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelArtifactDetails";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelArtifactDetails = detail::SchemaValue<ModelArtifactDetailsSchemaTag>;
 
 struct ModelBillingSchemaTag
 {
@@ -8216,7 +12547,7 @@ struct ModelCapabilitiesOverrideSupportsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8229,7 +12560,7 @@ struct ModelCapabilitiesSupportsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8245,17 +12576,69 @@ struct ModelChangeSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 11> known_string_values{"model_command", "settings_command", "config_command", "model_picker", "managed_settings", "repo_settings", "startup", "agent", "plan_mode", "automatic", "sdk"};
+    inline static constexpr std::array<std::string_view, 13> known_string_values{"model_command", "settings_command", "config_command", "model_picker", "managed_settings", "repo_settings", "startup", "agent", "plan_mode", "automatic", "changeboarding_shortcut", "sdk", "auto_tier_recommendation"};
 };
 using ModelChangeSource = detail::SchemaValue<ModelChangeSourceSchemaTag>;
+
+struct ModelClearStartupSeedRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelClearStartupSeedRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelClearStartupSeedRequest = detail::SchemaValue<ModelClearStartupSeedRequestSchemaTag>;
+
+struct ModelClearStartupSeedResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelClearStartupSeedResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelClearStartupSeedResult = detail::SchemaValue<ModelClearStartupSeedResultSchemaTag>;
+
+struct ModelGetReasoningSummariesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelGetReasoningSummariesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelGetReasoningSummariesRequest = detail::SchemaValue<ModelGetReasoningSummariesRequestSchemaTag>;
+
+struct ModelGetReasoningSummariesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelGetReasoningSummariesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelGetReasoningSummariesResult = detail::SchemaValue<ModelGetReasoningSummariesResultSchemaTag>;
 
 struct ModelListSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ModelList";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8365,6 +12748,331 @@ struct ModelPolicyStateSchemaTag
     inline static constexpr std::array<std::string_view, 3> known_string_values{"enabled", "disabled", "unconfigured"};
 };
 using ModelPolicyState = detail::SchemaValue<ModelPolicyStateSchemaTag>;
+
+struct ModelProviderAdapterCatalogSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAdapterCatalog";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderAdapterCatalog = detail::SchemaValue<ModelProviderAdapterCatalogSchemaTag>;
+
+struct ModelProviderAdapterDescriptorSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAdapterDescriptor";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderAdapterDescriptor = detail::SchemaValue<ModelProviderAdapterDescriptorSchemaTag>;
+
+struct ModelProviderAdapterOperationDescriptorSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAdapterOperationDescriptor";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderAdapterOperationDescriptor = detail::SchemaValue<ModelProviderAdapterOperationDescriptorSchemaTag>;
+
+struct ModelProviderAttributionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAttribution";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderAttribution = detail::SchemaValue<ModelProviderAttributionSchemaTag>;
+
+struct ModelProviderAutomaticDiscoveryModeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAutomaticDiscoveryMode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"automatic", "configuredOnly", "explicit"};
+};
+using ModelProviderAutomaticDiscoveryMode = detail::SchemaValue<ModelProviderAutomaticDiscoveryModeSchemaTag>;
+
+struct ModelProviderAutomaticDiscoveryPolicySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderAutomaticDiscoveryPolicy";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderAutomaticDiscoveryPolicy = detail::SchemaValue<ModelProviderAutomaticDiscoveryPolicySchemaTag>;
+
+struct ModelProviderConfigurationDispositionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderConfigurationDisposition";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"create", "alreadyConfigured"};
+};
+using ModelProviderConfigurationDisposition = detail::SchemaValue<ModelProviderConfigurationDispositionSchemaTag>;
+
+struct ModelProviderConfigurationPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderConfigurationPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderConfigurationPlan = detail::SchemaValue<ModelProviderConfigurationPlanSchemaTag>;
+
+struct ModelProviderDescriptorSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderDescriptor";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderDescriptor = detail::SchemaValue<ModelProviderDescriptorSchemaTag>;
+
+struct ModelProviderDiscoverRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderDiscoverRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderDiscoverRequest = detail::SchemaValue<ModelProviderDiscoverRequestSchemaTag>;
+
+struct ModelProviderDiscoverResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderDiscoverResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderDiscoverResult = detail::SchemaValue<ModelProviderDiscoverResultSchemaTag>;
+
+struct ModelProviderDiscoveryNetworkScopeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderDiscoveryNetworkScope";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"none", "loopbackOnly", "configuredEndpointOnly", "localNetwork", "internet"};
+};
+using ModelProviderDiscoveryNetworkScope = detail::SchemaValue<ModelProviderDiscoveryNetworkScopeSchemaTag>;
+
+struct ModelProviderGetStatusRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderGetStatusRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderGetStatusRequest = detail::SchemaValue<ModelProviderGetStatusRequestSchemaTag>;
+
+struct ModelProviderInstanceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderInstance";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderInstance = detail::SchemaValue<ModelProviderInstanceSchemaTag>;
+
+struct ModelProviderInstanceReferenceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderInstanceReference";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderInstanceReference = detail::SchemaValue<ModelProviderInstanceReferenceSchemaTag>;
+
+struct ModelProviderKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"copilot", "loki"};
+};
+using ModelProviderKind = detail::SchemaValue<ModelProviderKindSchemaTag>;
+
+struct ModelProviderModelsListRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderModelsListRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderModelsListRequest = detail::SchemaValue<ModelProviderModelsListRequestSchemaTag>;
+
+struct ModelProviderOperationOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderOperationOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderOperationOutcome = detail::SchemaValue<ModelProviderOperationOutcomeSchemaTag>;
+
+struct ModelProviderOperationOutcomeCodeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderOperationOutcomeCode";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"success", "absent", "unreachable", "failed"};
+};
+using ModelProviderOperationOutcomeCode = detail::SchemaValue<ModelProviderOperationOutcomeCodeSchemaTag>;
+
+struct ModelProviderPrepareConfigurationRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderPrepareConfigurationRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderPrepareConfigurationRequest = detail::SchemaValue<ModelProviderPrepareConfigurationRequestSchemaTag>;
+
+struct ModelProviderProvenanceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderProvenance";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderProvenance = detail::SchemaValue<ModelProviderProvenanceSchemaTag>;
+
+struct ModelProviderProvenanceSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderProvenanceSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"builtIn", "configured", "extension", "custom"};
+};
+using ModelProviderProvenanceSource = detail::SchemaValue<ModelProviderProvenanceSourceSchemaTag>;
+
+struct ModelProviderRefSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderRef";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderRef = detail::SchemaValue<ModelProviderRefSchemaTag>;
+
+struct ModelProviderStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderStatus = detail::SchemaValue<ModelProviderStatusSchemaTag>;
+
+struct ModelProviderWarningSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelProviderWarning";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelProviderWarning = detail::SchemaValue<ModelProviderWarningSchemaTag>;
 
 struct ModelSetAllowedModelsRequestSchemaTag
 {
@@ -8476,7 +13184,7 @@ struct ModelSwitchToRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 15;
+    inline static constexpr std::size_t property_count = 16;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8489,12 +13197,38 @@ struct ModelSwitchToResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t property_count = 10;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ModelSwitchToResult = detail::SchemaValue<ModelSwitchToResultSchemaTag>;
+
+struct ModelTokenPriceUnitSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelTokenPriceUnit";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelTokenPriceUnit = detail::SchemaValue<ModelTokenPriceUnitSchemaTag>;
+
+struct ModelTokenPriceUnitListSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ModelTokenPriceUnitList";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ModelTokenPriceUnitList = detail::SchemaValue<ModelTokenPriceUnitListSchemaTag>;
 
 struct ModelWarningTextSchemaTag
 {
@@ -8593,7 +13327,7 @@ struct NamedProviderConfigSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t property_count = 11;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8730,13 +13464,39 @@ struct OptionsUpdateToolFilterPrecedenceSchemaTag
 };
 using OptionsUpdateToolFilterPrecedence = detail::SchemaValue<OptionsUpdateToolFilterPrecedenceSchemaTag>;
 
+struct PendingExternalToolRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PendingExternalToolRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PendingExternalToolRequest = detail::SchemaValue<PendingExternalToolRequestSchemaTag>;
+
+struct PendingExternalToolRequestListSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PendingExternalToolRequestList";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PendingExternalToolRequestList = detail::SchemaValue<PendingExternalToolRequestListSchemaTag>;
+
 struct PendingPermissionRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PendingPermissionRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8764,7 +13524,7 @@ struct PermissionDecisionSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 15;
+    inline static constexpr std::size_t union_variant_count = 16;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionDecision = detail::SchemaValue<PermissionDecisionSchemaTag>;
@@ -8860,19 +13620,6 @@ struct PermissionDecisionApproveForLocationApprovalExtensionPermissionAccessSche
 };
 using PermissionDecisionApproveForLocationApprovalExtensionPermissionAccess = detail::SchemaValue<PermissionDecisionApproveForLocationApprovalExtensionPermissionAccessSchemaTag>;
 
-struct PermissionDecisionApproveForLocationApprovalFactorySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForLocationApprovalFactory";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using PermissionDecisionApproveForLocationApprovalFactory = detail::SchemaValue<PermissionDecisionApproveForLocationApprovalFactorySchemaTag>;
-
 struct PermissionDecisionApproveForLocationApprovalMcpSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForLocationApprovalMcp";
@@ -8924,6 +13671,19 @@ struct PermissionDecisionApproveForLocationApprovalReadSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionDecisionApproveForLocationApprovalRead = detail::SchemaValue<PermissionDecisionApproveForLocationApprovalReadSchemaTag>;
+
+struct PermissionDecisionApproveForLocationApprovalWorkflowSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForLocationApprovalWorkflow";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionDecisionApproveForLocationApprovalWorkflow = detail::SchemaValue<PermissionDecisionApproveForLocationApprovalWorkflowSchemaTag>;
 
 struct PermissionDecisionApproveForLocationApprovalWriteSchemaTag
 {
@@ -9029,19 +13789,6 @@ struct PermissionDecisionApproveForSessionApprovalExtensionPermissionAccessSchem
 };
 using PermissionDecisionApproveForSessionApprovalExtensionPermissionAccess = detail::SchemaValue<PermissionDecisionApproveForSessionApprovalExtensionPermissionAccessSchemaTag>;
 
-struct PermissionDecisionApproveForSessionApprovalFactorySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForSessionApprovalFactory";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using PermissionDecisionApproveForSessionApprovalFactory = detail::SchemaValue<PermissionDecisionApproveForSessionApprovalFactorySchemaTag>;
-
 struct PermissionDecisionApproveForSessionApprovalMcpSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForSessionApprovalMcp";
@@ -9094,6 +13841,19 @@ struct PermissionDecisionApproveForSessionApprovalReadSchemaTag
 };
 using PermissionDecisionApproveForSessionApprovalRead = detail::SchemaValue<PermissionDecisionApproveForSessionApprovalReadSchemaTag>;
 
+struct PermissionDecisionApproveForSessionApprovalWorkflowSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForSessionApprovalWorkflow";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionDecisionApproveForSessionApprovalWorkflow = detail::SchemaValue<PermissionDecisionApproveForSessionApprovalWorkflowSchemaTag>;
+
 struct PermissionDecisionApproveForSessionApprovalWriteSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PermissionDecisionApproveForSessionApprovalWrite";
@@ -9132,6 +13892,19 @@ struct PermissionDecisionApprovePermanentlySchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionDecisionApprovePermanently = detail::SchemaValue<PermissionDecisionApprovePermanentlySchemaTag>;
+
+struct PermissionDecisionApproveReadOnlyForSessionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionDecisionApproveReadOnlyForSession";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionDecisionApproveReadOnlyForSession = detail::SchemaValue<PermissionDecisionApproveReadOnlyForSessionSchemaTag>;
 
 struct PermissionDecisionApprovedSchemaTag
 {
@@ -9191,7 +13964,7 @@ struct PermissionDecisionContextSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9441,7 +14214,7 @@ struct PermissionModeSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 5> known_string_values{"cli_flag", "slash_command", "autopilot_confirmation", "user_setting", "rpc"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"cli_flag", "slash_command", "autopilot_confirmation", "user_setting", "organization_targeting", "rpc"};
 };
 using PermissionModeSource = detail::SchemaValue<PermissionModeSourceSchemaTag>;
 
@@ -9501,9 +14274,9 @@ struct PermissionPathsListSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PermissionPathsList";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9561,6 +14334,110 @@ struct PermissionPromptShownNotificationSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionPromptShownNotification = detail::SchemaValue<PermissionPromptShownNotificationSchemaTag>;
+
+struct PermissionRecoveryAttemptSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryAttempt";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionRecoveryAttempt = detail::SchemaValue<PermissionRecoveryAttemptSchemaTag>;
+
+struct PermissionRecoveryAttemptDispositionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryAttemptDisposition";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"deferred", "prompted", "approved", "denied", "blocked", "succeeded"};
+};
+using PermissionRecoveryAttemptDisposition = detail::SchemaValue<PermissionRecoveryAttemptDispositionSchemaTag>;
+
+struct PermissionRecoveryAttemptReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryAttemptReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"permission_required", "repeated_attempt", "attempts_exhausted", "permission_approved", "permission_denied", "responder_unavailable", "equivalent_alternative_succeeded"};
+};
+using PermissionRecoveryAttemptReason = detail::SchemaValue<PermissionRecoveryAttemptReasonSchemaTag>;
+
+struct PermissionRecoveryAttemptRelationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryAttemptRelation";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"initial", "retry", "alternative"};
+};
+using PermissionRecoveryAttemptRelation = detail::SchemaValue<PermissionRecoveryAttemptRelationSchemaTag>;
+
+struct PermissionRecoveryDataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryData";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionRecoveryData = detail::SchemaValue<PermissionRecoveryDataSchemaTag>;
+
+struct PermissionRecoveryOnBlockedSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryOnBlocked";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"ask", "fail"};
+};
+using PermissionRecoveryOnBlocked = detail::SchemaValue<PermissionRecoveryOnBlockedSchemaTag>;
+
+struct PermissionRecoveryReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"permission_required", "repeated_attempt", "attempts_exhausted", "permission_approved", "permission_denied", "responder_unavailable", "equivalent_alternative_succeeded"};
+};
+using PermissionRecoveryReason = detail::SchemaValue<PermissionRecoveryReasonSchemaTag>;
+
+struct PermissionRecoveryStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRecoveryStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"recovering", "awaiting_approval", "resolved", "blocked"};
+};
+using PermissionRecoveryStatus = detail::SchemaValue<PermissionRecoveryStatusSchemaTag>;
 
 struct PermissionRequestResultSchemaTag
 {
@@ -9698,7 +14575,7 @@ struct PermissionsConfigureParamsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t property_count = 7;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9717,6 +14594,32 @@ struct PermissionsConfigureResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionsConfigureResult = detail::SchemaValue<PermissionsConfigureResultSchemaTag>;
+
+struct PermissionsEvaluateManagedPolicyParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionsEvaluateManagedPolicyParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionsEvaluateManagedPolicyParams = detail::SchemaValue<PermissionsEvaluateManagedPolicyParamsSchemaTag>;
+
+struct PermissionsEvaluateManagedPolicyResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionsEvaluateManagedPolicyResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionsEvaluateManagedPolicyResult = detail::SchemaValue<PermissionsEvaluateManagedPolicyResultSchemaTag>;
 
 struct PermissionsFolderTrustAddTrustedResultSchemaTag
 {
@@ -9835,19 +14738,6 @@ struct PermissionsLocationsAddToolApprovalDetailsExtensionPermissionAccessSchema
 };
 using PermissionsLocationsAddToolApprovalDetailsExtensionPermissionAccess = detail::SchemaValue<PermissionsLocationsAddToolApprovalDetailsExtensionPermissionAccessSchemaTag>;
 
-struct PermissionsLocationsAddToolApprovalDetailsFactorySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "PermissionsLocationsAddToolApprovalDetailsFactory";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using PermissionsLocationsAddToolApprovalDetailsFactory = detail::SchemaValue<PermissionsLocationsAddToolApprovalDetailsFactorySchemaTag>;
-
 struct PermissionsLocationsAddToolApprovalDetailsMcpSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PermissionsLocationsAddToolApprovalDetailsMcp";
@@ -9899,6 +14789,19 @@ struct PermissionsLocationsAddToolApprovalDetailsReadSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionsLocationsAddToolApprovalDetailsRead = detail::SchemaValue<PermissionsLocationsAddToolApprovalDetailsReadSchemaTag>;
+
+struct PermissionsLocationsAddToolApprovalDetailsWorkflowSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionsLocationsAddToolApprovalDetailsWorkflow";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionsLocationsAddToolApprovalDetailsWorkflow = detail::SchemaValue<PermissionsLocationsAddToolApprovalDetailsWorkflowSchemaTag>;
 
 struct PermissionsLocationsAddToolApprovalDetailsWriteSchemaTag
 {
@@ -10160,6 +15063,32 @@ struct PermissionsUrlsSetUnrestrictedModeResultSchemaTag
 };
 using PermissionsUrlsSetUnrestrictedModeResult = detail::SchemaValue<PermissionsUrlsSetUnrestrictedModeResultSchemaTag>;
 
+struct PersistenceWriteRawJsonLockedRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PersistenceWriteRawJsonLockedRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PersistenceWriteRawJsonLockedRequest = detail::SchemaValue<PersistenceWriteRawJsonLockedRequestSchemaTag>;
+
+struct PersistenceWriteRawJsonLockedResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PersistenceWriteRawJsonLockedResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PersistenceWriteRawJsonLockedResult = detail::SchemaValue<PersistenceWriteRawJsonLockedResultSchemaTag>;
+
 struct PingRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PingRequest";
@@ -10270,12 +15199,38 @@ struct PluginSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t property_count = 10;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using Plugin = detail::SchemaValue<PluginSchemaTag>;
+
+struct PluginApplyInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginApplyInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginApplyInstallRequest = detail::SchemaValue<PluginApplyInstallRequestSchemaTag>;
+
+struct PluginInstallPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallPlan = detail::SchemaValue<PluginInstallPlanSchemaTag>;
 
 struct PluginInstallResultSchemaTag
 {
@@ -10303,6 +15258,162 @@ struct PluginInstallStagingModeSchemaTag
 };
 using PluginInstallStagingMode = detail::SchemaValue<PluginInstallStagingModeSchemaTag>;
 
+struct PluginInstallationFailureReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationFailureReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 31> known_string_values{"feature-disabled", "invalid-request", "confirmation-unavailable", "confirmation-invalid", "policy-context-unavailable", "policy-changed", "policy-blocked", "plan-expired", "plan-replayed", "foreign-runtime", "wrong-kind", "search-mismatch", "expired", "invalid-candidate", "descriptor-unavailable", "descriptor-not-found", "descriptor-withdrawn", "descriptor-invalid", "digest-mismatch", "unsupported-resource", "entrypoint-unavailable", "invalid-plugin", "review-too-large", "payload-unavailable", "payload-mismatch", "source-rate-limited", "no-credential", "credential-rejected", "busy", "already-installed", "write-failed"};
+};
+using PluginInstallationFailureReason = detail::SchemaValue<PluginInstallationFailureReasonSchemaTag>;
+
+struct PluginInstallationFileReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationFileReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationFileReview = detail::SchemaValue<PluginInstallationFileReviewSchemaTag>;
+
+struct PluginInstallationLocationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationLocation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationLocation = detail::SchemaValue<PluginInstallationLocationSchemaTag>;
+
+struct PluginInstallationManagementOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationManagementOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationManagementOutcome = detail::SchemaValue<PluginInstallationManagementOutcomeSchemaTag>;
+
+struct PluginInstallationManagementResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationManagementResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationManagementResult = detail::SchemaValue<PluginInstallationManagementResultSchemaTag>;
+
+struct PluginInstallationMcpServerReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationMcpServerReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationMcpServerReview = detail::SchemaValue<PluginInstallationMcpServerReviewSchemaTag>;
+
+struct PluginInstallationMcpTransportSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationMcpTransport";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"remote", "local"};
+};
+using PluginInstallationMcpTransport = detail::SchemaValue<PluginInstallationMcpTransportSchemaTag>;
+
+struct PluginInstallationOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationOutcome = detail::SchemaValue<PluginInstallationOutcomeSchemaTag>;
+
+struct PluginInstallationResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationResult = detail::SchemaValue<PluginInstallationResultSchemaTag>;
+
+struct PluginInstallationReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 1;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationReview = detail::SchemaValue<PluginInstallationReviewSchemaTag>;
+
+struct PluginInstallationSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 8;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationSource = detail::SchemaValue<PluginInstallationSourceSchemaTag>;
+
+struct PluginInstallationSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginInstallationSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginInstallationSummary = detail::SchemaValue<PluginInstallationSummarySchemaTag>;
+
 struct PluginListSchemaTag
 {
     inline static constexpr std::string_view schema_name = "PluginList";
@@ -10328,6 +15439,19 @@ struct PluginListResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PluginListResult = detail::SchemaValue<PluginListResultSchemaTag>;
+
+struct PluginPlanInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PluginPlanInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PluginPlanInstallRequest = detail::SchemaValue<PluginPlanInstallRequestSchemaTag>;
 
 struct PluginUpdateAllEntrySchemaTag
 {
@@ -10556,12 +15680,38 @@ struct ProtocolExternalToolDefinitionSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t property_count = 10;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProtocolExternalToolDefinition = detail::SchemaValue<ProtocolExternalToolDefinitionSchemaTag>;
+
+struct ProtocolExternalToolNamespaceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolExternalToolNamespace";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolExternalToolNamespace = detail::SchemaValue<ProtocolExternalToolNamespaceSchemaTag>;
+
+struct ProtocolImageGenerationOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProtocolImageGenerationOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProtocolImageGenerationOptions = detail::SchemaValue<ProtocolImageGenerationOptionsSchemaTag>;
 
 struct ProtocolMarkerSectionOverrideSchemaTag
 {
@@ -10712,7 +15862,7 @@ struct ProviderConfigSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 16;
+    inline static constexpr std::size_t property_count = 18;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -10731,6 +15881,19 @@ struct ProviderConfigAzureSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProviderConfigAzure = detail::SchemaValue<ProviderConfigAzureSchemaTag>;
+
+struct ProviderConfigModelProviderSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderConfigModelProvider";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"openai", "anthropic", "azure_openai", "ollama", "lm_studio", "foundry_local", "llama_cpp"};
+};
+using ProviderConfigModelProvider = detail::SchemaValue<ProviderConfigModelProviderSchemaTag>;
 
 struct ProviderConfigTransportSchemaTag
 {
@@ -10770,6 +15933,19 @@ struct ProviderConfigWireApiSchemaTag
     inline static constexpr std::array<std::string_view, 2> known_string_values{"completions", "responses"};
 };
 using ProviderConfigWireApi = detail::SchemaValue<ProviderConfigWireApiSchemaTag>;
+
+struct ProviderDescriptorSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderDescriptor";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderDescriptor = detail::SchemaValue<ProviderDescriptorSchemaTag>;
 
 struct ProviderEndpointSchemaTag
 {
@@ -10842,12 +16018,155 @@ struct ProviderModelConfigSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t property_count = 11;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProviderModelConfig = detail::SchemaValue<ProviderModelConfigSchemaTag>;
+
+struct ProviderMonthlyUsageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderMonthlyUsage";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderMonthlyUsage = detail::SchemaValue<ProviderMonthlyUsageSchemaTag>;
+
+struct ProviderMonthlyUsageScopeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderMonthlyUsageScope";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"user", "unknown"};
+};
+using ProviderMonthlyUsageScope = detail::SchemaValue<ProviderMonthlyUsageScopeSchemaTag>;
+
+struct ProviderMonthlyUsageStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderMonthlyUsageState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"available", "no_policy", "unavailable", "unknown"};
+};
+using ProviderMonthlyUsageState = detail::SchemaValue<ProviderMonthlyUsageStateSchemaTag>;
+
+struct ProviderQuotaAccessStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaAccessState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"allowed", "denied", "not_required", "unknown", "unavailable"};
+};
+using ProviderQuotaAccessState = detail::SchemaValue<ProviderQuotaAccessStateSchemaTag>;
+
+struct ProviderQuotaAcquisitionStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaAcquisitionStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"succeeded", "unavailable", "failed"};
+};
+using ProviderQuotaAcquisitionStatus = detail::SchemaValue<ProviderQuotaAcquisitionStatusSchemaTag>;
+
+struct ProviderQuotaBudgetMetadataSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaBudgetMetadata";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 11;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderQuotaBudgetMetadata = detail::SchemaValue<ProviderQuotaBudgetMetadataSchemaTag>;
+
+struct ProviderQuotaCapacityStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaCapacityState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"available", "exhausted", "unlimited", "not_required", "not_applicable", "unknown", "unavailable"};
+};
+using ProviderQuotaCapacityState = detail::SchemaValue<ProviderQuotaCapacityStateSchemaTag>;
+
+struct ProviderQuotaObservationKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaObservationKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"account_snapshot", "admission_state"};
+};
+using ProviderQuotaObservationKind = detail::SchemaValue<ProviderQuotaObservationKindSchemaTag>;
+
+struct ProviderQuotaQuantityKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaQuantityKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"authoritative_budget", "advisory_balance", "none"};
+};
+using ProviderQuotaQuantityKind = detail::SchemaValue<ProviderQuotaQuantityKindSchemaTag>;
+
+struct ProviderQuotaStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaState";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 20;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderQuotaState = detail::SchemaValue<ProviderQuotaStateSchemaTag>;
+
+struct ProviderQuotaUnitSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderQuotaUnit";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"ai_credits", "requests", "tokens", "unknown"};
+};
+using ProviderQuotaUnit = detail::SchemaValue<ProviderQuotaUnitSchemaTag>;
 
 struct ProviderSessionTokenSchemaTag
 {
@@ -10861,6 +16180,32 @@ struct ProviderSessionTokenSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProviderSessionToken = detail::SchemaValue<ProviderSessionTokenSchemaTag>;
+
+struct ProviderSyncRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderSyncRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderSyncRequest = detail::SchemaValue<ProviderSyncRequestSchemaTag>;
+
+struct ProviderSyncResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderSyncResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderSyncResult = detail::SchemaValue<ProviderSyncResultSchemaTag>;
 
 struct ProviderTokenAcquireRequestSchemaTag
 {
@@ -10887,6 +16232,32 @@ struct ProviderTokenAcquireResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ProviderTokenAcquireResult = detail::SchemaValue<ProviderTokenAcquireResultSchemaTag>;
+
+struct ProviderWithdrawRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderWithdrawRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderWithdrawRequest = detail::SchemaValue<ProviderWithdrawRequestSchemaTag>;
+
+struct ProviderWithdrawResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ProviderWithdrawResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ProviderWithdrawResult = detail::SchemaValue<ProviderWithdrawResultSchemaTag>;
 
 struct PushAttachmentSchemaTag
 {
@@ -11187,6 +16558,19 @@ struct PushGitHubRepoRefSchemaTag
 };
 using PushGitHubRepoRef = detail::SchemaValue<PushGitHubRepoRefSchemaTag>;
 
+struct QueueAppendSteeringRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "QueueAppendSteeringRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using QueueAppendSteeringRequest = detail::SchemaValue<QueueAppendSteeringRequestSchemaTag>;
+
 struct QueueBeginDeferredIdleDrainRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "QueueBeginDeferredIdleDrainRequest";
@@ -11388,7 +16772,7 @@ struct QueuePendingItemsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 4;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -11414,7 +16798,7 @@ struct QueuePendingItemsResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -11505,7 +16889,7 @@ struct QueueSnapshotResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -11537,6 +16921,32 @@ struct QueueUpdateTextResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using QueueUpdateTextResult = detail::SchemaValue<QueueUpdateTextResultSchemaTag>;
+
+struct QueueWithdrawMessageRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "QueueWithdrawMessageRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using QueueWithdrawMessageRequest = detail::SchemaValue<QueueWithdrawMessageRequestSchemaTag>;
+
+struct QueueWithdrawMessageResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "QueueWithdrawMessageResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using QueueWithdrawMessageResult = detail::SchemaValue<QueueWithdrawMessageResultSchemaTag>;
 
 struct QueuedCommandHandledSchemaTag
 {
@@ -11576,6 +16986,32 @@ struct QueuedCommandResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using QueuedCommandResult = detail::SchemaValue<QueuedCommandResultSchemaTag>;
+
+struct QuotaTakeWarningsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "QuotaTakeWarningsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Array;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using QuotaTakeWarningsResult = detail::SchemaValue<QuotaTakeWarningsResultSchemaTag>;
+
+struct QuotaWarningProjectionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "QuotaWarningProjection";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using QuotaWarningProjection = detail::SchemaValue<QuotaWarningProjectionSchemaTag>;
 
 struct ReasoningSummarySchemaTag
 {
@@ -11638,7 +17074,7 @@ struct RemediationActionSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 5> known_string_values{"sign_in", "switch_account", "show_account", "review_sandbox_policy", "allow_sandbox_outbound"};
+    inline static constexpr std::array<std::string_view, 6> known_string_values{"sign_in", "switch_account", "show_account", "review_sandbox_policy", "allow_sandbox_outbound", "rewind_conversation"};
 };
 using RemediationAction = detail::SchemaValue<RemediationActionSchemaTag>;
 
@@ -11915,6 +17351,84 @@ struct RemoteSessionRepositorySchemaTag
 };
 using RemoteSessionRepository = detail::SchemaValue<RemoteSessionRepositorySchemaTag>;
 
+struct RepoSettingsEditRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsEditRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using RepoSettingsEditRequest = detail::SchemaValue<RepoSettingsEditRequestSchemaTag>;
+
+struct RepoSettingsEditScopeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsEditScope";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"repo", "local"};
+};
+using RepoSettingsEditScope = detail::SchemaValue<RepoSettingsEditScopeSchemaTag>;
+
+struct RepoSettingsReadRawRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsReadRawRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using RepoSettingsReadRawRequest = detail::SchemaValue<RepoSettingsReadRawRequestSchemaTag>;
+
+struct RepoSettingsReadRawResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsReadRawResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using RepoSettingsReadRawResult = detail::SchemaValue<RepoSettingsReadRawResultSchemaTag>;
+
+struct RepoSettingsWriteAllRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsWriteAllRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using RepoSettingsWriteAllRequest = detail::SchemaValue<RepoSettingsWriteAllRequestSchemaTag>;
+
+struct RepoSettingsWriteKeyRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "RepoSettingsWriteKeyRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using RepoSettingsWriteKeyRequest = detail::SchemaValue<RepoSettingsWriteKeyRequestSchemaTag>;
+
 struct ResponseFormatSchemaTag
 {
     inline static constexpr std::string_view schema_name = "ResponseFormat";
@@ -11928,18 +17442,18 @@ struct ResponseFormatSchemaTag
 };
 using ResponseFormat = detail::SchemaValue<ResponseFormatSchemaTag>;
 
-struct RunOptionsSchemaTag
+struct SandboxApplyDefaultsRequestSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "RunOptions";
+    inline static constexpr std::string_view schema_name = "SandboxApplyDefaultsRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
-    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using RunOptions = detail::SchemaValue<RunOptionsSchemaTag>;
+using SandboxApplyDefaultsRequest = detail::SchemaValue<SandboxApplyDefaultsRequestSchemaTag>;
 
 struct SandboxConfigSchemaTag
 {
@@ -11947,7 +17461,7 @@ struct SandboxConfigSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t property_count = 11;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -12071,6 +17585,45 @@ struct SandboxConfigUserPolicySeatbeltSchemaTag
 };
 using SandboxConfigUserPolicySeatbelt = detail::SchemaValue<SandboxConfigUserPolicySeatbeltSchemaTag>;
 
+struct SandboxCredentialSuggestionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxCredentialSuggestion";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxCredentialSuggestion = detail::SchemaValue<SandboxCredentialSuggestionSchemaTag>;
+
+struct SandboxCredentialSuggestionsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxCredentialSuggestionsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxCredentialSuggestionsResult = detail::SchemaValue<SandboxCredentialSuggestionsResultSchemaTag>;
+
+struct SandboxCredentialsConfigSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxCredentialsConfig";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxCredentialsConfig = detail::SchemaValue<SandboxCredentialsConfigSchemaTag>;
+
 struct SandboxDisableForSessionRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SandboxDisableForSessionRequest";
@@ -12097,6 +17650,58 @@ struct SandboxDisableForSessionResultSchemaTag
 };
 using SandboxDisableForSessionResult = detail::SchemaValue<SandboxDisableForSessionResultSchemaTag>;
 
+struct SandboxDocsUrlResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxDocsUrlResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxDocsUrlResult = detail::SchemaValue<SandboxDocsUrlResultSchemaTag>;
+
+struct SandboxEffectiveForOptionalParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxEffectiveForOptionalParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxEffectiveForOptionalParams = detail::SchemaValue<SandboxEffectiveForOptionalParamsSchemaTag>;
+
+struct SandboxEffectiveForOptionalResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxEffectiveForOptionalResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxEffectiveForOptionalResult = detail::SchemaValue<SandboxEffectiveForOptionalResultSchemaTag>;
+
+struct SandboxEnforcementCommandAllowedParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxEnforcementCommandAllowedParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxEnforcementCommandAllowedParams = detail::SchemaValue<SandboxEnforcementCommandAllowedParamsSchemaTag>;
+
 struct SandboxEnforcementStatusSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SandboxEnforcementStatus";
@@ -12110,6 +17715,279 @@ struct SandboxEnforcementStatusSchemaTag
 };
 using SandboxEnforcementStatus = detail::SchemaValue<SandboxEnforcementStatusSchemaTag>;
 
+struct SandboxFilterPickerCandidatesParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxFilterPickerCandidatesParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxFilterPickerCandidatesParams = detail::SchemaValue<SandboxFilterPickerCandidatesParamsSchemaTag>;
+
+struct SandboxFilterPickerCandidatesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxFilterPickerCandidatesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxFilterPickerCandidatesResult = detail::SchemaValue<SandboxFilterPickerCandidatesResultSchemaTag>;
+
+struct SandboxGrantPathForRequestRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxGrantPathForRequestRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxGrantPathForRequestRequest = detail::SchemaValue<SandboxGrantPathForRequestRequestSchemaTag>;
+
+struct SandboxGrantPathForRequestResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxGrantPathForRequestResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxGrantPathForRequestResult = detail::SchemaValue<SandboxGrantPathForRequestResultSchemaTag>;
+
+struct SandboxHostCapabilitySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxHostCapability";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxHostCapability = detail::SchemaValue<SandboxHostCapabilitySchemaTag>;
+
+struct SandboxHostCapabilityNameSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxHostCapabilityName";
+    inline static constexpr SchemaKind kind = SchemaKind::String;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxHostCapabilityName = detail::SchemaValue<SandboxHostCapabilityNameSchemaTag>;
+
+struct SandboxHostSupportSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxHostSupport";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxHostSupport = detail::SchemaValue<SandboxHostSupportSchemaTag>;
+
+struct SandboxMaskedEnvVarSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxMaskedEnvVar";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxMaskedEnvVar = detail::SchemaValue<SandboxMaskedEnvVarSchemaTag>;
+
+struct SandboxPickerCandidateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxPickerCandidate";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxPickerCandidate = detail::SchemaValue<SandboxPickerCandidateSchemaTag>;
+
+struct SandboxPreparePickerPolicyParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxPreparePickerPolicyParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxPreparePickerPolicyParams = detail::SchemaValue<SandboxPreparePickerPolicyParamsSchemaTag>;
+
+struct SandboxPreparePickerPolicyResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxPreparePickerPolicyResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxPreparePickerPolicyResult = detail::SchemaValue<SandboxPreparePickerPolicyResultSchemaTag>;
+
+struct SandboxProxyCaCreateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxyCaCreateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxyCaCreateResult = detail::SchemaValue<SandboxProxyCaCreateResultSchemaTag>;
+
+struct SandboxProxyCaRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxyCaRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxyCaRequest = detail::SchemaValue<SandboxProxyCaRequestSchemaTag>;
+
+struct SandboxProxyCaStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxyCaState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"unsupported", "notInstalled", "installed", "error"};
+};
+using SandboxProxyCaState = detail::SchemaValue<SandboxProxyCaStateSchemaTag>;
+
+struct SandboxProxyCaStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxyCaStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxyCaStatus = detail::SchemaValue<SandboxProxyCaStatusSchemaTag>;
+
+struct SandboxProxySecretGetResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxySecretGetResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxySecretGetResult = detail::SchemaValue<SandboxProxySecretGetResultSchemaTag>;
+
+struct SandboxProxySecretLocationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxySecretLocation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxySecretLocation = detail::SchemaValue<SandboxProxySecretLocationSchemaTag>;
+
+struct SandboxProxySecretSaveRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxySecretSaveRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxySecretSaveRequest = detail::SchemaValue<SandboxProxySecretSaveRequestSchemaTag>;
+
+struct SandboxProxySecretSaveResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxProxySecretSaveResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxProxySecretSaveResult = detail::SchemaValue<SandboxProxySecretSaveResultSchemaTag>;
+
+struct SandboxResolveFlooredConfigParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxResolveFlooredConfigParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxResolveFlooredConfigParams = detail::SchemaValue<SandboxResolveFlooredConfigParamsSchemaTag>;
+
+struct SandboxResolveFlooredConfigResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxResolveFlooredConfigResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxResolveFlooredConfigResult = detail::SchemaValue<SandboxResolveFlooredConfigResultSchemaTag>;
+
 struct SandboxSessionChangeSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SandboxSessionChange";
@@ -12122,6 +18000,32 @@ struct SandboxSessionChangeSchemaTag
     inline static constexpr std::array<std::string_view, 2> known_string_values{"disabled", "restored"};
 };
 using SandboxSessionChange = detail::SchemaValue<SandboxSessionChangeSchemaTag>;
+
+struct SandboxUnsupportedStartupNoticeParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxUnsupportedStartupNoticeParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxUnsupportedStartupNoticeParams = detail::SchemaValue<SandboxUnsupportedStartupNoticeParamsSchemaTag>;
+
+struct SandboxUnsupportedStartupNoticeResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SandboxUnsupportedStartupNoticeResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SandboxUnsupportedStartupNoticeResult = detail::SchemaValue<SandboxUnsupportedStartupNoticeResultSchemaTag>;
 
 struct ScheduleAddAtRequestSchemaTag
 {
@@ -12578,6 +18482,19 @@ struct SessionCompletionItemSchemaTag
 };
 using SessionCompletionItem = detail::SchemaValue<SessionCompletionItemSchemaTag>;
 
+struct SessionConnectedIdeInfoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionConnectedIdeInfo";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionConnectedIdeInfo = detail::SchemaValue<SessionConnectedIdeInfoSchemaTag>;
+
 struct SessionContextSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SessionContext";
@@ -12662,7 +18579,7 @@ struct SessionFsErrorSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -12720,6 +18637,32 @@ struct SessionFsMkdirRequestSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SessionFsMkdirRequest = detail::SchemaValue<SessionFsMkdirRequestSchemaTag>;
+
+struct SessionFsReadFileBytesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionFsReadFileBytesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionFsReadFileBytesRequest = detail::SchemaValue<SessionFsReadFileBytesRequestSchemaTag>;
+
+struct SessionFsReadFileBytesResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionFsReadFileBytesResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionFsReadFileBytesResult = detail::SchemaValue<SessionFsReadFileBytesResultSchemaTag>;
 
 struct SessionFsReadFileRequestSchemaTag
 {
@@ -12857,7 +18800,7 @@ struct SessionFsSetProviderCapabilitiesSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t property_count = 2;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13045,6 +18988,19 @@ struct SessionFsStatResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SessionFsStatResult = detail::SchemaValue<SessionFsStatResultSchemaTag>;
+
+struct SessionFsWriteFileBytesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionFsWriteFileBytesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionFsWriteFileBytesRequest = detail::SchemaValue<SessionFsWriteFileBytesRequestSchemaTag>;
 
 struct SessionFsWriteFileRequestSchemaTag
 {
@@ -13325,7 +19281,7 @@ struct SessionManagedPermissionsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13345,13 +19301,26 @@ struct SessionManagedSettingsSchemaTag
 };
 using SessionManagedSettings = detail::SchemaValue<SessionManagedSettingsSchemaTag>;
 
+struct SessionMcpSetConnectedIdeInfoParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionMcpSetConnectedIdeInfoParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionMcpSetConnectedIdeInfoParams = detail::SchemaValue<SessionMcpSetConnectedIdeInfoParamsSchemaTag>;
+
 struct SessionMetadataSnapshotSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SessionMetadataSnapshot";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 15;
+    inline static constexpr std::size_t property_count = 16;
     inline static constexpr std::size_t required_property_count = 10;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13377,7 +19346,7 @@ struct SessionModelListSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 5;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13403,7 +19372,7 @@ struct SessionOpenOptionsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 74;
+    inline static constexpr std::size_t property_count = 83;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13514,6 +19483,71 @@ struct SessionOpenResultSchemaTag
 };
 using SessionOpenResult = detail::SchemaValue<SessionOpenResultSchemaTag>;
 
+struct SessionPluginsDisableRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionPluginsDisableRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionPluginsDisableRequest = detail::SchemaValue<SessionPluginsDisableRequestSchemaTag>;
+
+struct SessionPluginsEnableRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionPluginsEnableRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionPluginsEnableRequest = detail::SchemaValue<SessionPluginsEnableRequestSchemaTag>;
+
+struct SessionPluginsInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionPluginsInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionPluginsInstallRequest = detail::SchemaValue<SessionPluginsInstallRequestSchemaTag>;
+
+struct SessionPluginsRetryManagedRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionPluginsRetryManagedRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionPluginsRetryManagedRequest = detail::SchemaValue<SessionPluginsRetryManagedRequestSchemaTag>;
+
+struct SessionPluginsRetryManagedResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionPluginsRetryManagedResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionPluginsRetryManagedResult = detail::SchemaValue<SessionPluginsRetryManagedResultSchemaTag>;
+
 struct SessionPruneResultSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SessionPruneResult";
@@ -13526,6 +19560,58 @@ struct SessionPruneResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SessionPruneResult = detail::SchemaValue<SessionPruneResultSchemaTag>;
+
+struct SessionQuotaDelegateWarningSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionQuotaDelegateWarning";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionQuotaDelegateWarning = detail::SchemaValue<SessionQuotaDelegateWarningSchemaTag>;
+
+struct SessionQuotaPlanTierSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionQuotaPlanTier";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 8> known_string_values{"free", "edu", "pro", "pro_plus", "business", "enterprise", "max", "unknown"};
+};
+using SessionQuotaPlanTier = detail::SchemaValue<SessionQuotaPlanTierSchemaTag>;
+
+struct SessionQuotaProjectionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionQuotaProjection";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 13;
+    inline static constexpr std::size_t required_property_count = 10;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionQuotaProjection = detail::SchemaValue<SessionQuotaProjectionSchemaTag>;
+
+struct SessionQuotaSnapshotSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionQuotaSnapshot";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 12;
+    inline static constexpr std::size_t required_property_count = 7;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionQuotaSnapshot = detail::SchemaValue<SessionQuotaSnapshotSchemaTag>;
 
 struct SessionSetCredentialsParamsSchemaTag
 {
@@ -13728,7 +19814,7 @@ struct SessionUpdateOptionsParamsSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 59;
+    inline static constexpr std::size_t property_count = 65;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -13786,6 +19872,19 @@ struct SessionWorkingDirectoryContextHostTypeSchemaTag
     inline static constexpr std::array<std::string_view, 2> known_string_values{"github", "ado"};
 };
 using SessionWorkingDirectoryContextHostType = detail::SchemaValue<SessionWorkingDirectoryContextHostTypeSchemaTag>;
+
+struct SessionWorkingDirectoryContextWithClientSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionWorkingDirectoryContextWithClient";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionWorkingDirectoryContextWithClient = detail::SchemaValue<SessionWorkingDirectoryContextWithClientSchemaTag>;
 
 struct SessionsBulkDeleteRequestSchemaTag
 {
@@ -13864,6 +19963,32 @@ struct SessionsCloseResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SessionsCloseResult = detail::SchemaValue<SessionsCloseResultSchemaTag>;
+
+struct SessionsCreateWorkspaceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsCreateWorkspaceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsCreateWorkspaceRequest = detail::SchemaValue<SessionsCreateWorkspaceRequestSchemaTag>;
+
+struct SessionsCreateWorkspaceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsCreateWorkspaceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsCreateWorkspaceResult = detail::SchemaValue<SessionsCreateWorkspaceResultSchemaTag>;
 
 struct SessionsDeleteRequestSchemaTag
 {
@@ -14176,6 +20301,32 @@ struct SessionsLoadDeferredRepoHooksRequestSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SessionsLoadDeferredRepoHooksRequest = detail::SchemaValue<SessionsLoadDeferredRepoHooksRequestSchemaTag>;
+
+struct SessionsLoadWorkspaceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsLoadWorkspaceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsLoadWorkspaceRequest = detail::SchemaValue<SessionsLoadWorkspaceRequestSchemaTag>;
+
+struct SessionsLoadWorkspaceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsLoadWorkspaceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsLoadWorkspaceResult = detail::SchemaValue<SessionsLoadWorkspaceResultSchemaTag>;
 
 struct SessionsOpenAttachSchemaTag
 {
@@ -14515,6 +20666,32 @@ struct SessionsTransferRemoteControlRequestSchemaTag
 };
 using SessionsTransferRemoteControlRequest = detail::SchemaValue<SessionsTransferRemoteControlRequestSchemaTag>;
 
+struct SessionsUpdateWorkspaceFieldsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsUpdateWorkspaceFieldsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsUpdateWorkspaceFieldsRequest = detail::SchemaValue<SessionsUpdateWorkspaceFieldsRequestSchemaTag>;
+
+struct SessionsUpdateWorkspaceFieldsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SessionsUpdateWorkspaceFieldsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SessionsUpdateWorkspaceFieldsResult = detail::SchemaValue<SessionsUpdateWorkspaceFieldsResultSchemaTag>;
+
 struct SettableAuthInfoSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SettableAuthInfo";
@@ -14523,7 +20700,7 @@ struct SettableAuthInfoSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 7;
+    inline static constexpr std::size_t union_variant_count = 8;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SettableAuthInfo = detail::SchemaValue<SettableAuthInfoSchemaTag>;
@@ -14540,6 +20717,45 @@ struct SettableTokenAuthInfoSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using SettableTokenAuthInfo = detail::SchemaValue<SettableTokenAuthInfoSchemaTag>;
+
+struct SettingsEditOperationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SettingsEditOperation";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"set", "add-item", "remove-item", "remove"};
+};
+using SettingsEditOperation = detail::SchemaValue<SettingsEditOperationSchemaTag>;
+
+struct SettingsEditResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SettingsEditResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SettingsEditResult = detail::SchemaValue<SettingsEditResultSchemaTag>;
+
+struct SettingsEditStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SettingsEditStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"changed", "unchanged", "invalid"};
+};
+using SettingsEditStatus = detail::SchemaValue<SettingsEditStatusSchemaTag>;
 
 struct ShellCancelUserRequestedRequestSchemaTag
 {
@@ -14703,7 +20919,7 @@ struct ShutdownRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -14735,6 +20951,32 @@ struct SkillSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using Skill = detail::SchemaValue<SkillSchemaTag>;
+
+struct SkillApplyInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillApplyInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillApplyInstallRequest = detail::SchemaValue<SkillApplyInstallRequestSchemaTag>;
+
+struct SkillApplyUninstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillApplyUninstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillApplyUninstallRequest = detail::SchemaValue<SkillApplyUninstallRequestSchemaTag>;
 
 struct SkillDiscoveryPathSchemaTag
 {
@@ -14775,6 +21017,227 @@ struct SkillDiscoveryScopeSchemaTag
 };
 using SkillDiscoveryScope = detail::SchemaValue<SkillDiscoveryScopeSchemaTag>;
 
+struct SkillInstallPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallPlan = detail::SchemaValue<SkillInstallPlanSchemaTag>;
+
+struct SkillInstallationFailureReasonSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationFailureReason";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 33> known_string_values{"feature-disabled", "invalid-request", "operation-limit", "cancelled", "confirmation-unavailable", "confirmation-invalid", "policy-context-unavailable", "policy-changed", "resource-not-found", "plan-expired", "plan-replayed", "foreign-runtime", "wrong-kind", "search-mismatch", "expired", "invalid-candidate", "descriptor-unavailable", "descriptor-invalid", "entrypoint-unavailable", "invalid-skill", "payload-unavailable", "payload-mismatch", "source-rate-limited", "no-credential", "credential-rejected", "source-changed", "lifecycle-unavailable", "recovery-required", "review-too-large", "busy", "already-installed", "configuration-modified", "write-failed"};
+};
+using SkillInstallationFailureReason = detail::SchemaValue<SkillInstallationFailureReasonSchemaTag>;
+
+struct SkillInstallationFileReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationFileReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationFileReview = detail::SchemaValue<SkillInstallationFileReviewSchemaTag>;
+
+struct SkillInstallationLocationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationLocation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationLocation = detail::SchemaValue<SkillInstallationLocationSchemaTag>;
+
+struct SkillInstallationManagementOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationManagementOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 9;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationManagementOutcome = detail::SchemaValue<SkillInstallationManagementOutcomeSchemaTag>;
+
+struct SkillInstallationManagementResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationManagementResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationManagementResult = detail::SchemaValue<SkillInstallationManagementResultSchemaTag>;
+
+struct SkillInstallationOperationRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationOperationRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationOperationRequest = detail::SchemaValue<SkillInstallationOperationRequestSchemaTag>;
+
+struct SkillInstallationOperationStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationOperationStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 6;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationOperationStatus = detail::SchemaValue<SkillInstallationOperationStatusSchemaTag>;
+
+struct SkillInstallationOutcomeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationOutcome";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 7;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationOutcome = detail::SchemaValue<SkillInstallationOutcomeSchemaTag>;
+
+struct SkillInstallationOwnershipStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationOwnershipState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"intact", "modified", "recovery-required"};
+};
+using SkillInstallationOwnershipState = detail::SchemaValue<SkillInstallationOwnershipStateSchemaTag>;
+
+struct SkillInstallationResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 4;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationResult = detail::SchemaValue<SkillInstallationResultSchemaTag>;
+
+struct SkillInstallationReviewSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationReview";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationReview = detail::SchemaValue<SkillInstallationReviewSchemaTag>;
+
+struct SkillInstallationScopeSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationScope";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"personal"};
+};
+using SkillInstallationScope = detail::SchemaValue<SkillInstallationScopeSchemaTag>;
+
+struct SkillInstallationSessionStateSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationSessionState";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"loaded-enabled", "loaded-disabled", "not-loaded", "unknown"};
+};
+using SkillInstallationSessionState = detail::SchemaValue<SkillInstallationSessionStateSchemaTag>;
+
+struct SkillInstallationSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t required_property_count = 8;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationSource = detail::SchemaValue<SkillInstallationSourceSchemaTag>;
+
+struct SkillInstallationSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 10;
+    inline static constexpr std::size_t required_property_count = 10;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationSummary = detail::SchemaValue<SkillInstallationSummarySchemaTag>;
+
+struct SkillInstallationsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillInstallationsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillInstallationsRequest = detail::SchemaValue<SkillInstallationsRequestSchemaTag>;
+
 struct SkillListSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SkillList";
@@ -14788,13 +21251,39 @@ struct SkillListSchemaTag
 };
 using SkillList = detail::SchemaValue<SkillListSchemaTag>;
 
+struct SkillPlanInstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillPlanInstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillPlanInstallRequest = detail::SchemaValue<SkillPlanInstallRequestSchemaTag>;
+
+struct SkillPlanUninstallRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillPlanUninstallRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillPlanUninstallRequest = detail::SchemaValue<SkillPlanUninstallRequestSchemaTag>;
+
 struct SkillProviderDescriptorSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SkillProviderDescriptor";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -14840,6 +21329,19 @@ struct SkillProviderReadResultSchemaTag
 };
 using SkillProviderReadResult = detail::SchemaValue<SkillProviderReadResultSchemaTag>;
 
+struct SkillSetEnabledRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillSetEnabledRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillSetEnabledRequest = detail::SchemaValue<SkillSetEnabledRequestSchemaTag>;
+
 struct SkillSourceSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SkillSource";
@@ -14852,6 +21354,19 @@ struct SkillSourceSchemaTag
     inline static constexpr std::array<std::string_view, 8> known_string_values{"project", "inherited", "personal-copilot", "personal-agents", "plugin", "custom", "builtin", "sdk"};
 };
 using SkillSource = detail::SchemaValue<SkillSourceSchemaTag>;
+
+struct SkillUninstallPlanSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "SkillUninstallPlan";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using SkillUninstallPlan = detail::SchemaValue<SkillUninstallPlanSchemaTag>;
 
 struct SkillsConfigSetDisabledSkillsRequestSchemaTag
 {
@@ -14898,7 +21413,7 @@ struct SkillsDiscoverRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -14924,7 +21439,7 @@ struct SkillsGetDiscoveryPathsRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 4;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -14989,7 +21504,7 @@ struct SlashCommandAgentPromptResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t property_count = 7;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -15132,7 +21647,7 @@ struct SlashCommandSetModelResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -15191,6 +21706,32 @@ struct SlashCommandTimelineEntrySchemaTag
 };
 using SlashCommandTimelineEntry = detail::SchemaValue<SlashCommandTimelineEntrySchemaTag>;
 
+struct StaffLogLevelMigrationStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "StaffLogLevelMigrationStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"ineligible", "current", "refreshed"};
+};
+using StaffLogLevelMigrationStatus = detail::SchemaValue<StaffLogLevelMigrationStatusSchemaTag>;
+
+struct StaffUpdateChannelMigrationStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "StaffUpdateChannelMigrationStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"ineligible", "current", "migrated", "completed", "excluded-experimental"};
+};
+using StaffUpdateChannelMigrationStatus = detail::SchemaValue<StaffUpdateChannelMigrationStatusSchemaTag>;
+
 struct SubagentSettingsSchemaTag
 {
     inline static constexpr std::string_view schema_name = "SubagentSettings";
@@ -15236,7 +21777,7 @@ struct SystemMessageBlockSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -15268,6 +21809,32 @@ struct TaskAgentProgressSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using TaskAgentProgress = detail::SchemaValue<TaskAgentProgressSchemaTag>;
+
+struct TaskBlockerSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TaskBlocker";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using TaskBlocker = detail::SchemaValue<TaskBlockerSchemaTag>;
+
+struct TaskBlockerKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TaskBlockerKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 1> known_string_values{"permission_recovery"};
+};
+using TaskBlockerKind = detail::SchemaValue<TaskBlockerKindSchemaTag>;
 
 struct TaskClientActiveStatusSchemaTag
 {
@@ -15405,7 +21972,7 @@ struct TaskCompleteDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -15542,6 +22109,19 @@ struct TaskShellInfoAttachmentModeSchemaTag
 };
 using TaskShellInfoAttachmentMode = detail::SchemaValue<TaskShellInfoAttachmentModeSchemaTag>;
 
+struct TaskShellOutputExitSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TaskShellOutputExit";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using TaskShellOutputExit = detail::SchemaValue<TaskShellOutputExitSchemaTag>;
+
 struct TaskShellProgressSchemaTag
 {
     inline static constexpr std::string_view schema_name = "TaskShellProgress";
@@ -15671,6 +22251,32 @@ struct TasksPromoteToBackgroundResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using TasksPromoteToBackgroundResult = detail::SchemaValue<TasksPromoteToBackgroundResultSchemaTag>;
+
+struct TasksReadOutputRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TasksReadOutputRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using TasksReadOutputRequest = detail::SchemaValue<TasksReadOutputRequestSchemaTag>;
+
+struct TasksReadOutputResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TasksReadOutputResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using TasksReadOutputResult = detail::SchemaValue<TasksReadOutputResultSchemaTag>;
 
 struct TasksRefreshResultSchemaTag
 {
@@ -15854,6 +22460,19 @@ struct TokenAuthInfoSchemaTag
 };
 using TokenAuthInfo = detail::SchemaValue<TokenAuthInfoSchemaTag>;
 
+struct TokenPriceUnitSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "TokenPriceUnit";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"ai_credits", "nano_aiu"};
+};
+using TokenPriceUnit = detail::SchemaValue<TokenPriceUnitSchemaTag>;
+
 struct TokenProviderAuthInfoSchemaTag
 {
     inline static constexpr std::string_view schema_name = "TokenProviderAuthInfo";
@@ -15873,7 +22492,7 @@ struct ToolSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -16009,6 +22628,19 @@ struct ToolsInitializeAndValidateResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using ToolsInitializeAndValidateResult = detail::SchemaValue<ToolsInitializeAndValidateResultSchemaTag>;
+
+struct ToolsListPendingRequestsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ToolsListPendingRequestsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ToolsListPendingRequestsRequest = detail::SchemaValue<ToolsListPendingRequestsRequestSchemaTag>;
 
 struct ToolsListRequestSchemaTag
 {
@@ -16608,6 +23240,32 @@ struct UIUserInputResponseSchemaTag
 };
 using UIUserInputResponse = detail::SchemaValue<UIUserInputResponseSchemaTag>;
 
+struct UiThreadRunRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UiThreadRunRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UiThreadRunRequest = detail::SchemaValue<UiThreadRunRequestSchemaTag>;
+
+struct UnsupportedEnqueueCommandResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UnsupportedEnqueueCommandResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UnsupportedEnqueueCommandResult = detail::SchemaValue<UnsupportedEnqueueCommandResultSchemaTag>;
+
 struct UpdateSubagentSettingsRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "UpdateSubagentSettingsRequest";
@@ -16627,7 +23285,7 @@ struct UsageGetMetricsResultSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 12;
+    inline static constexpr std::size_t property_count = 14;
     inline static constexpr std::size_t required_property_count = 8;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -16666,7 +23324,7 @@ struct UsageMetricsModelMetricSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -16712,6 +23370,19 @@ struct UsageMetricsModelMetricUsageSchemaTag
 };
 using UsageMetricsModelMetricUsage = detail::SchemaValue<UsageMetricsModelMetricUsageSchemaTag>;
 
+struct UsageMetricsProviderModelMetricSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UsageMetricsProviderModelMetric";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UsageMetricsProviderModelMetric = detail::SchemaValue<UsageMetricsProviderModelMetricSchemaTag>;
+
 struct UsageMetricsTokenDetailSchemaTag
 {
     inline static constexpr std::string_view schema_name = "UsageMetricsTokenDetail";
@@ -16724,6 +23395,19 @@ struct UsageMetricsTokenDetailSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using UsageMetricsTokenDetail = detail::SchemaValue<UsageMetricsTokenDetailSchemaTag>;
+
+struct UsageSetCodeChangesRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UsageSetCodeChangesRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UsageSetCodeChangesRequest = detail::SchemaValue<UsageSetCodeChangesRequestSchemaTag>;
 
 struct UserAuthInfoSchemaTag
 {
@@ -16764,6 +23448,84 @@ struct UserSettingMetadataSchemaTag
 };
 using UserSettingMetadata = detail::SchemaValue<UserSettingMetadataSchemaTag>;
 
+struct UserSettingsApplyTopKeyRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsApplyTopKeyRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsApplyTopKeyRequest = detail::SchemaValue<UserSettingsApplyTopKeyRequestSchemaTag>;
+
+struct UserSettingsApplyTopKeyResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsApplyTopKeyResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsApplyTopKeyResult = detail::SchemaValue<UserSettingsApplyTopKeyResultSchemaTag>;
+
+struct UserSettingsBuildRuntimeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsBuildRuntimeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsBuildRuntimeRequest = detail::SchemaValue<UserSettingsBuildRuntimeRequestSchemaTag>;
+
+struct UserSettingsEditRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsEditRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsEditRequest = detail::SchemaValue<UserSettingsEditRequestSchemaTag>;
+
+struct UserSettingsGetPathsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsGetPathsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsGetPathsRequest = detail::SchemaValue<UserSettingsGetPathsRequestSchemaTag>;
+
+struct UserSettingsGetPathsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsGetPathsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsGetPathsResult = detail::SchemaValue<UserSettingsGetPathsResultSchemaTag>;
+
 struct UserSettingsGetResultSchemaTag
 {
     inline static constexpr std::string_view schema_name = "UserSettingsGetResult";
@@ -16776,6 +23538,409 @@ struct UserSettingsGetResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using UserSettingsGetResult = detail::SchemaValue<UserSettingsGetResultSchemaTag>;
+
+struct UserSettingsGovernanceKeysResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsGovernanceKeysResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsGovernanceKeysResult = detail::SchemaValue<UserSettingsGovernanceKeysResultSchemaTag>;
+
+struct UserSettingsHostContextSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsHostContext";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsHostContext = detail::SchemaValue<UserSettingsHostContextSchemaTag>;
+
+struct UserSettingsLoadAndMergeRepoRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadAndMergeRepoRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadAndMergeRepoRequest = detail::SchemaValue<UserSettingsLoadAndMergeRepoRequestSchemaTag>;
+
+struct UserSettingsLoadAndMergeRepoResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadAndMergeRepoResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadAndMergeRepoResult = detail::SchemaValue<UserSettingsLoadAndMergeRepoResultSchemaTag>;
+
+struct UserSettingsLoadForConfigDirRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadForConfigDirRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadForConfigDirRequest = detail::SchemaValue<UserSettingsLoadForConfigDirRequestSchemaTag>;
+
+struct UserSettingsLoadForEditResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadForEditResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadForEditResult = detail::SchemaValue<UserSettingsLoadForEditResultSchemaTag>;
+
+struct UserSettingsLoadRepoRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadRepoRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadRepoRequest = detail::SchemaValue<UserSettingsLoadRepoRequestSchemaTag>;
+
+struct UserSettingsLoadRepoResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadRepoResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadRepoResult = detail::SchemaValue<UserSettingsLoadRepoResultSchemaTag>;
+
+struct UserSettingsLoadWithWarningResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsLoadWithWarningResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsLoadWithWarningResult = detail::SchemaValue<UserSettingsLoadWithWarningResultSchemaTag>;
+
+struct UserSettingsMergeManagedAndUserParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMergeManagedAndUserParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMergeManagedAndUserParams = detail::SchemaValue<UserSettingsMergeManagedAndUserParamsSchemaTag>;
+
+struct UserSettingsMergeManagedAndUserResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMergeManagedAndUserResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMergeManagedAndUserResult = detail::SchemaValue<UserSettingsMergeManagedAndUserResultSchemaTag>;
+
+struct UserSettingsMergeRepoValueParamsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMergeRepoValueParams";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMergeRepoValueParams = detail::SchemaValue<UserSettingsMergeRepoValueParamsSchemaTag>;
+
+struct UserSettingsMergeRepoValueResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMergeRepoValueResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMergeRepoValueResult = detail::SchemaValue<UserSettingsMergeRepoValueResultSchemaTag>;
+
+struct UserSettingsMigrateObsoleteOnDiskRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateObsoleteOnDiskRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMigrateObsoleteOnDiskRequest = detail::SchemaValue<UserSettingsMigrateObsoleteOnDiskRequestSchemaTag>;
+
+struct UserSettingsMigrateObsoleteOnDiskResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateObsoleteOnDiskResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMigrateObsoleteOnDiskResult = detail::SchemaValue<UserSettingsMigrateObsoleteOnDiskResultSchemaTag>;
+
+struct UserSettingsMigrateObsoleteOnDiskStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateObsoleteOnDiskStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"missing", "invalid", "unchanged", "changed"};
+};
+using UserSettingsMigrateObsoleteOnDiskStatus = detail::SchemaValue<UserSettingsMigrateObsoleteOnDiskStatusSchemaTag>;
+
+struct UserSettingsMigrateStaffLogLevelOnceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateStaffLogLevelOnceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMigrateStaffLogLevelOnceRequest = detail::SchemaValue<UserSettingsMigrateStaffLogLevelOnceRequestSchemaTag>;
+
+struct UserSettingsMigrateStaffLogLevelOnceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateStaffLogLevelOnceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMigrateStaffLogLevelOnceResult = detail::SchemaValue<UserSettingsMigrateStaffLogLevelOnceResultSchemaTag>;
+
+struct UserSettingsMigrateStaffUpdateChannelOnceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsMigrateStaffUpdateChannelOnceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsMigrateStaffUpdateChannelOnceResult = detail::SchemaValue<UserSettingsMigrateStaffUpdateChannelOnceResultSchemaTag>;
+
+struct UserSettingsNormalizeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsNormalizeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsNormalizeRequest = detail::SchemaValue<UserSettingsNormalizeRequestSchemaTag>;
+
+struct UserSettingsNormalizeResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsNormalizeResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsNormalizeResult = detail::SchemaValue<UserSettingsNormalizeResultSchemaTag>;
+
+struct UserSettingsPathResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsPathResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsPathResult = detail::SchemaValue<UserSettingsPathResultSchemaTag>;
+
+struct UserSettingsProblemSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsProblem";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsProblem = detail::SchemaValue<UserSettingsProblemSchemaTag>;
+
+struct UserSettingsProblemLocationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsProblemLocation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsProblemLocation = detail::SchemaValue<UserSettingsProblemLocationSchemaTag>;
+
+struct UserSettingsProblemSourceSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsProblemSource";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsProblemSource = detail::SchemaValue<UserSettingsProblemSourceSchemaTag>;
+
+struct UserSettingsProblemsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsProblemsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsProblemsRequest = detail::SchemaValue<UserSettingsProblemsRequestSchemaTag>;
+
+struct UserSettingsProblemsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsProblemsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsProblemsResult = detail::SchemaValue<UserSettingsProblemsResultSchemaTag>;
+
+struct UserSettingsResetStaffModelSelectionOnceRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsResetStaffModelSelectionOnceRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsResetStaffModelSelectionOnceRequest = detail::SchemaValue<UserSettingsResetStaffModelSelectionOnceRequestSchemaTag>;
+
+struct UserSettingsResetStaffModelSelectionOnceResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsResetStaffModelSelectionOnceResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsResetStaffModelSelectionOnceResult = detail::SchemaValue<UserSettingsResetStaffModelSelectionOnceResultSchemaTag>;
+
+struct UserSettingsSetHookDisabledRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsSetHookDisabledRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsSetHookDisabledRequest = detail::SchemaValue<UserSettingsSetHookDisabledRequestSchemaTag>;
+
+struct UserSettingsSetHookDisabledResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsSetHookDisabledResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsSetHookDisabledResult = detail::SchemaValue<UserSettingsSetHookDisabledResultSchemaTag>;
 
 struct UserSettingsSetRequestSchemaTag
 {
@@ -16790,9 +23955,9 @@ struct UserSettingsSetRequestSchemaTag
 };
 using UserSettingsSetRequest = detail::SchemaValue<UserSettingsSetRequestSchemaTag>;
 
-struct UserSettingsSetResultSchemaTag
+struct UserSettingsUnknownKeysWarningRequestSchemaTag
 {
-    inline static constexpr std::string_view schema_name = "UserSettingsSetResult";
+    inline static constexpr std::string_view schema_name = "UserSettingsUnknownKeysWarningRequest";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = false;
     inline static constexpr bool has_map = false;
@@ -16801,7 +23966,98 @@ struct UserSettingsSetResultSchemaTag
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
-using UserSettingsSetResult = detail::SchemaValue<UserSettingsSetResultSchemaTag>;
+using UserSettingsUnknownKeysWarningRequest = detail::SchemaValue<UserSettingsUnknownKeysWarningRequestSchemaTag>;
+
+struct UserSettingsUnknownKeysWarningResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsUnknownKeysWarningResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsUnknownKeysWarningResult = detail::SchemaValue<UserSettingsUnknownKeysWarningResultSchemaTag>;
+
+struct UserSettingsUpdateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsUpdateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsUpdateRequest = detail::SchemaValue<UserSettingsUpdateRequestSchemaTag>;
+
+struct UserSettingsUpdateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsUpdateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsUpdateResult = detail::SchemaValue<UserSettingsUpdateResultSchemaTag>;
+
+struct UserSettingsValidateRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsValidateRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsValidateRequest = detail::SchemaValue<UserSettingsValidateRequestSchemaTag>;
+
+struct UserSettingsValidateResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsValidateResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsValidateResult = detail::SchemaValue<UserSettingsValidateResultSchemaTag>;
+
+struct UserSettingsValidationIssueSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsValidationIssue";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsValidationIssue = detail::SchemaValue<UserSettingsValidationIssueSchemaTag>;
+
+struct UserSettingsWriteAllRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserSettingsWriteAllRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserSettingsWriteAllRequest = detail::SchemaValue<UserSettingsWriteAllRequestSchemaTag>;
 
 struct UserToolSessionApprovalSchemaTag
 {
@@ -16881,19 +24137,6 @@ struct UserToolSessionApprovalExtensionPermissionAccessSchemaTag
 };
 using UserToolSessionApprovalExtensionPermissionAccess = detail::SchemaValue<UserToolSessionApprovalExtensionPermissionAccessSchemaTag>;
 
-struct UserToolSessionApprovalFactorySchemaTag
-{
-    inline static constexpr std::string_view schema_name = "UserToolSessionApprovalFactory";
-    inline static constexpr SchemaKind kind = SchemaKind::Object;
-    inline static constexpr bool has_optional_properties = true;
-    inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
-    inline static constexpr std::size_t required_property_count = 1;
-    inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 0> known_string_values{};
-};
-using UserToolSessionApprovalFactory = detail::SchemaValue<UserToolSessionApprovalFactorySchemaTag>;
-
 struct UserToolSessionApprovalMcpSchemaTag
 {
     inline static constexpr std::string_view schema_name = "UserToolSessionApprovalMcp";
@@ -16932,6 +24175,19 @@ struct UserToolSessionApprovalReadSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using UserToolSessionApprovalRead = detail::SchemaValue<UserToolSessionApprovalReadSchemaTag>;
+
+struct UserToolSessionApprovalWorkflowSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserToolSessionApprovalWorkflow";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserToolSessionApprovalWorkflow = detail::SchemaValue<UserToolSessionApprovalWorkflowSchemaTag>;
 
 struct UserToolSessionApprovalWriteSchemaTag
 {
@@ -16998,13 +24254,637 @@ struct VisibilitySetResultSchemaTag
 };
 using VisibilitySetResult = detail::SchemaValue<VisibilitySetResultSchemaTag>;
 
+struct WorkflowAbortRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAbortRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAbortRequest = detail::SchemaValue<WorkflowAbortRequestSchemaTag>;
+
+struct WorkflowAckResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAckResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAckResult = detail::SchemaValue<WorkflowAckResultSchemaTag>;
+
+struct WorkflowAgentOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAgentOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAgentOptions = detail::SchemaValue<WorkflowAgentOptionsSchemaTag>;
+
+struct WorkflowAgentRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAgentRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAgentRequest = detail::SchemaValue<WorkflowAgentRequestSchemaTag>;
+
+struct WorkflowAgentResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAgentResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAgentResult = detail::SchemaValue<WorkflowAgentResultSchemaTag>;
+
+struct WorkflowAgentSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowAgentSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 14;
+    inline static constexpr std::size_t required_property_count = 8;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowAgentSummary = detail::SchemaValue<WorkflowAgentSummarySchemaTag>;
+
+struct WorkflowCancelRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowCancelRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowCancelRequest = detail::SchemaValue<WorkflowCancelRequestSchemaTag>;
+
+struct WorkflowCurrentPhaseSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowCurrentPhase";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowCurrentPhase = detail::SchemaValue<WorkflowCurrentPhaseSchemaTag>;
+
+struct WorkflowDeclaredLimitsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowDeclaredLimits";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowDeclaredLimits = detail::SchemaValue<WorkflowDeclaredLimitsSchemaTag>;
+
+struct WorkflowDurableOperationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowDurableOperation";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 11> known_string_values{"createRun", "markRunStarted", "finishRun", "reserveAgent", "releaseAgent", "chargeCredit", "addElapsed", "reconcileCreditTotal", "journalGet", "journalPut", "refreshLease"};
+};
+using WorkflowDurableOperation = detail::SchemaValue<WorkflowDurableOperationSchemaTag>;
+
+struct WorkflowExecuteRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowExecuteRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowExecuteRequest = detail::SchemaValue<WorkflowExecuteRequestSchemaTag>;
+
+struct WorkflowExecuteResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowExecuteResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowExecuteResult = detail::SchemaValue<WorkflowExecuteResultSchemaTag>;
+
+struct WorkflowGetRunProgressRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowGetRunProgressRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowGetRunProgressRequest = detail::SchemaValue<WorkflowGetRunProgressRequestSchemaTag>;
+
+struct WorkflowGetRunRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowGetRunRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowGetRunRequest = detail::SchemaValue<WorkflowGetRunRequestSchemaTag>;
+
+struct WorkflowJournalGetRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowJournalGetRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowJournalGetRequest = detail::SchemaValue<WorkflowJournalGetRequestSchemaTag>;
+
+struct WorkflowJournalGetResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowJournalGetResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowJournalGetResult = detail::SchemaValue<WorkflowJournalGetResultSchemaTag>;
+
+struct WorkflowJournalPutRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowJournalPutRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 4;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowJournalPutRequest = detail::SchemaValue<WorkflowJournalPutRequestSchemaTag>;
+
+struct WorkflowListRunsRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowListRunsRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowListRunsRequest = detail::SchemaValue<WorkflowListRunsRequestSchemaTag>;
+
+struct WorkflowListRunsResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowListRunsResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowListRunsResult = detail::SchemaValue<WorkflowListRunsResultSchemaTag>;
+
+struct WorkflowLogLineSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowLogLine";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowLogLine = detail::SchemaValue<WorkflowLogLineSchemaTag>;
+
+struct WorkflowLogLineKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowLogLineKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"log", "phase"};
+};
+using WorkflowLogLineKind = detail::SchemaValue<WorkflowLogLineKindSchemaTag>;
+
+struct WorkflowLogRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowLogRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowLogRequest = detail::SchemaValue<WorkflowLogRequestSchemaTag>;
+
+struct WorkflowPauseCheckpointActionSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPauseCheckpointAction";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 2> known_string_values{"continue", "pause"};
+};
+using WorkflowPauseCheckpointAction = detail::SchemaValue<WorkflowPauseCheckpointActionSchemaTag>;
+
+struct WorkflowPauseCheckpointRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPauseCheckpointRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowPauseCheckpointRequest = detail::SchemaValue<WorkflowPauseCheckpointRequestSchemaTag>;
+
+struct WorkflowPauseCheckpointResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPauseCheckpointResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowPauseCheckpointResult = detail::SchemaValue<WorkflowPauseCheckpointResultSchemaTag>;
+
+struct WorkflowPauseInfoSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPauseInfo";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 2;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowPauseInfo = detail::SchemaValue<WorkflowPauseInfoSchemaTag>;
+
+struct WorkflowPauseRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPauseRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowPauseRequest = detail::SchemaValue<WorkflowPauseRequestSchemaTag>;
+
+struct WorkflowPhaseObservationSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPhaseObservation";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 13;
+    inline static constexpr std::size_t required_property_count = 10;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowPhaseObservation = detail::SchemaValue<WorkflowPhaseObservationSchemaTag>;
+
+struct WorkflowPhaseStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowPhaseStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 4> known_string_values{"pending", "active", "completed", "skipped"};
+};
+using WorkflowPhaseStatus = detail::SchemaValue<WorkflowPhaseStatusSchemaTag>;
+
+struct WorkflowProgressLineSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowProgressLine";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowProgressLine = detail::SchemaValue<WorkflowProgressLineSchemaTag>;
+
+struct WorkflowProgressPageSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowProgressPage";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 6;
+    inline static constexpr std::size_t required_property_count = 6;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowProgressPage = detail::SchemaValue<WorkflowProgressPageSchemaTag>;
+
+struct WorkflowResumeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowResumeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowResumeRequest = detail::SchemaValue<WorkflowResumeRequestSchemaTag>;
+
+struct WorkflowResumeResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowResumeResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowResumeResult = detail::SchemaValue<WorkflowResumeResultSchemaTag>;
+
+struct WorkflowRunConsumedSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunConsumed";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 3;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunConsumed = detail::SchemaValue<WorkflowRunConsumedSchemaTag>;
+
+struct WorkflowRunDetailSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunDetail";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 23;
+    inline static constexpr std::size_t required_property_count = 23;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunDetail = detail::SchemaValue<WorkflowRunDetailSchemaTag>;
+
+struct WorkflowRunFailureSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunFailure";
+    inline static constexpr SchemaKind kind = SchemaKind::Union;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 5;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunFailure = detail::SchemaValue<WorkflowRunFailureSchemaTag>;
+
+struct WorkflowRunFailureKindSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunFailureKind";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 3> known_string_values{"maxTotalSubagents", "timeoutSeconds", "maxAiCredits"};
+};
+using WorkflowRunFailureKind = detail::SchemaValue<WorkflowRunFailureKindSchemaTag>;
+
+struct WorkflowRunLimitsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunLimits";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunLimits = detail::SchemaValue<WorkflowRunLimitsSchemaTag>;
+
+struct WorkflowRunOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunOptions = detail::SchemaValue<WorkflowRunOptionsSchemaTag>;
+
+struct WorkflowRunRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunRequest = detail::SchemaValue<WorkflowRunRequestSchemaTag>;
+
+struct WorkflowRunResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 9;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunResult = detail::SchemaValue<WorkflowRunResultSchemaTag>;
+
+struct WorkflowRunStatusSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunStatus";
+    inline static constexpr SchemaKind kind = SchemaKind::Enum;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 0;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 7> known_string_values{"pending", "running", "completed", "halted", "paused", "cancelled", "error"};
+};
+using WorkflowRunStatus = detail::SchemaValue<WorkflowRunStatusSchemaTag>;
+
+struct WorkflowRunSummarySchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunSummary";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 20;
+    inline static constexpr std::size_t required_property_count = 20;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunSummary = detail::SchemaValue<WorkflowRunSummarySchemaTag>;
+
+struct WorkflowRunTerminalSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowRunTerminal";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowRunTerminal = detail::SchemaValue<WorkflowRunTerminalSchemaTag>;
+
+struct WorkflowToolResumeRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowToolResumeRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowToolResumeRequest = detail::SchemaValue<WorkflowToolResumeRequestSchemaTag>;
+
+struct WorkflowToolRunOptionsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowToolRunOptions";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowToolRunOptions = detail::SchemaValue<WorkflowToolRunOptionsSchemaTag>;
+
+struct WorkflowToolRunRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkflowToolRunRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkflowToolRunRequest = detail::SchemaValue<WorkflowToolRunRequestSchemaTag>;
+
+struct WorkspaceDiffContentsSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspaceDiffContents";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 0;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspaceDiffContents = detail::SchemaValue<WorkspaceDiffContentsSchemaTag>;
+
 struct WorkspaceDiffFileChangeSchemaTag
 {
     inline static constexpr std::string_view schema_name = "WorkspaceDiffFileChange";
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 3;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -17128,6 +25008,19 @@ struct WorkspacesCheckpointsSchemaTag
 };
 using WorkspacesCheckpoints = detail::SchemaValue<WorkspacesCheckpointsSchemaTag>;
 
+struct WorkspacesCreateDirectoryRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspacesCreateDirectoryRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspacesCreateDirectoryRequest = detail::SchemaValue<WorkspacesCreateDirectoryRequestSchemaTag>;
+
 struct WorkspacesCreateFileRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "WorkspacesCreateFileRequest";
@@ -17160,7 +25053,7 @@ struct WorkspacesDiffRequestSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t property_count = 3;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -17284,6 +25177,32 @@ struct WorkspacesReadFileResultSchemaTag
 };
 using WorkspacesReadFileResult = detail::SchemaValue<WorkspacesReadFileResultSchemaTag>;
 
+struct WorkspacesRemovePathRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspacesRemovePathRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 3;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspacesRemovePathRequest = detail::SchemaValue<WorkspacesRemovePathRequestSchemaTag>;
+
+struct WorkspacesRenamePathRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspacesRenamePathRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspacesRenamePathRequest = detail::SchemaValue<WorkspacesRenamePathRequestSchemaTag>;
+
 struct WorkspacesSaveLargePasteRequestSchemaTag
 {
     inline static constexpr std::string_view schema_name = "WorkspacesSaveLargePasteRequest";
@@ -17309,6 +25228,32 @@ struct WorkspacesSaveLargePasteResultSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using WorkspacesSaveLargePasteResult = detail::SchemaValue<WorkspacesSaveLargePasteResultSchemaTag>;
+
+struct WorkspacesStatFileRequestSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspacesStatFileRequest";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 1;
+    inline static constexpr std::size_t required_property_count = 1;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspacesStatFileRequest = detail::SchemaValue<WorkspacesStatFileRequestSchemaTag>;
+
+struct WorkspacesStatFileResultSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "WorkspacesStatFileResult";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 5;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using WorkspacesStatFileResult = detail::SchemaValue<WorkspacesStatFileResultSchemaTag>;
 
 struct WorkspacesTruncateSummariesRequestSchemaTag
 {

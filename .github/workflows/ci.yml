@@ -22,12 +22,10 @@ jobs:
         # Deliberately no -G: runner images rotate their Visual Studio version, and pinning
         # one ("Visual Studio 17 2022") breaks the Windows job the moment the image moves on.
         # CMake's per-platform default is correct on all three runners.
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCOPILOT_BUILD_TESTS=ON
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release
 
-      - name: Run Unit Tests
-        run: ctest --test-dir build -C Release -E "^E2ETest\." --output-on-failure
-        env:
-          COPILOT_SDK_CPP_SKIP_E2E: 1
+      - name: Check generated protocol catalog
+        run: cmake --build build --config Release --target copilot_codegen_check

@@ -25,136 +25,144 @@ namespace copilot::rpc::methods
 // Top-level client API (no per-session scoping)
 // =============================================================================
 
-inline constexpr const char* kPing                  = "ping";
-inline constexpr const char* kConnect               = "connect";
-inline constexpr const char* kModelsList            = "models.list";
-inline constexpr const char* kToolsList             = "tools.list";
-inline constexpr const char* kAccountGetQuota       = "account.getQuota";
+inline constexpr const char* kSessionFsReadFileBytes = "sessionFs.readFileBytes";
+inline constexpr const char* kSessionFsWriteFileBytes = "sessionFs.writeFileBytes";
+inline constexpr const char* kPing = "ping";
+inline constexpr const char* kConnect = "connect";
+inline constexpr const char* kModelsList = "models.list";
+inline constexpr const char* kToolsList = "tools.list";
+inline constexpr const char* kAccountGetQuota = "account.getQuota";
 
 // MCP global config
-inline constexpr const char* kMcpConfigList         = "mcp.config.list";
-inline constexpr const char* kMcpConfigAdd          = "mcp.config.add";
-inline constexpr const char* kMcpConfigUpdate       = "mcp.config.update";
-inline constexpr const char* kMcpConfigRemove       = "mcp.config.remove";
-inline constexpr const char* kMcpConfigEnable       = "mcp.config.enable";
-inline constexpr const char* kMcpConfigDisable      = "mcp.config.disable";
-inline constexpr const char* kMcpDiscover           = "mcp.discover";
+inline constexpr const char* kMcpConfigList = "mcp.config.list";
+inline constexpr const char* kMcpConfigAdd = "mcp.config.add";
+inline constexpr const char* kMcpConfigUpdate = "mcp.config.update";
+inline constexpr const char* kMcpConfigRemove = "mcp.config.remove";
+inline constexpr const char* kMcpConfigEnable = "mcp.config.enable";
+inline constexpr const char* kMcpConfigDisable = "mcp.config.disable";
+inline constexpr const char* kMcpDiscover = "mcp.discover";
 
 // Skills global config
 inline constexpr const char* kSkillsConfigSetDisabledSkills = "skills.config.setDisabledSkills";
-inline constexpr const char* kSkillsDiscover                = "skills.discover";
+inline constexpr const char* kSkillsDiscover = "skills.discover";
 
 // Session filesystem provider (client-side fs registration)
-inline constexpr const char* kSessionFsSetProvider  = "sessionFs.setProvider";
+inline constexpr const char* kSessionFsSetProvider = "sessionFs.setProvider";
 
 // Session lifecycle (top-level)
-inline constexpr const char* kSessionsFork          = "sessions.fork";
-inline constexpr const char* kSessionsConnect       = "sessions.connect";
+inline constexpr const char* kSessionsFork = "sessions.fork";
+inline constexpr const char* kSessionsConnect = "sessions.connect";
 
 // =============================================================================
 // Server-to-client requests (the runtime calls these on the SDK client)
 // All take a `sessionId` to route to the registered handler set.
 // =============================================================================
 
-inline constexpr const char* kSessionFsReadFile           = "sessionFs.readFile";
-inline constexpr const char* kSessionFsWriteFile          = "sessionFs.writeFile";
-inline constexpr const char* kSessionFsAppendFile         = "sessionFs.appendFile";
-inline constexpr const char* kSessionFsExists             = "sessionFs.exists";
-inline constexpr const char* kSessionFsStat               = "sessionFs.stat";
-inline constexpr const char* kSessionFsMkdir              = "sessionFs.mkdir";
-inline constexpr const char* kSessionFsReaddir            = "sessionFs.readdir";
-inline constexpr const char* kSessionFsReaddirWithTypes   = "sessionFs.readdirWithTypes";
-inline constexpr const char* kSessionFsRm                 = "sessionFs.rm";
-inline constexpr const char* kSessionFsRename             = "sessionFs.rename";
+inline constexpr const char* kSessionFsReadFile = "sessionFs.readFile";
+inline constexpr const char* kSessionFsWriteFile = "sessionFs.writeFile";
+inline constexpr const char* kSessionFsAppendFile = "sessionFs.appendFile";
+inline constexpr const char* kSessionFsExists = "sessionFs.exists";
+inline constexpr const char* kSessionFsStat = "sessionFs.stat";
+inline constexpr const char* kSessionFsMkdir = "sessionFs.mkdir";
+inline constexpr const char* kSessionFsReaddir = "sessionFs.readdir";
+inline constexpr const char* kSessionFsReaddirWithTypes = "sessionFs.readdirWithTypes";
+inline constexpr const char* kSessionFsRm = "sessionFs.rm";
+inline constexpr const char* kSessionFsRename = "sessionFs.rename";
 
 // =============================================================================
 // Session-scoped methods (per-session API; each carries a `sessionId`)
 // =============================================================================
 
-inline constexpr const char* kSessionSuspend                                  = "session.suspend";
-inline constexpr const char* kSessionLog                                      = "session.log";
+inline constexpr const char* kSessionSuspend = "session.suspend";
+inline constexpr const char* kSessionLog = "session.log";
 
-inline constexpr const char* kSessionAuthGetStatus                            = "session.auth.getStatus";
+inline constexpr const char* kSessionAuthGetStatus = "session.auth.getStatus";
 
-inline constexpr const char* kSessionModelGetCurrent                          = "session.model.getCurrent";
-inline constexpr const char* kSessionModelSwitchTo                            = "session.model.switchTo";
-inline constexpr const char* kSessionModelSwitchAutoTier                      = "session.model.switchAutoTier";
-inline constexpr const char* kManagedSettingsClearCache                       = "managedSettings.clearCache";
+inline constexpr const char* kSessionModelGetCurrent = "session.model.getCurrent";
+inline constexpr const char* kSessionModelSwitchTo = "session.model.switchTo";
+inline constexpr const char* kSessionModelSwitchAutoTier = "session.model.switchAutoTier";
+inline constexpr const char* kManagedSettingsClearCache = "managedSettings.clearCache";
 
-inline constexpr const char* kSessionModeGet                                  = "session.mode.get";
-inline constexpr const char* kSessionModeSet                                  = "session.mode.set";
+inline constexpr const char* kSessionModeGet = "session.mode.get";
+inline constexpr const char* kSessionModeSet = "session.mode.set";
 
-inline constexpr const char* kSessionNameGet                                  = "session.name.get";
-inline constexpr const char* kSessionNameSet                                  = "session.name.set";
+inline constexpr const char* kSessionNameGet = "session.name.get";
+inline constexpr const char* kSessionNameSet = "session.name.set";
 
-inline constexpr const char* kSessionPlanRead                                 = "session.plan.read";
-inline constexpr const char* kSessionPlanUpdate                               = "session.plan.update";
-inline constexpr const char* kSessionPlanDelete                               = "session.plan.delete";
+inline constexpr const char* kSessionPlanRead = "session.plan.read";
+inline constexpr const char* kSessionPlanUpdate = "session.plan.update";
+inline constexpr const char* kSessionPlanDelete = "session.plan.delete";
 
-inline constexpr const char* kSessionWorkspacesGetWorkspace                   = "session.workspaces.getWorkspace";
-inline constexpr const char* kSessionWorkspacesListFiles                      = "session.workspaces.listFiles";
-inline constexpr const char* kSessionWorkspacesReadFile                       = "session.workspaces.readFile";
-inline constexpr const char* kSessionWorkspacesCreateFile                     = "session.workspaces.createFile";
+inline constexpr const char* kSessionWorkspacesGetWorkspace = "session.workspaces.getWorkspace";
+inline constexpr const char* kSessionWorkspacesListFiles = "session.workspaces.listFiles";
+inline constexpr const char* kSessionWorkspacesReadFile = "session.workspaces.readFile";
+inline constexpr const char* kSessionWorkspacesCreateFile = "session.workspaces.createFile";
 
-inline constexpr const char* kSessionInstructionsGetSources                   = "session.instructions.getSources";
+inline constexpr const char* kSessionInstructionsGetSources = "session.instructions.getSources";
 
-inline constexpr const char* kSessionFleetStart                               = "session.fleet.start";
+inline constexpr const char* kSessionFleetStart = "session.fleet.start";
 
-inline constexpr const char* kSessionAgentList                                = "session.agent.list";
-inline constexpr const char* kSessionAgentGetCurrent                          = "session.agent.getCurrent";
-inline constexpr const char* kSessionAgentSelect                              = "session.agent.select";
-inline constexpr const char* kSessionAgentDeselect                            = "session.agent.deselect";
-inline constexpr const char* kSessionAgentReload                              = "session.agent.reload";
+inline constexpr const char* kSessionAgentList = "session.agent.list";
+inline constexpr const char* kSessionAgentGetCurrent = "session.agent.getCurrent";
+inline constexpr const char* kSessionAgentSelect = "session.agent.select";
+inline constexpr const char* kSessionAgentDeselect = "session.agent.deselect";
+inline constexpr const char* kSessionAgentReload = "session.agent.reload";
 
-inline constexpr const char* kSessionTasksStartAgent                          = "session.tasks.startAgent";
-inline constexpr const char* kSessionTasksList                                = "session.tasks.list";
-inline constexpr const char* kSessionTasksPromoteToBackground                 = "session.tasks.promoteToBackground";
-inline constexpr const char* kSessionTasksCancel                              = "session.tasks.cancel";
-inline constexpr const char* kSessionTasksRemove                              = "session.tasks.remove";
-inline constexpr const char* kSessionTasksSendMessage                         = "session.tasks.sendMessage";
+inline constexpr const char* kSessionTasksStartAgent = "session.tasks.startAgent";
+inline constexpr const char* kSessionTasksList = "session.tasks.list";
+inline constexpr const char* kSessionTasksPromoteToBackground = "session.tasks.promoteToBackground";
+inline constexpr const char* kSessionTasksCancel = "session.tasks.cancel";
+inline constexpr const char* kSessionTasksRemove = "session.tasks.remove";
+inline constexpr const char* kSessionTasksSendMessage = "session.tasks.sendMessage";
 
-inline constexpr const char* kSessionSkillsList                               = "session.skills.list";
-inline constexpr const char* kSessionSkillsEnable                             = "session.skills.enable";
-inline constexpr const char* kSessionSkillsDisable                            = "session.skills.disable";
-inline constexpr const char* kSessionSkillsReload                             = "session.skills.reload";
+inline constexpr const char* kSessionSkillsList = "session.skills.list";
+inline constexpr const char* kSessionSkillsEnable = "session.skills.enable";
+inline constexpr const char* kSessionSkillsDisable = "session.skills.disable";
+inline constexpr const char* kSessionSkillsReload = "session.skills.reload";
 
-inline constexpr const char* kSessionMcpList                                  = "session.mcp.list";
-inline constexpr const char* kSessionMcpEnable                                = "session.mcp.enable";
-inline constexpr const char* kSessionMcpDisable                               = "session.mcp.disable";
-inline constexpr const char* kSessionMcpReload                                = "session.mcp.reload";
-inline constexpr const char* kSessionMcpOauthLogin                            = "session.mcp.oauth.login";
+inline constexpr const char* kSessionMcpList = "session.mcp.list";
+inline constexpr const char* kSessionMcpEnable = "session.mcp.enable";
+inline constexpr const char* kSessionMcpDisable = "session.mcp.disable";
+inline constexpr const char* kSessionMcpReload = "session.mcp.reload";
+inline constexpr const char* kSessionMcpOauthLogin = "session.mcp.oauth.login";
 
-inline constexpr const char* kSessionPluginsList                              = "session.plugins.list";
+inline constexpr const char* kSessionPluginsList = "session.plugins.list";
 
-inline constexpr const char* kSessionExtensionsList                           = "session.extensions.list";
-inline constexpr const char* kSessionExtensionsEnable                         = "session.extensions.enable";
-inline constexpr const char* kSessionExtensionsDisable                        = "session.extensions.disable";
-inline constexpr const char* kSessionExtensionsReload                         = "session.extensions.reload";
+inline constexpr const char* kSessionExtensionsList = "session.extensions.list";
+inline constexpr const char* kSessionExtensionsEnable = "session.extensions.enable";
+inline constexpr const char* kSessionExtensionsDisable = "session.extensions.disable";
+inline constexpr const char* kSessionExtensionsReload = "session.extensions.reload";
 
-inline constexpr const char* kSessionToolsHandlePendingToolCall               = "session.tools.handlePendingToolCall";
+inline constexpr const char* kSessionToolsHandlePendingToolCall =
+    "session.tools.handlePendingToolCall";
 
-inline constexpr const char* kSessionCommandsList                             = "session.commands.list";
-inline constexpr const char* kSessionCommandsInvoke                           = "session.commands.invoke";
-inline constexpr const char* kSessionCommandsHandlePendingCommand             = "session.commands.handlePendingCommand";
-inline constexpr const char* kSessionCommandsRespondToQueuedCommand           = "session.commands.respondToQueuedCommand";
+inline constexpr const char* kSessionCommandsList = "session.commands.list";
+inline constexpr const char* kSessionCommandsInvoke = "session.commands.invoke";
+inline constexpr const char* kSessionCommandsHandlePendingCommand =
+    "session.commands.handlePendingCommand";
+inline constexpr const char* kSessionCommandsRespondToQueuedCommand =
+    "session.commands.respondToQueuedCommand";
 
-inline constexpr const char* kSessionUiElicitation                            = "session.ui.elicitation";
-inline constexpr const char* kSessionUiHandlePendingElicitation               = "session.ui.handlePendingElicitation";
+inline constexpr const char* kSessionUiElicitation = "session.ui.elicitation";
+inline constexpr const char* kSessionUiHandlePendingElicitation =
+    "session.ui.handlePendingElicitation";
 
-inline constexpr const char* kSessionPermissionsHandlePendingPermissionRequest = "session.permissions.handlePendingPermissionRequest";
-inline constexpr const char* kSessionPermissionsSetApproveAll                  = "session.permissions.setApproveAll";
-inline constexpr const char* kSessionPermissionsResetSessionApprovals          = "session.permissions.resetSessionApprovals";
+inline constexpr const char* kSessionPermissionsHandlePendingPermissionRequest =
+    "session.permissions.handlePendingPermissionRequest";
+inline constexpr const char* kSessionPermissionsSetApproveAll = "session.permissions.setApproveAll";
+inline constexpr const char* kSessionPermissionsResetSessionApprovals =
+    "session.permissions.resetSessionApprovals";
 
-inline constexpr const char* kSessionShellExec                                = "session.shell.exec";
-inline constexpr const char* kSessionShellKill                                = "session.shell.kill";
+inline constexpr const char* kSessionShellExec = "session.shell.exec";
+inline constexpr const char* kSessionShellKill = "session.shell.kill";
 
-inline constexpr const char* kSessionHistoryCompact                           = "session.history.compact";
-inline constexpr const char* kSessionHistoryTruncate                          = "session.history.truncate";
+inline constexpr const char* kSessionHistoryCompact = "session.history.compact";
+inline constexpr const char* kSessionHistoryTruncate = "session.history.truncate";
 
-inline constexpr const char* kSessionUsageGetMetrics                          = "session.usage.getMetrics";
+inline constexpr const char* kSessionUsageGetMetrics = "session.usage.getMetrics";
 
-inline constexpr const char* kSessionRemoteEnable                             = "session.remote.enable";
-inline constexpr const char* kSessionRemoteDisable                            = "session.remote.disable";
+inline constexpr const char* kSessionRemoteEnable = "session.remote.enable";
+inline constexpr const char* kSessionRemoteDisable = "session.remote.disable";
 
 // =============================================================================
 // Legacy / pre-v3 helpers that the C++ port still invokes against the CLI.
@@ -163,20 +171,20 @@ inline constexpr const char* kSessionRemoteDisable                            = 
 // reference a single symbol.
 // =============================================================================
 
-inline constexpr const char* kAuthGetStatus       = "auth.getStatus";
-inline constexpr const char* kStatusGet           = "status.get";
+inline constexpr const char* kAuthGetStatus = "auth.getStatus";
+inline constexpr const char* kStatusGet = "status.get";
 
-inline constexpr const char* kSessionCreate       = "session.create";
-inline constexpr const char* kSessionResume       = "session.resume";
-inline constexpr const char* kSessionList         = "session.list";
-inline constexpr const char* kSessionGetMetadata  = "session.getMetadata";
-inline constexpr const char* kSessionDelete       = "session.delete";
-inline constexpr const char* kSessionGetLastId    = "session.getLastId";
-inline constexpr const char* kSessionDestroy      = "session.destroy";
-inline constexpr const char* kSessionDetach       = "session.detach";
-inline constexpr const char* kSessionSend         = "session.send";
-inline constexpr const char* kSessionAbort        = "session.abort";
-inline constexpr const char* kSessionGetMessages  = "session.getMessages";
+inline constexpr const char* kSessionCreate = "session.create";
+inline constexpr const char* kSessionResume = "session.resume";
+inline constexpr const char* kSessionList = "session.list";
+inline constexpr const char* kSessionGetMetadata = "session.getMetadata";
+inline constexpr const char* kSessionDelete = "session.delete";
+inline constexpr const char* kSessionGetLastId = "session.getLastId";
+inline constexpr const char* kSessionDestroy = "session.destroy";
+inline constexpr const char* kSessionDetach = "session.detach";
+inline constexpr const char* kSessionSend = "session.send";
+inline constexpr const char* kSessionAbort = "session.abort";
+inline constexpr const char* kSessionGetMessages = "session.getMessages";
 inline constexpr const char* kSessionGetForeground = "session.getForeground";
 inline constexpr const char* kSessionSetForeground = "session.setForeground";
 
@@ -208,7 +216,10 @@ class RpcRequestDispatcher
     RpcRequestDispatcher() = default;
 
     /// Construct and install on `client` immediately.
-    explicit RpcRequestDispatcher(JsonRpcClient& client) { attach(client); }
+    explicit RpcRequestDispatcher(JsonRpcClient& client)
+    {
+        attach(client);
+    }
 
     /// Install this dispatcher as the request handler of `client`.
     /// Any previously-installed handler is overwritten.
@@ -216,9 +227,8 @@ class RpcRequestDispatcher
     {
         client.set_request_handler(
             [this](const std::string& method, const json& params) -> json
-            {
-                return dispatch(method, params);
-            });
+            { return dispatch(method, params); }
+        );
     }
 
     /// Register `handler` for `method`. Overwrites any previous registration.
@@ -265,8 +275,8 @@ class RpcRequestDispatcher
         if (!handler)
         {
             throw JsonRpcError(
-                JsonRpcErrorCode::MethodNotFound,
-                "No handler registered for method: " + method);
+                JsonRpcErrorCode::MethodNotFound, "No handler registered for method: " + method
+            );
         }
         return handler(params);
     }

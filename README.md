@@ -6,6 +6,27 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
+## Version 0.4.2
+
+Targets Copilot CLI 1.0.102-1 and SDK protocol version 3.
+
+- Correlate message waiters with the originating request, including sub-agent,
+  abort, and autopilot events; receive structured JSON with `response_schema`
+  and `send_and_wait_structured`.
+- Replace session tools at runtime with `Session::set_tools`; use tool namespaces
+  and per-invocation agent/request identifiers.
+- Supply session skill providers, installation confirmation handlers, and extension
+  launch providers. Handle MCP authentication token updates or runtime refresh.
+- Configure diagnostics, agent/hook directories, sandboxing, image generation,
+  transcript recovery, and the expanded provider/agent options.
+- Cancel incoming JSON-RPC requests and run request callbacks independently of the
+  reader. Retire session callbacks on teardown and shut down owned runtimes gracefully.
+- Use generated binary SessionFs request/result types and report partial writes
+  with `SessionFsError::write_changed`.
+
+Known limitations: experimental AHP hosting is not implemented. The in-process
+macOS UI-thread dispatcher is not provided.
+
 ## Build
 
 Requirements: CMake 3.20+ and a C++20 compiler.
@@ -15,29 +36,11 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-## Tests
-
-Unit tests:
-
-```sh
-ctest --test-dir build -C Release --output-on-failure
-```
-
-E2E tests (real Copilot CLI):
-- Require `copilot` to be installed and authenticated.
-- To disable E2E tests in CI/non-interactive runs, set `COPILOT_SDK_CPP_SKIP_E2E=1`.
-
-Snapshot conformance tests (optional):
-- Require Python 3 and the upstream `copilot-sdk` snapshots directory.
-- Install Python deps: `python -m pip install --user -r tests/snapshot_tests/requirements.txt`
-- Enable with `-DCOPILOT_BUILD_SNAPSHOT_TESTS=ON` and set `-DCOPILOT_SDK_CPP_SNAPSHOT_DIR=...` if auto-detection fails.
-- Run: `cmake --build build --target run_snapshot_tests --config Release`
-
 ## Official protocol baseline and code generation
 
 `schemas/official-baseline.json` pins the official SDK commit, protocol version,
-schema hashes, and the complete generated surface: 1,203 API definitions, 494
-session-event definitions, 363 RPC methods, and 122 event variants. Generated
+schema hashes, and the complete generated surface: 1,899 API definitions, 679
+session-event definitions, 619 RPC methods, and 163 event variants. Generated
 wire-preserving types live under `include/copilot/generated/`; the existing
 handwritten public API remains the ergonomic layer.
 
@@ -73,8 +76,8 @@ Advanced parity includes:
   `copilot_runtime_*` native ABI (`prebuilds/<platform>/runtime.node`).
 - `CopilotRequestHandler` and WebSocket handlers for streamed model-layer I/O.
 - Automatic MCP OAuth event handling and pending-request responses.
-- `create_canvas`, `define_factory`, `Session::factory()`, and `join_session`
-  helpers for canvas, factory, and extension consumers.
+- `create_canvas`, `define_workflow`, `Session::workflow()`, and `join_session`
+  helpers for canvas, workflow, and extension consumers.
 
 ## Custom Tools
 

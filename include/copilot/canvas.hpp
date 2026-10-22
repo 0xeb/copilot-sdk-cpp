@@ -18,7 +18,10 @@ class CanvasError : public std::runtime_error
     {
     }
 
-    const std::string& code() const noexcept { return code_; }
+    const std::string& code() const noexcept
+    {
+        return code_;
+    }
 
   private:
     std::string code_;
@@ -29,6 +32,8 @@ struct CanvasAction
     std::string name;
     std::optional<std::string> description;
     std::optional<json> input_schema;
+    /// Returned JSON becomes the invoke_canvas_action tool result. A ToolResultObject
+    /// shape with binaryResultsForLlm supplies images to the model.
     std::function<json(const json&)> handler;
 };
 
@@ -48,8 +53,14 @@ class Canvas
   public:
     explicit Canvas(CanvasOptions options);
 
-    const std::string& id() const noexcept { return id_; }
-    const json& declaration() const noexcept { return declaration_; }
+    const std::string& id() const noexcept
+    {
+        return id_;
+    }
+    const json& declaration() const noexcept
+    {
+        return declaration_;
+    }
     json handle_open(const json& request) const;
     void handle_close(const json& request) const;
     json handle_action(const std::string& action, const json& request) const;

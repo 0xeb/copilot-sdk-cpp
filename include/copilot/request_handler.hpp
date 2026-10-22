@@ -3,8 +3,8 @@
 
 #pragma once
 
-#include <copilot/types.hpp>
 #include <atomic>
+#include <copilot/types.hpp>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -19,6 +19,7 @@ struct CopilotRequestContext
     std::string request_id;
     std::optional<std::string> session_id;
     std::optional<std::string> agent_id;
+    std::optional<std::string> agent_invocation_id;
     std::optional<std::string> parent_agent_id;
     std::optional<std::string> interaction_type;
     std::string transport = "http";
@@ -26,7 +27,10 @@ struct CopilotRequestContext
     std::map<std::string, std::vector<std::string>> headers;
     std::shared_ptr<std::atomic_bool> cancelled;
 
-    bool is_cancelled() const noexcept { return cancelled && cancelled->load(); }
+    bool is_cancelled() const noexcept
+    {
+        return cancelled && cancelled->load();
+    }
 };
 
 struct CopilotHttpRequest
@@ -53,6 +57,13 @@ struct CopilotWebSocketCloseStatus
     std::optional<std::string> error;
 };
 
+struct CopilotWebSocketMessage
+{
+    std::string data;
+    bool binary = false;
+    std::optional<std::string> agent_invocation_id;
+};
+
 class CopilotWebSocketHandler
 {
   public:
@@ -62,6 +73,10 @@ class CopilotWebSocketHandler
     virtual ~CopilotWebSocketHandler() = default;
     virtual void open(const CopilotRequestContext&) {}
     virtual void send_request_message(const std::string& data, bool binary) = 0;
+    virtual void send_request_message(const CopilotWebSocketMessage& message)
+    {
+        send_request_message(message.data, message.binary);
+    }
     virtual void close(const CopilotWebSocketCloseStatus& status)
     {
         if (status.error)
@@ -102,26 +117,21 @@ class CopilotRequestHandler
 {
   public:
     virtual ~CopilotRequestHandler() = default;
-    virtual CopilotHttpResponse send_request(
-        const CopilotHttpRequest& request,
-        const CopilotRequestContext& context) = 0;
-    virtual std::shared_ptr<CopilotWebSocketHandler> open_websocket(
-        const CopilotRequestContext&)
+    virtual CopilotHttpResponse
+    send_request(const CopilotHttpRequest& request, const CopilotRequestContext& context) = 0;
+    virtual std::shared_ptr<CopilotWebSocketHandler> open_websocket(const CopilotRequestContext&)
     {
         return {};
     }
 };
 
 /// Adapts official httpRequestStart/httpRequestChunk callbacks to high-level handlers.
-class CopilotRequestHandlerBridge
-    : public std::enable_shared_from_this<CopilotRequestHandlerBridge>
+class CopilotRequestHandlerBridge : public std::enable_shared_from_this<CopilotRequestHandlerBridge>
 {
   public:
     using SendRpc = std::function<void(const std::string&, const json&)>;
 
-    CopilotRequestHandlerBridge(
-        std::shared_ptr<CopilotRequestHandler> handler,
-        SendRpc send_rpc);
+    CopilotRequestHandlerBridge(std::shared_ptr<CopilotRequestHandler> handler, SendRpc send_rpc);
     ~CopilotRequestHandlerBridge();
 
     json handle(const std::string& method, const json& params);

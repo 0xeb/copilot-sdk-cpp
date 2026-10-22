@@ -3,9 +3,10 @@
 
 #pragma once
 
-#include <chrono>
-#include <copilot/generated/protocol_version.hpp>
 #include <cctype>
+#include <chrono>
+#include <copilot/cancellation.hpp>
+#include <copilot/generated/protocol_version.hpp>
 #include <cstdlib>
 #include <functional>
 #include <map>
@@ -22,7 +23,7 @@ namespace copilot
 
 class CopilotRequestHandler;
 class Canvas;
-struct FactoryHandle;
+struct WorkflowHandle;
 
 // =============================================================================
 // Type Aliases
@@ -272,6 +273,8 @@ struct ToolInvocation
     std::optional<std::vector<json>> available_tools;
     std::optional<std::string> traceparent;
     std::optional<std::string> tracestate;
+    std::optional<std::string> agent_id;
+    std::optional<std::string> request_id;
 };
 
 /// Tool handler function type
@@ -352,6 +355,7 @@ struct PermissionInvocation
 {
     std::string session_id;
     bool managed_settings_enabled = false;
+    std::optional<json> prompt_request;
 };
 
 /// Permission handler function type
@@ -365,6 +369,13 @@ struct McpAuthToken
     std::optional<std::string> token_type;
     std::optional<int64_t> expires_in;
 };
+
+struct McpAuthResult
+{
+    std::optional<McpAuthToken> token;
+    bool runtime_refresh = false;
+};
+using McpAuthResultHandler = std::function<McpAuthResult(const json&, const std::string&)>;
 
 using McpAuthHandler =
     std::function<std::optional<McpAuthToken>(const json& request, const std::string& session_id)>;
@@ -425,7 +436,8 @@ struct UserInputInvocation
 };
 
 /// Handler for user input requests from the agent
-using UserInputHandler = std::function<UserInputResponse(const UserInputRequest&, const UserInputInvocation&)>;
+using UserInputHandler =
+    std::function<UserInputResponse(const UserInputRequest&, const UserInputInvocation&)>;
 
 // =============================================================================
 // Elicitation Types
@@ -676,8 +688,8 @@ struct AutoModeSwitchInvocation
 };
 
 /// Auto mode switch handler function type
-using AutoModeSwitchHandler =
-    std::function<AutoModeSwitchResponse(const AutoModeSwitchRequest&, const AutoModeSwitchInvocation&)>;
+using AutoModeSwitchHandler = std::function<
+    AutoModeSwitchResponse(const AutoModeSwitchRequest&, const AutoModeSwitchInvocation&)>;
 
 // =============================================================================
 // Hook Handler Types
@@ -694,7 +706,8 @@ inline void parse_hook_base(
     int64_t& timestamp,
     std::optional<std::string>& timestamp_iso,
     std::string& cwd,
-    std::optional<std::string>& session_id)
+    std::optional<std::string>& session_id
+)
 {
     if (j.contains("timestamp"))
     {
@@ -711,8 +724,50 @@ inline void parse_hook_base(
         session_id = j["sessionId"].get<std::string>();
 }
 
+/// Sub-agent actor fields carried by every typed hook input. All absent for
+/// root-agent hooks and older runtimes.
+/// C# REFERENCE: dotnet/src/Types.cs PreToolUseHookInput.AgentId/AgentType/ParentAgentId
+struct HookActor
+{
+    std::optional<std::string> agent_id;
+    std::optional<std::string> agent_type;
+    std::optional<std::string> parent_agent_id;
+};
+
+inline void parse_hook_actor(const json& j, HookActor& a)
+{
+    if (j.contains("agentId") && j["agentId"].is_string())
+        a.agent_id = j["agentId"].get<std::string>();
+    if (j.contains("agentType") && j["agentType"].is_string())
+        a.agent_type = j["agentType"].get<std::string>();
+    if (j.contains("parentAgentId") && j["parentAgentId"].is_string())
+        a.parent_agent_id = j["parentAgentId"].get<std::string>();
+}
+
+/// Text of the `error` field of an errorOccurred / sessionEnd hook input.
+/// The CLI sends an error object (`{name, message, stack}` or `{message}`): its
+/// string `message` becomes the text, and an object without one becomes its JSON.
+/// A string passes through; anything else is rejected.
+/// C# REFERENCE: dotnet/src/HookErrorTextConverter.cs
+inline std::string hook_error_text(const json& error)
+{
+    if (error.is_string())
+        return error.get<std::string>();
+    if (error.is_object())
+    {
+        const auto it = error.find("message");
+        if (it != error.end() && it->is_string())
+            return it->get<std::string>();
+        return error.dump();
+    }
+    throw std::invalid_argument(
+        std::string("Expected a string or an error object for a hook error, got ") +
+        error.type_name()
+    );
+}
+
 /// Input for a pre-tool-use hook
-struct PreToolUseHookInput
+struct PreToolUseHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
@@ -725,14 +780,17 @@ struct PreToolUseHookInput
 inline void from_json(const json& j, PreToolUseHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("toolName")) j.at("toolName").get_to(h.tool_name);
-    if (j.contains("toolArgs") && !j["toolArgs"].is_null()) h.tool_args = j["toolArgs"];
+    parse_hook_actor(j, h);
+    if (j.contains("toolName"))
+        j.at("toolName").get_to(h.tool_name);
+    if (j.contains("toolArgs") && !j["toolArgs"].is_null())
+        h.tool_args = j["toolArgs"];
 }
 
 /// Output for a pre-tool-use hook
 struct PreToolUseHookOutput
 {
-    std::optional<std::string> permission_decision;     ///< "allow", "deny", or "ask"
+    std::optional<std::string> permission_decision; ///< "allow", "deny", or "ask"
     std::optional<std::string> permission_decision_reason;
     std::optional<json> modified_args;
     std::optional<std::string> additional_context;
@@ -742,17 +800,23 @@ struct PreToolUseHookOutput
 inline void to_json(json& j, const PreToolUseHookOutput& h)
 {
     j = json::object();
-    if (h.permission_decision) j["permissionDecision"] = *h.permission_decision;
-    if (h.permission_decision_reason) j["permissionDecisionReason"] = *h.permission_decision_reason;
-    if (h.modified_args) j["modifiedArgs"] = *h.modified_args;
-    if (h.additional_context) j["additionalContext"] = *h.additional_context;
-    if (h.suppress_output) j["suppressOutput"] = *h.suppress_output;
+    if (h.permission_decision)
+        j["permissionDecision"] = *h.permission_decision;
+    if (h.permission_decision_reason)
+        j["permissionDecisionReason"] = *h.permission_decision_reason;
+    if (h.modified_args)
+        j["modifiedArgs"] = *h.modified_args;
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+    if (h.suppress_output)
+        j["suppressOutput"] = *h.suppress_output;
 }
 
-using PreToolUseHandler = std::function<std::optional<PreToolUseHookOutput>(const PreToolUseHookInput&, const HookInvocation&)>;
+using PreToolUseHandler = std::function<
+    std::optional<PreToolUseHookOutput>(const PreToolUseHookInput&, const HookInvocation&)>;
 
 /// Input for a post-tool-use hook
-struct PostToolUseHookInput
+struct PostToolUseHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
@@ -766,9 +830,13 @@ struct PostToolUseHookInput
 inline void from_json(const json& j, PostToolUseHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("toolName")) j.at("toolName").get_to(h.tool_name);
-    if (j.contains("toolArgs") && !j["toolArgs"].is_null()) h.tool_args = j["toolArgs"];
-    if (j.contains("toolResult") && !j["toolResult"].is_null()) h.tool_result = j["toolResult"];
+    parse_hook_actor(j, h);
+    if (j.contains("toolName"))
+        j.at("toolName").get_to(h.tool_name);
+    if (j.contains("toolArgs") && !j["toolArgs"].is_null())
+        h.tool_args = j["toolArgs"];
+    if (j.contains("toolResult") && !j["toolResult"].is_null())
+        h.tool_result = j["toolResult"];
 }
 
 /// Output for a post-tool-use hook
@@ -782,15 +850,19 @@ struct PostToolUseHookOutput
 inline void to_json(json& j, const PostToolUseHookOutput& h)
 {
     j = json::object();
-    if (h.modified_result) j["modifiedResult"] = *h.modified_result;
-    if (h.additional_context) j["additionalContext"] = *h.additional_context;
-    if (h.suppress_output) j["suppressOutput"] = *h.suppress_output;
+    if (h.modified_result)
+        j["modifiedResult"] = *h.modified_result;
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+    if (h.suppress_output)
+        j["suppressOutput"] = *h.suppress_output;
 }
 
-using PostToolUseHandler = std::function<std::optional<PostToolUseHookOutput>(const PostToolUseHookInput&, const HookInvocation&)>;
+using PostToolUseHandler = std::function<
+    std::optional<PostToolUseHookOutput>(const PostToolUseHookInput&, const HookInvocation&)>;
 
 /// Input for a user-prompt-submitted hook
-struct UserPromptSubmittedHookInput
+struct UserPromptSubmittedHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
@@ -802,7 +874,9 @@ struct UserPromptSubmittedHookInput
 inline void from_json(const json& j, UserPromptSubmittedHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("prompt")) j.at("prompt").get_to(h.prompt);
+    parse_hook_actor(j, h);
+    if (j.contains("prompt"))
+        j.at("prompt").get_to(h.prompt);
 }
 
 /// Output for a user-prompt-submitted hook
@@ -811,33 +885,48 @@ struct UserPromptSubmittedHookOutput
     std::optional<std::string> modified_prompt;
     std::optional<std::string> additional_context;
     std::optional<bool> suppress_output;
+    /// "block" refuses the prompt: no model turn runs, no user message is recorded,
+    /// and the session emits a `session.warning` (`policy_blocked`) carrying `reason`.
+    std::optional<std::string> decision;
+    /// Why the prompt was blocked.
+    std::optional<std::string> reason;
 };
 
 inline void to_json(json& j, const UserPromptSubmittedHookOutput& h)
 {
     j = json::object();
-    if (h.modified_prompt) j["modifiedPrompt"] = *h.modified_prompt;
-    if (h.additional_context) j["additionalContext"] = *h.additional_context;
-    if (h.suppress_output) j["suppressOutput"] = *h.suppress_output;
+    if (h.modified_prompt)
+        j["modifiedPrompt"] = *h.modified_prompt;
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+    if (h.suppress_output)
+        j["suppressOutput"] = *h.suppress_output;
+    if (h.decision)
+        j["decision"] = *h.decision;
+    if (h.reason)
+        j["reason"] = *h.reason;
 }
 
-using UserPromptSubmittedHandler = std::function<std::optional<UserPromptSubmittedHookOutput>(const UserPromptSubmittedHookInput&, const HookInvocation&)>;
+using UserPromptSubmittedHandler = std::function<std::optional<
+    UserPromptSubmittedHookOutput>(const UserPromptSubmittedHookInput&, const HookInvocation&)>;
 
 /// Input for a session-start hook
-struct SessionStartHookInput
+struct SessionStartHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
     std::optional<std::string> session_id;
     std::string cwd;
-    std::string source;     ///< "startup", "resume", or "new"
+    std::string source; ///< "startup", "resume", or "new"
     std::optional<std::string> initial_prompt;
 };
 
 inline void from_json(const json& j, SessionStartHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("source")) j.at("source").get_to(h.source);
+    parse_hook_actor(j, h);
+    if (j.contains("source"))
+        j.at("source").get_to(h.source);
     if (j.contains("initialPrompt") && !j["initialPrompt"].is_null())
         h.initial_prompt = j.at("initialPrompt").get<std::string>();
 }
@@ -852,20 +941,23 @@ struct SessionStartHookOutput
 inline void to_json(json& j, const SessionStartHookOutput& h)
 {
     j = json::object();
-    if (h.additional_context) j["additionalContext"] = *h.additional_context;
-    if (h.modified_config) j["modifiedConfig"] = *h.modified_config;
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+    if (h.modified_config)
+        j["modifiedConfig"] = *h.modified_config;
 }
 
-using SessionStartHandler = std::function<std::optional<SessionStartHookOutput>(const SessionStartHookInput&, const HookInvocation&)>;
+using SessionStartHandler = std::function<
+    std::optional<SessionStartHookOutput>(const SessionStartHookInput&, const HookInvocation&)>;
 
 /// Input for a session-end hook
-struct SessionEndHookInput
+struct SessionEndHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
     std::optional<std::string> session_id;
     std::string cwd;
-    std::string reason;     ///< "complete", "error", "abort", "timeout", or "user_exit"
+    std::string reason; ///< "complete", "error", "abort", "timeout", or "user_exit"
     std::optional<std::string> final_message;
     std::optional<std::string> error;
 };
@@ -873,11 +965,13 @@ struct SessionEndHookInput
 inline void from_json(const json& j, SessionEndHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("reason")) j.at("reason").get_to(h.reason);
+    parse_hook_actor(j, h);
+    if (j.contains("reason"))
+        j.at("reason").get_to(h.reason);
     if (j.contains("finalMessage") && !j["finalMessage"].is_null())
         h.final_message = j.at("finalMessage").get<std::string>();
     if (j.contains("error") && !j["error"].is_null())
-        h.error = j.at("error").get<std::string>();
+        h.error = hook_error_text(j.at("error"));
 }
 
 /// Output for a session-end hook
@@ -891,38 +985,46 @@ struct SessionEndHookOutput
 inline void to_json(json& j, const SessionEndHookOutput& h)
 {
     j = json::object();
-    if (h.suppress_output) j["suppressOutput"] = *h.suppress_output;
-    if (h.cleanup_actions) j["cleanupActions"] = *h.cleanup_actions;
-    if (h.session_summary) j["sessionSummary"] = *h.session_summary;
+    if (h.suppress_output)
+        j["suppressOutput"] = *h.suppress_output;
+    if (h.cleanup_actions)
+        j["cleanupActions"] = *h.cleanup_actions;
+    if (h.session_summary)
+        j["sessionSummary"] = *h.session_summary;
 }
 
-using SessionEndHandler = std::function<std::optional<SessionEndHookOutput>(const SessionEndHookInput&, const HookInvocation&)>;
+using SessionEndHandler = std::function<
+    std::optional<SessionEndHookOutput>(const SessionEndHookInput&, const HookInvocation&)>;
 
 /// Input for an error-occurred hook
-struct ErrorOccurredHookInput
+struct ErrorOccurredHookInput : HookActor
 {
     int64_t timestamp = 0;
     std::optional<std::string> timestamp_iso;
     std::optional<std::string> session_id;
     std::string cwd;
     std::string error;
-    std::string error_context;  ///< "model_call", "tool_execution", "system", or "user_input"
+    std::string error_context; ///< "model_call", "tool_execution", "system", or "user_input"
     bool recoverable = false;
 };
 
 inline void from_json(const json& j, ErrorOccurredHookInput& h)
 {
     parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    if (j.contains("error")) j.at("error").get_to(h.error);
-    if (j.contains("errorContext")) j.at("errorContext").get_to(h.error_context);
-    if (j.contains("recoverable")) j.at("recoverable").get_to(h.recoverable);
+    parse_hook_actor(j, h);
+    if (j.contains("error") && !j["error"].is_null())
+        h.error = hook_error_text(j.at("error"));
+    if (j.contains("errorContext"))
+        j.at("errorContext").get_to(h.error_context);
+    if (j.contains("recoverable"))
+        j.at("recoverable").get_to(h.recoverable);
 }
 
 /// Output for an error-occurred hook
 struct ErrorOccurredHookOutput
 {
     std::optional<bool> suppress_output;
-    std::optional<std::string> error_handling;  ///< "retry", "skip", or "abort"
+    std::optional<std::string> error_handling; ///< "retry", "skip", or "abort"
     std::optional<int> retry_count;
     std::optional<std::string> user_notification;
 };
@@ -930,17 +1032,21 @@ struct ErrorOccurredHookOutput
 inline void to_json(json& j, const ErrorOccurredHookOutput& h)
 {
     j = json::object();
-    if (h.suppress_output) j["suppressOutput"] = *h.suppress_output;
-    if (h.error_handling) j["errorHandling"] = *h.error_handling;
-    if (h.retry_count) j["retryCount"] = *h.retry_count;
-    if (h.user_notification) j["userNotification"] = *h.user_notification;
+    if (h.suppress_output)
+        j["suppressOutput"] = *h.suppress_output;
+    if (h.error_handling)
+        j["errorHandling"] = *h.error_handling;
+    if (h.retry_count)
+        j["retryCount"] = *h.retry_count;
+    if (h.user_notification)
+        j["userNotification"] = *h.user_notification;
 }
 
-using ErrorOccurredHandler = std::function<std::optional<ErrorOccurredHookOutput>(const ErrorOccurredHookInput&, const HookInvocation&)>;
+using ErrorOccurredHandler = std::function<
+    std::optional<ErrorOccurredHookOutput>(const ErrorOccurredHookInput&, const HookInvocation&)>;
 
 /// Generic hook handler for newer hook payloads whose schema is preserved as JSON.
-using JsonHookHandler =
-    std::function<std::optional<json>(const json&, const HookInvocation&)>;
+using JsonHookHandler = std::function<std::optional<json>(const json&, const HookInvocation&)>;
 
 /// Hook handlers configuration for a session
 struct SessionHooks
@@ -955,6 +1061,9 @@ struct SessionHooks
     std::optional<JsonHookHandler> on_post_tool_use_failure;
     std::optional<JsonHookHandler> on_user_prompt_transformed;
     std::optional<JsonHookHandler> on_agent_stop;
+    /// `subagentStart`: input carries agentName/agentDisplayName/agentDescription
+    /// plus the actor fields; output may set `additionalContext`.
+    std::optional<JsonHookHandler> on_subagent_start;
     std::optional<JsonHookHandler> on_subagent_stop;
     std::optional<JsonHookHandler> on_permission_request;
 
@@ -962,10 +1071,9 @@ struct SessionHooks
     bool has_any() const
     {
         return on_pre_tool_use || on_post_tool_use || on_user_prompt_submitted ||
-               on_session_start || on_session_end || on_error_occurred ||
-               on_pre_mcp_tool_call || on_post_tool_use_failure ||
-               on_user_prompt_transformed || on_agent_stop || on_subagent_stop ||
-               on_permission_request;
+               on_session_start || on_session_end || on_error_occurred || on_pre_mcp_tool_call ||
+               on_post_tool_use_failure || on_user_prompt_transformed || on_agent_stop ||
+               on_subagent_start || on_subagent_stop || on_permission_request;
     }
 };
 
@@ -1112,6 +1220,8 @@ struct ProviderConfig
             return std::string(model);
         return std::nullopt;
     }
+    std::optional<std::string> model_provider;
+    std::optional<std::string> api_key_command;
 };
 
 inline void to_json(json& j, const ProviderConfig& c)
@@ -1137,6 +1247,10 @@ inline void to_json(json& j, const ProviderConfig& c)
         j["maxPromptTokens"] = *c.max_input_tokens;
     if (c.max_output_tokens)
         j["maxOutputTokens"] = *c.max_output_tokens;
+    if (c.model_provider)
+        j["modelProvider"] = *c.model_provider;
+    if (c.api_key_command)
+        j["apiKeyCommand"] = *c.api_key_command;
 }
 
 inline void from_json(const json& j, ProviderConfig& c)
@@ -1162,6 +1276,10 @@ inline void from_json(const json& j, ProviderConfig& c)
         c.max_input_tokens = j.at("maxPromptTokens").get<int>();
     if (j.contains("maxOutputTokens"))
         c.max_output_tokens = j.at("maxOutputTokens").get<int>();
+    if (j.contains("modelProvider") && !j["modelProvider"].is_null())
+        c.model_provider = j.at("modelProvider").get<std::string>();
+    if (j.contains("apiKeyCommand") && !j["apiKeyCommand"].is_null())
+        c.api_key_command = j.at("apiKeyCommand").get<std::string>();
 }
 
 // =============================================================================
@@ -1216,6 +1334,7 @@ struct McpRemoteServerConfig
     std::optional<int> timeout;
     std::string url;
     std::optional<std::map<std::string, std::string>> headers;
+    std::optional<std::vector<std::string>> oauth_scopes;
 };
 
 inline void to_json(json& j, const McpRemoteServerConfig& c)
@@ -1225,6 +1344,8 @@ inline void to_json(json& j, const McpRemoteServerConfig& c)
         j["timeout"] = *c.timeout;
     if (c.headers)
         j["headers"] = *c.headers;
+    if (c.oauth_scopes)
+        j["oauthScopes"] = *c.oauth_scopes;
 }
 
 inline void from_json(const json& j, McpRemoteServerConfig& c)
@@ -1236,6 +1357,8 @@ inline void from_json(const json& j, McpRemoteServerConfig& c)
         c.timeout = j.at("timeout").get<int>();
     if (j.contains("headers"))
         c.headers = j.at("headers").get<std::map<std::string, std::string>>();
+    if (j.contains("oauthScopes") && !j["oauthScopes"].is_null())
+        c.oauth_scopes = j.at("oauthScopes").get<std::vector<std::string>>();
 }
 
 /// Union type for MCP server configuration
@@ -1260,6 +1383,8 @@ struct CustomAgentConfig
     /// When set, the runtime will attempt to use this model for the agent,
     /// falling back to the parent session model if unavailable.
     std::optional<std::string> model;
+    std::optional<std::map<std::string, std::vector<json>>> hooks;
+    std::optional<json> model_policy;
 };
 
 inline void to_json(json& j, const CustomAgentConfig& c)
@@ -1279,6 +1404,10 @@ inline void to_json(json& j, const CustomAgentConfig& c)
         j["skills"] = *c.skills;
     if (c.model)
         j["model"] = *c.model;
+    if (c.hooks)
+        j["hooks"] = *c.hooks;
+    if (c.model_policy)
+        j["modelPolicy"] = *c.model_policy;
 }
 
 inline void from_json(const json& j, CustomAgentConfig& c)
@@ -1299,6 +1428,10 @@ inline void from_json(const json& j, CustomAgentConfig& c)
         c.skills = j.at("skills").get<std::vector<std::string>>();
     if (j.contains("model"))
         c.model = j.at("model").get<std::string>();
+    if (j.contains("hooks") && !j["hooks"].is_null())
+        c.hooks = j.at("hooks").get<std::map<std::string, std::vector<json>>>();
+    if (j.contains("modelPolicy") && !j["modelPolicy"].is_null())
+        c.model_policy = j.at("modelPolicy").get<json>();
 }
 
 struct DefaultAgentConfig
@@ -1441,8 +1574,14 @@ class ToolSet
         return *this;
     }
 
-    const std::vector<std::string>& values() const noexcept { return values_; }
-    std::vector<std::string> to_vector() const { return values_; }
+    const std::vector<std::string>& values() const noexcept
+    {
+        return values_;
+    }
+    std::vector<std::string> to_vector() const
+    {
+        return values_;
+    }
 
   private:
     void add(const std::string& source, const std::string& name)
@@ -1464,6 +1603,24 @@ class ToolSet
 };
 
 /// Tool definition for registration with a session
+struct ToolNamespace
+{
+    std::string name;
+    std::optional<std::string> description;
+};
+inline void to_json(json& j, const ToolNamespace& value)
+{
+    j = {{"name", value.name}};
+    if (value.description)
+        j["description"] = *value.description;
+}
+inline void from_json(const json& j, ToolNamespace& value)
+{
+    j.at("name").get_to(value.name);
+    if (j.contains("description") && !j["description"].is_null())
+        value.description = j["description"].get<std::string>();
+}
+
 struct Tool
 {
     std::string name;
@@ -1490,12 +1647,39 @@ struct Tool
     bool is_terminal = false;
 
     /// Fluent setter — mark this tool as not requiring permission prompts.
-    Tool& with_skip_permission(bool value = true) & { skip_permission = value; return *this; }
-    Tool  with_skip_permission(bool value = true) && { skip_permission = value; return std::move(*this); }
+    Tool& with_skip_permission(bool value = true) &
+    {
+        skip_permission = value;
+        return *this;
+    }
+    Tool with_skip_permission(bool value = true) &&
+    {
+        skip_permission = value;
+        return std::move(*this);
+    }
 
     /// Fluent setter — mark this tool as replacing a built-in CLI tool.
-    Tool& with_overrides_built_in_tool(bool value = true) & { overrides_built_in_tool = value; return *this; }
-    Tool  with_overrides_built_in_tool(bool value = true) && { overrides_built_in_tool = value; return std::move(*this); }
+    Tool& with_overrides_built_in_tool(bool value = true) &
+    {
+        overrides_built_in_tool = value;
+        return *this;
+    }
+    Tool with_overrides_built_in_tool(bool value = true) &&
+    {
+        overrides_built_in_tool = value;
+        return std::move(*this);
+    }
+    std::optional<ToolNamespace> tool_namespace;
+    Tool& with_namespace(ToolNamespace value) &
+    {
+        tool_namespace = std::move(value);
+        return *this;
+    }
+    Tool with_namespace(ToolNamespace value) &&
+    {
+        tool_namespace = std::move(value);
+        return std::move(*this);
+    }
 };
 
 // =============================================================================
@@ -1565,6 +1749,57 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
         {RemoteSessionMode::On, "on"},
     }
 )
+
+// C# REFERENCE: dotnet/src/Types.cs ISkillProvider and SessionConfigBase.
+struct SkillProviderDescriptor
+{
+    std::string name;
+    std::string description;
+    std::optional<bool> user_invocable;
+    std::optional<bool> disable_model_invocation;
+    std::optional<std::string> argument_hint;
+    std::optional<std::string> directory;
+};
+inline void to_json(json& j, const SkillProviderDescriptor& value)
+{
+    j = {{"name", value.name}, {"description", value.description}};
+    if (value.user_invocable)
+        j["userInvocable"] = *value.user_invocable;
+    if (value.disable_model_invocation)
+        j["disableModelInvocation"] = *value.disable_model_invocation;
+    if (value.argument_hint)
+        j["argumentHint"] = *value.argument_hint;
+    if (value.directory)
+        j["directory"] = *value.directory;
+}
+class SkillProvider
+{
+  public:
+    virtual ~SkillProvider() = default;
+    virtual std::vector<SkillProviderDescriptor> list_skills() = 0;
+    virtual std::optional<std::string> read_skill(const std::string& name) = 0;
+};
+enum class WorkingDirectoryTrust
+{
+    Session,
+    User
+};
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    WorkingDirectoryTrust,
+    {{WorkingDirectoryTrust::Session, "session"}, {WorkingDirectoryTrust::User, "user"}}
+)
+struct TranscriptRecoveryReport
+{
+    std::string planned_backup_path;
+    std::vector<int> invalid_line_numbers;
+    bool session_start_moved = false;
+};
+inline void from_json(const json& j, TranscriptRecoveryReport& value)
+{
+    value.planned_backup_path = j.value("plannedBackupPath", "");
+    value.invalid_line_numbers = j.value("invalidLineNumbers", std::vector<int>{});
+    value.session_start_moved = j.value("sessionStartMoved", false);
+}
 
 struct SessionConfig
 {
@@ -1706,6 +1941,20 @@ struct SessionConfig
     std::optional<bool> enable_skills;
     std::optional<json> cloud;
     std::optional<json> exp_assignments;
+    // C# REFERENCE: dotnet/src/Types.cs SessionConfigBase.
+    std::optional<json> diagnostics;
+    std::optional<std::vector<std::string>> agent_directories;
+    std::optional<std::vector<std::string>> hook_directories;
+    std::optional<bool> enforce_managed_model_defaults;
+    std::optional<bool> interactive_user;
+    std::optional<json> image_generation;
+    std::optional<json> sandbox_config;
+    std::optional<json> autopilot;
+    std::shared_ptr<SkillProvider> skill_provider;
+    std::optional<McpAuthResultHandler> on_mcp_auth_request_with_result;
+    std::optional<bool> refresh_custom_instructions;
+    std::optional<std::string> name;
+    std::optional<WorkingDirectoryTrust> trust_working_directory;
 };
 
 /// Configuration for resuming an existing session
@@ -1840,9 +2089,21 @@ struct ResumeSessionConfig
     bool continue_pending_work = false;
     std::optional<std::vector<json>> open_canvases;
     std::optional<json> exp_assignments;
-    std::optional<std::vector<json>> factories;
-    std::vector<std::shared_ptr<FactoryHandle>> factory_objects;
+    std::optional<std::vector<json>> workflows;
+    std::vector<std::shared_ptr<WorkflowHandle>> workflow_objects;
     std::optional<std::vector<std::string>> requested_environment_variables;
+    // C# REFERENCE: dotnet/src/Types.cs SessionConfigBase.
+    std::optional<json> diagnostics;
+    std::optional<std::vector<std::string>> agent_directories;
+    std::optional<std::vector<std::string>> hook_directories;
+    std::optional<bool> enforce_managed_model_defaults;
+    std::optional<bool> interactive_user;
+    std::optional<json> image_generation;
+    std::optional<json> sandbox_config;
+    std::optional<json> autopilot;
+    std::shared_ptr<SkillProvider> skill_provider;
+    std::optional<McpAuthResultHandler> on_mcp_auth_request_with_result;
+    std::optional<bool> allow_transcript_recovery;
 };
 
 /// Options for sending a message
@@ -1856,15 +2117,27 @@ class MessageSource
 {
   public:
     /// The message originates from user input.
-    static MessageSource user() { return MessageSource("user"); }
+    static MessageSource user()
+    {
+        return MessageSource("user");
+    }
     /// The message provides application-generated context.
-    static MessageSource system() { return MessageSource("system"); }
+    static MessageSource system()
+    {
+        return MessageSource("system");
+    }
     /// A prompt sent on behalf of another agent. `id` is preserved verbatim
     /// after the `agent-` prefix.
-    static MessageSource agent(const std::string& id) { return MessageSource("agent-" + id); }
+    static MessageSource agent(const std::string& id)
+    {
+        return MessageSource("agent-" + id);
+    }
 
     /// The string used on the wire.
-    const std::string& value() const noexcept { return value_; }
+    const std::string& value() const noexcept
+    {
+        return value_;
+    }
 
     friend bool operator==(const MessageSource& a, const MessageSource& b) noexcept
     {
@@ -1886,6 +2159,7 @@ struct MessageOptions
     std::optional<std::string> display_prompt;
     /// Optional provenance tag; omitted from the wire when unset.
     std::optional<MessageSource> source;
+    std::optional<json> response_schema;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -1903,6 +2177,11 @@ inline void to_json(json& j, const MessageOptions& o)
         j["displayPrompt"] = *o.display_prompt;
     if (o.source)
         j["source"] = o.source->value();
+    if (o.response_schema)
+        j["responseFormat"] = {
+            {"type", "json_schema"},
+            {"jsonSchema", {{"name", "response"}, {"schema", *o.response_schema}, {"strict", true}}}
+        };
 }
 
 inline void from_json(const json& j, MessageOptions& o)
@@ -1918,6 +2197,12 @@ inline void from_json(const json& j, MessageOptions& o)
         o.request_headers = j.at("requestHeaders").get<std::map<std::string, std::string>>();
     if (j.contains("displayPrompt"))
         o.display_prompt = j.at("displayPrompt").get<std::string>();
+    if (j.contains("responseFormat") && j["responseFormat"].is_object())
+    {
+        const auto& format = j["responseFormat"];
+        if (format.contains("jsonSchema") && format["jsonSchema"].contains("schema"))
+            o.response_schema = format["jsonSchema"]["schema"];
+    }
 }
 
 // =============================================================================
@@ -1962,7 +2247,8 @@ struct RuntimeConnection
 
     static RuntimeConnection for_stdio(
         std::optional<std::string> path = std::nullopt,
-        std::optional<std::vector<std::string>> args = std::nullopt)
+        std::optional<std::vector<std::string>> args = std::nullopt
+    )
     {
         return RuntimeConnection{
             .kind = RuntimeConnectionKind::Stdio,
@@ -1974,7 +2260,8 @@ struct RuntimeConnection
     static RuntimeConnection for_tcp(
         int port = 0,
         std::optional<std::string> connection_token = std::nullopt,
-        std::optional<std::string> path = std::nullopt)
+        std::optional<std::string> path = std::nullopt
+    )
     {
         return RuntimeConnection{
             .kind = RuntimeConnectionKind::Tcp,
@@ -1984,9 +2271,8 @@ struct RuntimeConnection
         };
     }
 
-    static RuntimeConnection for_uri(
-        std::string url,
-        std::optional<std::string> connection_token = std::nullopt)
+    static RuntimeConnection
+    for_uri(std::string url, std::optional<std::string> connection_token = std::nullopt)
     {
         return RuntimeConnection{
             .kind = RuntimeConnectionKind::Uri,
@@ -1997,7 +2283,8 @@ struct RuntimeConnection
 
     static RuntimeConnection for_in_process(
         std::optional<std::string> cli_entrypoint = std::nullopt,
-        std::optional<std::string> library_path = std::nullopt)
+        std::optional<std::string> library_path = std::nullopt
+    )
     {
         return RuntimeConnection{
             .kind = RuntimeConnectionKind::InProcess,
@@ -2023,8 +2310,7 @@ struct TelemetryConfig
 };
 
 using TraceContextProvider = std::function<std::map<std::string, std::string>()>;
-using ClientRequestHandler =
-    std::function<json(const std::string& method, const json& params)>;
+using ClientRequestHandler = std::function<json(const std::string& method, const json& params)>;
 using GitHubTelemetryHandler = std::function<void(const json& notification)>;
 using SessionFsHandler = std::function<json(const json& params)>;
 
@@ -2120,6 +2406,16 @@ struct CopilotClientInfo
 };
 
 /// Options for creating a CopilotClient
+enum class InstallationDecision
+{
+    Confirm,
+    Decline,
+    Cancel
+};
+using InstallationConfirmationHandler =
+    std::function<InstallationDecision(const json&, const CancellationToken&)>;
+using ExtensionLaunchProvider = std::function<json(const json&, const CancellationToken&)>;
+
 struct ClientOptions
 {
     std::optional<RuntimeConnection> connection;
@@ -2198,6 +2494,8 @@ struct ClientOptions
     /// an external server via {@link cli_url}.
     bool remote = false;
     std::optional<bool> enable_remote_sessions;
+    std::optional<InstallationConfirmationHandler> installation_confirmation_handler;
+    std::optional<ExtensionLaunchProvider> extension_launch_provider;
 };
 
 // =============================================================================
@@ -2323,7 +2621,8 @@ inline bool parse_fixed_decimal(const std::string& s, size_t pos, size_t len, in
     return true;
 }
 
-inline std::optional<std::chrono::system_clock::time_point> parse_iso8601_timestamp(const std::string& s)
+inline std::optional<std::chrono::system_clock::time_point>
+parse_iso8601_timestamp(const std::string& s)
 {
     // Accepts: YYYY-MM-DDTHH:MM:SS[.fffffffff](Z|(+|-)HH:MM)
     // Copilot SDKs generally emit RFC3339/ISO8601 strings (e.g. 2025-01-17T10:24:12.345Z).
@@ -2413,13 +2712,14 @@ inline std::optional<std::chrono::system_clock::time_point> parse_iso8601_timest
     std::chrono::year_month_day ymd{
         std::chrono::year{year_num},
         std::chrono::month{static_cast<unsigned>(month_num)},
-        std::chrono::day{static_cast<unsigned>(day_num)}};
+        std::chrono::day{static_cast<unsigned>(day_num)}
+    };
     if (!ymd.ok())
         return std::nullopt;
 
     std::chrono::sys_time<std::chrono::nanoseconds> tp =
-        std::chrono::sys_days{ymd} + std::chrono::hours{hour_num} + std::chrono::minutes{minute_num} +
-        std::chrono::seconds{second_num} + fractional_ns;
+        std::chrono::sys_days{ymd} + std::chrono::hours{hour_num} +
+        std::chrono::minutes{minute_num} + std::chrono::seconds{second_num} + fractional_ns;
     tp -= std::chrono::minutes{tz_offset_minutes};
 
     return std::chrono::time_point_cast<std::chrono::system_clock::duration>(tp);
@@ -2563,7 +2863,8 @@ inline void from_json(const json& j, ModelCapabilities& c)
     }
     if (j.contains("limits"))
     {
-        if (j["limits"].contains("max_prompt_tokens") && !j["limits"]["max_prompt_tokens"].is_null())
+        if (j["limits"].contains("max_prompt_tokens") &&
+            !j["limits"]["max_prompt_tokens"].is_null())
             c.limits.max_prompt_tokens = j["limits"]["max_prompt_tokens"].get<int>();
         if (j["limits"].contains("max_context_window_tokens"))
             j["limits"]["max_context_window_tokens"].get_to(c.limits.max_context_window_tokens);
@@ -2621,7 +2922,8 @@ inline void from_json(const json& j, ModelInfo& m)
     if (j.contains("billing") && !j["billing"].is_null())
         m.billing = j["billing"].get<ModelBilling>();
     if (j.contains("supportedReasoningEfforts") && !j["supportedReasoningEfforts"].is_null())
-        m.supported_reasoning_efforts = j["supportedReasoningEfforts"].get<std::vector<std::string>>();
+        m.supported_reasoning_efforts =
+            j["supportedReasoningEfforts"].get<std::vector<std::string>>();
     if (j.contains("defaultReasoningEffort") && !j["defaultReasoningEffort"].is_null())
         m.default_reasoning_effort = j["defaultReasoningEffort"].get<std::string>();
 }
@@ -2697,8 +2999,13 @@ inline void from_json(const json& j, SelectionAttachment& a)
 
 inline void to_json(json& j, const SelectionAttachment& a)
 {
-    j = json{{"type", "selection"}, {"filePath", a.file_path},
-             {"displayName", a.display_name}, {"text", a.text}, {"selection", a.selection}};
+    j = json{
+        {"type", "selection"},
+        {"filePath", a.file_path},
+        {"displayName", a.display_name},
+        {"text", a.text},
+        {"selection", a.selection}
+    };
 }
 
 // =============================================================================
@@ -2708,12 +3015,12 @@ inline void to_json(json& j, const SelectionAttachment& a)
 /// Session lifecycle event type constants
 namespace SessionLifecycleEventTypes
 {
-    inline constexpr const char* Created = "session.created";
-    inline constexpr const char* Deleted = "session.deleted";
-    inline constexpr const char* Updated = "session.updated";
-    inline constexpr const char* Foreground = "session.foreground";
-    inline constexpr const char* Background = "session.background";
-}
+inline constexpr const char* Created = "session.created";
+inline constexpr const char* Deleted = "session.deleted";
+inline constexpr const char* Updated = "session.updated";
+inline constexpr const char* Foreground = "session.foreground";
+inline constexpr const char* Background = "session.background";
+} // namespace SessionLifecycleEventTypes
 
 /// Metadata for session lifecycle events
 struct SessionLifecycleEventMetadata

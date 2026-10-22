@@ -8,18 +8,18 @@
 namespace copilot::generated::coverage
 {
 
-inline constexpr std::size_t kApiDefinitionCount = 1306;
-inline constexpr std::size_t kSessionEventDefinitionCount = 582;
-inline constexpr std::size_t kSharedDefinitionCount = 58;
-inline constexpr std::size_t kUniqueDefinitionCount = 1830;
-inline constexpr std::size_t kRpcMethodCount = 383;
-inline constexpr std::size_t kSessionEventVariantCount = 147;
-inline constexpr std::string_view kApiSchemaSha256 = "443958cfdccb9323b13c20ce5133817c1800b8e9e700ae3b9520bcc6f2a66340";
-inline constexpr std::string_view kSessionEventsSchemaSha256 = "d34b2b2af8f20c2118f1d07d1409bceac10d400c0878e987b9af68f903103d8c";
-inline constexpr std::string_view kApiDefinitionNamesSha256 = "1a0c4ed01b23fd47aa97d01ac99c29ba6861873c61d0f8d9e9b95c80ef293b95";
-inline constexpr std::string_view kSessionEventDefinitionNamesSha256 = "528849e2f18ec2429afb1ad0201b0a317c8be84ec6c6fa823a288da129b598e1";
-inline constexpr std::string_view kRpcMethodNamesSha256 = "37f118b1fbbb0f3442d0b366e3f4d73ebc5ba287b7dcb5ca75448dd2c86345dc";
-inline constexpr std::string_view kSessionEventWireTypesSha256 = "d45372a060c9f6851e5438ac8a5d14073dff77f44138dc2e6be51dc556bd979f";
-inline constexpr std::string_view kSurfaceSha256 = "02dd29c3d305ad86ecaabd8879afa5cd418039ac6f564819297a5c45c5384769";
+inline constexpr std::size_t kApiDefinitionCount = 1899;
+inline constexpr std::size_t kSessionEventDefinitionCount = 679;
+inline constexpr std::size_t kSharedDefinitionCount = 95;
+inline constexpr std::size_t kUniqueDefinitionCount = 2483;
+inline constexpr std::size_t kRpcMethodCount = 619;
+inline constexpr std::size_t kSessionEventVariantCount = 163;
+inline constexpr std::string_view kApiSchemaSha256 = "3ea4787901ebed80f00e2c5271769049bc93ebfbbd6b6635c8c168ca7aad4922";
+inline constexpr std::string_view kSessionEventsSchemaSha256 = "2d2ac2bea9ede2d02c1e51f4595d3e2c8cf81bfb2b00cb13d74fea83014ffa5d";
+inline constexpr std::string_view kApiDefinitionNamesSha256 = "d83b01cffcc12957e537df53b1fc5c558fe8f5812d0c23c994f9618246210a56";
+inline constexpr std::string_view kSessionEventDefinitionNamesSha256 = "41759d22cf394209839ecc2c94427a71f6cde220b089bad09b1a743bd38529db";
+inline constexpr std::string_view kRpcMethodNamesSha256 = "042db620282c31562c0cb3eeb35d0b856fd02306c569952ec519d99e4b1ff6c1";
+inline constexpr std::string_view kSessionEventWireTypesSha256 = "c187b11484980240db6d438f94854cc6170344d0d8618cf339770a34ba26af3c";
+inline constexpr std::string_view kSurfaceSha256 = "57f34d75b55d70d12e5816ce3db46e3bf374d8a1aa0e63ee87708abd029f81ac";
 
 } // namespace copilot::generated::coverage
