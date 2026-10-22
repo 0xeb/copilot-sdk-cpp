@@ -7,10 +7,12 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <copilot/cancellation.hpp>
 #include <copilot/transport.hpp>
 #include <copilot/types.hpp>
 #include <functional>
 #include <future>
+#include <limits>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -51,25 +53,48 @@ enum class JsonRpcErrorCode : int
 class JsonRpcError : public std::runtime_error
 {
   public:
-    JsonRpcError(
-        JsonRpcErrorCode code, const std::string& message, const json& data = nullptr
-    )
-        : std::runtime_error(message), code_(code), data_(data)
+    /// A null `data` means "no data" here; use with_data() to carry an explicit
+    /// `data: null`.
+    JsonRpcError(JsonRpcErrorCode code, const std::string& message, const json& data = nullptr)
+        : std::runtime_error(message), code_(code), data_(data), has_data_(!data.is_null())
     {
+    }
+
+    /// Error whose `data` member is preserved exactly: nullopt = absent,
+    /// json(nullptr) = present and null.
+    /// C# REFERENCE: dotnet/src/JsonRpc.cs (4001c1da7, structured error data)
+    static JsonRpcError
+    with_data(JsonRpcErrorCode code, const std::string& message, std::optional<json> data)
+    {
+        JsonRpcError error(code, message);
+        error.has_data_ = data.has_value();
+        error.data_ = data.value_or(json(nullptr));
+        return error;
     }
 
     JsonRpcErrorCode code() const
     {
         return code_;
     }
+    /// The `data` member; null when absent (see has_data()).
     const json& data() const
     {
         return data_;
+    }
+    /// True when the wire error carried a `data` member, even `data: null`.
+    bool has_data() const noexcept
+    {
+        return has_data_;
+    }
+    std::optional<json> data_if_present() const
+    {
+        return has_data_ ? std::optional<json>(data_) : std::nullopt;
     }
 
   private:
     JsonRpcErrorCode code_;
     json data_;
+    bool has_data_ = false;
 };
 
 // =============================================================================
@@ -134,13 +159,14 @@ struct JsonRpcErrorObject
 {
     int code;
     std::string message;
-    json data;
+    /// nullopt = no `data` member; json(nullptr) = `"data": null`.
+    std::optional<json> data;
 
     json to_json() const
     {
         json j = {{"code", code}, {"message", message}};
-        if (!data.is_null())
-            j["data"] = data;
+        if (data)
+            j["data"] = *data;
         return j;
     }
 
@@ -198,6 +224,7 @@ struct JsonRpcResponse
 struct PendingRequest
 {
     std::promise<json> promise;
+    std::function<void(const json&)> on_success;
     std::chrono::steady_clock::time_point deadline;
 
     PendingRequest(std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
@@ -214,20 +241,25 @@ struct PendingRequest
 // =============================================================================
 
 /// Handler for incoming notifications
-using NotificationHandler =
-    std::function<void(const std::string& method, const json& params)>;
+using NotificationHandler = std::function<void(const std::string& method, const json& params)>;
 
 /// Handler for incoming requests (returns response result or throws)
-using RequestHandler =
-    std::function<json(const std::string& method, const json& params)>;
+using RequestHandler = std::function<json(const std::string& method, const json& params)>;
+
+/// Handler for incoming requests that can observe cancellation. The token is
+/// signalled by a matching `$/cancelRequest` or when the connection closes.
+using CancellableRequestHandler = std::function<
+    json(const std::string& method, const json& params, const CancellationToken& cancellation)>;
 
 /// JSON-RPC 2.0 client with bidirectional communication
 ///
 /// Features:
 /// - Send requests and await responses (with timeout)
 /// - Send notifications (fire-and-forget)
-/// - Handle incoming notifications via callback
-/// - Handle incoming requests (server-to-client calls) via callback
+/// - Handle incoming notifications via callback (in order, on the read thread)
+/// - Handle incoming requests (server-to-client calls) via callback, each on its
+///   own worker thread so a handler may itself call invoke() and wait
+/// - Incoming `$/cancelRequest` support
 /// - Background read loop with automatic dispatch
 class JsonRpcClient
 {
@@ -235,7 +267,8 @@ class JsonRpcClient
     /// Construct client with transport and message framer
     /// @param transport The underlying transport (takes ownership)
     explicit JsonRpcClient(std::unique_ptr<ITransport> transport)
-        : transport_(std::move(transport)), framer_(*transport_), next_id_(1), running_(false)
+        : wire_(std::make_shared<Wire>(std::move(transport))),
+          incoming_(std::make_shared<IncomingRegistry>()), next_id_(1), running_(false)
     {
     }
 
@@ -268,18 +301,33 @@ class JsonRpcClient
         pending_cv_.notify_all();
 
         // Close transport to unblock read
-        if (was_running && transport_)
-            transport_->close();
+        if (was_running && wire_->transport)
+            wire_->transport->close();
 
         // Wait for read thread
         if (read_thread_.joinable())
-            read_thread_.join();
+        {
+            if (read_thread_.get_id() == std::this_thread::get_id())
+                read_thread_.detach();
+            else
+                read_thread_.join();
+        }
 
         if (timeout_thread_.joinable())
             timeout_thread_.join();
 
         // Fail all pending requests
         fail_all_pending(JsonRpcErrorCode::ConnectionClosed, "Connection closed");
+        notify_closed();
+        join_workers();
+    }
+
+    void signal_connection_closed()
+    {
+        fail_all_pending(JsonRpcErrorCode::ConnectionClosed, "Runtime process exited");
+        notify_closed();
+        if (wire_->transport)
+            wire_->transport->close();
     }
 
     /// Check if client is running
@@ -298,48 +346,64 @@ class JsonRpcClient
     /// Set handler for incoming requests
     void set_request_handler(RequestHandler handler)
     {
+        if (!handler)
+        {
+            set_request_handler(CancellableRequestHandler{});
+            return;
+        }
+        set_request_handler(CancellableRequestHandler(
+            [handler = std::move(handler
+             )](const std::string& method, const json& params, const CancellationToken&)
+            { return handler(method, params); }
+        ));
+    }
+
+    /// Set a cancellation-aware handler for incoming requests
+    void set_request_handler(CancellableRequestHandler handler)
+    {
         std::lock_guard<std::mutex> lock(handlers_mutex_);
         request_handler_ = std::move(handler);
+    }
+
+    /// Called once when the connection closes (read EOF or stop()), after
+    /// pending outgoing requests have failed and incoming tokens are cancelled.
+    void set_on_closed(std::function<void()> callback)
+    {
+        std::lock_guard<std::mutex> lock(handlers_mutex_);
+        on_closed_ = std::move(callback);
+    }
+
+    /// Signalled when the connection closes.
+    CancellationToken connection_closed_token() const
+    {
+        return incoming_->connection_closed.token();
     }
 
     /// Send a request and await response
     /// @param method The method name
     /// @param params The parameters (can be object or array)
     /// @param timeout Request timeout (0 = no timeout)
-    /// @return Future that resolves to the result
+    /// @return Future that resolves to the result. Once the connection has
+    ///         failed the future is already failed with ConnectionClosed and
+    ///         nothing is written.
     std::future<json> invoke(
         const std::string& method,
         const json& params = nullptr,
         std::chrono::milliseconds timeout = std::chrono::milliseconds{30000}
     )
     {
-        auto id = next_id_++;
+        return invoke_with_id(method, params, timeout).second;
+    }
 
-        auto pending = std::make_shared<PendingRequest>(timeout);
-        auto future = pending->promise.get_future();
-
-        {
-            std::lock_guard<std::mutex> lock(pending_mutex_);
-            pending_requests_[id] = pending;
-        }
-        pending_cv_.notify_all();
-
-        // Build and send request
-        JsonRpcRequest request{method, params, JsonRpcId{id}};
-
-        try
-        {
-            send_message(request.to_json());
-        }
-        catch (...)
-        {
-            // Remove pending request on send failure
-            std::lock_guard<std::mutex> lock(pending_mutex_);
-            pending_requests_.erase(id);
-            throw;
-        }
-
-        return future;
+    /// Run completion on the read thread before subsequent inbound messages are dispatched.
+    std::future<json> invoke_with_completion(
+        const std::string& method, const json& params, std::function<void(const json&)> completion
+    )
+    {
+        return invoke_with_id(
+                   method, params, std::chrono::milliseconds(30000), std::move(completion)
+        )
+            .second;
     }
 
     /// Send a request and wait for response synchronously
@@ -380,35 +444,152 @@ class JsonRpcClient
     /// Send a response to an incoming request
     void send_response(const JsonRpcId& id, const json& result)
     {
-        JsonRpcResponse response{id, result, std::nullopt};
-        send_message(response.to_json());
+        wire_->send_response(id, result);
     }
 
-    /// Send an error response to an incoming request
+    /// Send an error response to an incoming request (a null `data` is omitted)
     void send_error_response(
-        const JsonRpcId& id,
-        int code,
-        const std::string& message,
-        const json& data = nullptr
+        const JsonRpcId& id, int code, const std::string& message, const json& data = nullptr
     )
     {
-        JsonRpcResponse response{id, std::nullopt, JsonRpcErrorObject{code, message, data}};
-        send_message(response.to_json());
+        wire_->send_error(
+            id, code, message, data.is_null() ? std::nullopt : std::optional<json>(data)
+        );
     }
 
   private:
+    // State shared with request workers. Workers capture these by shared_ptr and
+    // never touch the JsonRpcClient itself, so a handler that ends up destroying
+    // the client (e.g. Client::stop() from inside a tool) cannot leave a worker
+    // writing through a dangling `this`.
+    struct Wire
+    {
+        explicit Wire(std::unique_ptr<ITransport> t) : transport(std::move(t)), framer(*transport)
+        {
+        }
+
+        std::unique_ptr<ITransport> transport;
+        MessageFramer framer;
+        std::mutex write_mutex;
+
+        void send(const json& message)
+        {
+            std::lock_guard<std::mutex> lock(write_mutex);
+            framer.write_message(message.dump());
+        }
+
+        void send_response(const JsonRpcId& id, const json& result)
+        {
+            send(JsonRpcResponse{id, result, std::nullopt}.to_json());
+        }
+
+        void send_error(
+            const JsonRpcId& id,
+            int code,
+            const std::string& message,
+            std::optional<json> data = std::nullopt
+        )
+        {
+            send(JsonRpcResponse{
+                id, std::nullopt, JsonRpcErrorObject{code, message, std::move(data)}
+            }.to_json());
+        }
+
+        /// Best effort: the peer may already be gone.
+        template <class F>
+        void try_send(F&& f) noexcept
+        {
+            try
+            {
+                f();
+            }
+            catch (...)
+            {
+            }
+        }
+    };
+
+    // C# REFERENCE: dotnet/src/JsonRpc.cs IncomingRequestCancellation
+    struct IncomingCancel
+    {
+        int64_t id = 0;
+        CancellationSource source; // handler token: request cancel OR connection closed
+        std::atomic<bool> request_cancelled{false};
+        std::atomic<bool> responded{false};
+
+        /// Claim the single response slot for this request.
+        bool claim() noexcept
+        {
+            return !responded.exchange(true);
+        }
+    };
+
+    struct IncomingRegistry
+    {
+        std::mutex mutex;
+        std::map<int64_t, std::shared_ptr<IncomingCancel>> requests;
+        CancellationSource connection_closed;
+
+        void retire(const std::shared_ptr<IncomingCancel>& request)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            const auto it = requests.find(request->id);
+            if (it != requests.end() && it->second == request)
+                requests.erase(it);
+        }
+    };
+
+    struct Worker
+    {
+        std::thread thread;
+        std::shared_ptr<std::atomic<bool>> done;
+    };
+
+    static constexpr int kRequestCancelledCode =
+        static_cast<int>(JsonRpcErrorCode::RequestCancelled);
+
+    /// Numeric request ids only; string ids and values outside int64 do not
+    /// participate in cancellation.
+    static std::optional<int64_t> numeric_request_id(const json& id)
+    {
+        if (id.is_number_unsigned())
+        {
+            const auto value = id.get<uint64_t>();
+            if (value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
+                return std::nullopt;
+            return static_cast<int64_t>(value);
+        }
+        if (id.is_number_integer())
+            return id.get<int64_t>();
+        return std::nullopt;
+    }
+
     /// Internal invoke that returns both request ID and future for cleanup purposes
     std::pair<int64_t, std::future<json>> invoke_with_id(
-        const std::string& method, const json& params, std::chrono::milliseconds timeout
+        const std::string& method,
+        const json& params,
+        std::chrono::milliseconds timeout,
+        std::function<void(const json&)> completion = {}
     )
     {
         auto id = next_id_++;
 
         auto pending = std::make_shared<PendingRequest>(timeout);
+        pending->on_success = std::move(completion);
         auto future = pending->promise.get_future();
 
         {
             std::lock_guard<std::mutex> lock(pending_mutex_);
+            // Sticky terminal error: once the connection has failed, fail fast
+            // instead of writing and waiting out the timeout.
+            // C# REFERENCE: dotnet/src/JsonRpc.cs InvokeAsync (_terminalError, 9515b5e85)
+            if (terminal_)
+            {
+                pending->promise.set_exception(
+                    std::make_exception_ptr(JsonRpcError(*terminal_, "Connection closed"))
+                );
+                return {id, std::move(future)};
+            }
             pending_requests_[id] = pending;
         }
         pending_cv_.notify_all();
@@ -482,11 +663,9 @@ class JsonRpcClient
             {
                 try
                 {
-                    pending->promise.set_exception(
-                        std::make_exception_ptr(
-                            JsonRpcError(JsonRpcErrorCode::Timeout, "Request timed out")
-                        )
-                    );
+                    pending->promise.set_exception(std::make_exception_ptr(
+                        JsonRpcError(JsonRpcErrorCode::Timeout, "Request timed out")
+                    ));
                 }
                 catch (...)
                 {
@@ -519,8 +698,7 @@ class JsonRpcClient
 
     void send_message(const json& message)
     {
-        std::lock_guard<std::mutex> lock(write_mutex_);
-        framer_.write_message(message.dump());
+        wire_->send(message);
     }
 
     void read_loop()
@@ -529,7 +707,7 @@ class JsonRpcClient
         {
             try
             {
-                auto message_str = framer_.read_message();
+                auto message_str = wire_->framer.read_message();
                 auto message = json::parse(message_str);
                 dispatch_message(message);
             }
@@ -537,6 +715,7 @@ class JsonRpcClient
             {
                 running_ = false;
                 fail_all_pending(JsonRpcErrorCode::ConnectionClosed, "Connection closed");
+                notify_closed();
                 break;
             }
             catch (const json::exception& e)
@@ -569,10 +748,16 @@ class JsonRpcClient
         if (message.contains("method"))
         {
             auto request = JsonRpcRequest::from_json(message);
+            // Intercepted before any routing, whether or not it carries an id.
+            if (request.method == "$/cancelRequest")
+            {
+                handle_cancel_request(request.params);
+                return;
+            }
             if (request.is_notification())
                 handle_notification(request);
             else
-                handle_request(request);
+                handle_request(request, message.at("id"));
             return;
         }
 
@@ -609,15 +794,23 @@ class JsonRpcClient
         if (response.is_error())
         {
             auto& err = *response.error;
-            pending->promise.set_exception(
-                std::make_exception_ptr(
-                    JsonRpcError(static_cast<JsonRpcErrorCode>(err.code), err.message, err.data)
-                )
-            );
+            pending->promise.set_exception(std::make_exception_ptr(JsonRpcError::with_data(
+                static_cast<JsonRpcErrorCode>(err.code), err.message, err.data
+            )));
         }
         else
         {
-            pending->promise.set_value(response.result.value_or(nullptr));
+            try
+            {
+                const auto result = response.result.value_or(nullptr);
+                if (pending->on_success)
+                    pending->on_success(result);
+                pending->promise.set_value(result);
+            }
+            catch (...)
+            {
+                pending->promise.set_exception(std::current_exception());
+            }
         }
     }
 
@@ -642,9 +835,40 @@ class JsonRpcClient
         }
     }
 
-    void handle_request(const JsonRpcRequest& request)
+    // C# REFERENCE: dotnet/src/JsonRpc.cs HandleCancelRequest
+    void handle_cancel_request(const json& params)
     {
-        RequestHandler handler;
+        if (!params.is_object() || !params.contains("id"))
+            return;
+        const auto id = numeric_request_id(params.at("id"));
+        if (!id)
+            return;
+
+        std::shared_ptr<IncomingCancel> request;
+        {
+            std::lock_guard<std::mutex> lock(incoming_->mutex);
+            const auto it = incoming_->requests.find(*id);
+            if (it == incoming_->requests.end())
+                return;
+            request = it->second;
+        }
+
+        request->request_cancelled = true;
+        // Signal the handler before replying (d12079020).
+        request->source.cancel();
+        if (request->claim())
+        {
+            wire_->try_send(
+                [&]
+                { wire_->send_error(JsonRpcId{*id}, kRequestCancelledCode, "Request cancelled"); }
+            );
+        }
+    }
+
+    // C# REFERENCE: dotnet/src/JsonRpc.cs HandleIncomingMethodAsync
+    void handle_request(const JsonRpcRequest& request, const json& raw_id)
+    {
+        CancellableRequestHandler handler;
         {
             std::lock_guard<std::mutex> lock(handlers_mutex_);
             handler = request_handler_;
@@ -653,28 +877,175 @@ class JsonRpcClient
         if (!handler)
         {
             // No handler - respond with method not found
-            send_error_response(
-                *request.id,
-                static_cast<int>(JsonRpcErrorCode::MethodNotFound),
-                "Method not found: " + request.method
+            wire_->try_send(
+                [&]
+                {
+                    wire_->send_error(
+                        *request.id,
+                        static_cast<int>(JsonRpcErrorCode::MethodNotFound),
+                        "Method not found: " + request.method
+                    );
+                }
             );
             return;
         }
 
-        try
+        // Register for cancellation (numeric ids only; a duplicate id gets no
+        // registration and only observes connection close).
+        std::shared_ptr<IncomingCancel> cancel;
+        CancellationToken token = incoming_->connection_closed.token();
+        if (const auto numeric = numeric_request_id(raw_id))
         {
-            auto result = handler(request.method, request.params);
-            send_response(*request.id, result);
+            auto candidate = std::make_shared<IncomingCancel>();
+            candidate->id = *numeric;
+            std::lock_guard<std::mutex> lock(incoming_->mutex);
+            if (incoming_->connection_closed.is_cancelled())
+                candidate->source.cancel();
+            if (incoming_->requests.emplace(*numeric, candidate).second)
+            {
+                cancel = candidate;
+                token = candidate->source.token();
+            }
         }
-        catch (const JsonRpcError& e)
+
+        // Each request runs on its own worker so a handler can call invoke() and
+        // wait for the reply, which only this read thread can deliver.
+        spawn_worker(
+            [wire = wire_,
+             incoming = incoming_,
+             handler = std::move(handler),
+             request,
+             cancel,
+             token]()
+            {
+                const JsonRpcId id = *request.id;
+                auto cancelled = [&] { return cancel && cancel->request_cancelled.load(); };
+                auto reply_cancelled = [&]
+                {
+                    if (cancel->claim())
+                        wire->try_send(
+                            [&]
+                            { wire->send_error(id, kRequestCancelledCode, "Request cancelled"); }
+                        );
+                };
+                auto claim = [&] { return !cancel || cancel->claim(); };
+                auto reply_error = [&](int code,
+                                       const std::string& message,
+                                       std::optional<json> data = std::nullopt)
+                {
+                    if (cancelled())
+                        reply_cancelled();
+                    else if (claim())
+                        wire->try_send([&] { wire->send_error(id, code, message, data); });
+                };
+
+                try
+                {
+                    auto result = handler(request.method, request.params, token);
+                    if (cancelled())
+                        reply_cancelled(); // late result is dropped
+                    else if (claim())
+                        wire->try_send([&] { wire->send_response(id, result); });
+                }
+                catch (const JsonRpcError& e)
+                {
+                    reply_error(static_cast<int>(e.code()), e.what(), e.data_if_present());
+                }
+                catch (const std::exception& e)
+                {
+                    reply_error(static_cast<int>(JsonRpcErrorCode::InternalError), e.what());
+                }
+                catch (...)
+                {
+                    reply_error(static_cast<int>(JsonRpcErrorCode::InternalError), "Unknown error");
+                }
+                if (cancel)
+                    incoming->retire(cancel);
+            }
+        );
+    }
+
+    void spawn_worker(std::function<void()> work)
+    {
+        std::vector<std::thread> finished;
         {
-            send_error_response(*request.id, static_cast<int>(e.code()), e.what(), e.data());
+            std::lock_guard<std::mutex> lock(workers_mutex_);
+            for (auto it = workers_.begin(); it != workers_.end();)
+            {
+                if (it->done->load())
+                {
+                    finished.push_back(std::move(it->thread));
+                    it = workers_.erase(it);
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+            auto done = std::make_shared<std::atomic<bool>>(false);
+            workers_.push_back(Worker{
+                std::thread(
+                    [work = std::move(work), done]()
+                    {
+                        work();
+                        done->store(true);
+                    }
+                ),
+                done
+            });
         }
-        catch (const std::exception& e)
+        for (auto& thread : finished)
+            if (thread.joinable())
+                thread.join();
+    }
+
+    void join_workers()
+    {
+        std::vector<Worker> workers;
         {
-            send_error_response(
-                *request.id, static_cast<int>(JsonRpcErrorCode::InternalError), e.what()
-            );
+            std::lock_guard<std::mutex> lock(workers_mutex_);
+            workers.swap(workers_);
+        }
+        for (auto& worker : workers)
+        {
+            if (!worker.thread.joinable())
+                continue;
+            if (worker.thread.get_id() == std::this_thread::get_id())
+                worker.thread.detach(); // stop() called from inside a handler
+            else
+                worker.thread.join();
+        }
+    }
+
+    /// Cancel every incoming handler token and fire on_closed, once.
+    void notify_closed()
+    {
+        std::vector<std::shared_ptr<IncomingCancel>> requests;
+        {
+            std::lock_guard<std::mutex> lock(incoming_->mutex);
+            if (incoming_->connection_closed.is_cancelled())
+                return;
+            incoming_->connection_closed.cancel();
+            for (auto& [_, request] : incoming_->requests)
+                requests.push_back(request);
+        }
+        for (auto& request : requests)
+            request->source.cancel();
+
+        std::function<void()> callback;
+        {
+            std::lock_guard<std::mutex> lock(handlers_mutex_);
+            callback = on_closed_;
+        }
+        if (callback)
+        {
+            try
+            {
+                callback();
+            }
+            catch (...)
+            {
+            }
         }
     }
 
@@ -683,6 +1054,8 @@ class JsonRpcClient
         std::vector<std::shared_ptr<PendingRequest>> to_fail;
         {
             std::lock_guard<std::mutex> lock(pending_mutex_);
+            if (!terminal_)
+                terminal_ = code;
             to_fail.reserve(pending_requests_.size());
             for (auto& [id, pending] : pending_requests_)
                 to_fail.push_back(pending);
@@ -692,8 +1065,7 @@ class JsonRpcClient
         {
             try
             {
-                pending->promise.set_exception(
-                    std::make_exception_ptr(JsonRpcError(code, message))
+                pending->promise.set_exception(std::make_exception_ptr(JsonRpcError(code, message))
                 );
             }
             catch (...)
@@ -703,22 +1075,26 @@ class JsonRpcClient
         }
     }
 
-    std::unique_ptr<ITransport> transport_;
-    MessageFramer framer_;
+    std::shared_ptr<Wire> wire_;
+    std::shared_ptr<IncomingRegistry> incoming_;
     std::atomic<int64_t> next_id_;
     std::atomic<bool> running_;
 
     std::thread read_thread_;
     std::thread timeout_thread_;
-    std::mutex write_mutex_;
 
     std::mutex pending_mutex_;
     std::condition_variable pending_cv_;
     std::map<int64_t, std::shared_ptr<PendingRequest>> pending_requests_;
+    std::optional<JsonRpcErrorCode> terminal_;
 
     std::mutex handlers_mutex_;
     NotificationHandler notification_handler_;
-    RequestHandler request_handler_;
+    CancellableRequestHandler request_handler_;
+    std::function<void()> on_closed_;
+
+    std::mutex workers_mutex_;
+    std::vector<Worker> workers_;
 };
 
 } // namespace copilot

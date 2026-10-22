@@ -13,7 +13,7 @@
 #include <copilot/canvas.hpp>
 #include <copilot/events.hpp>
 #include <copilot/extension.hpp>
-#include <copilot/factory.hpp>
+#include <copilot/workflow.hpp>
 #include <copilot/generated/api_types.hpp>
 #include <copilot/generated/compatibility_types.hpp>
 #include <copilot/generated/protocol_version.hpp>

@@ -11,6 +11,7 @@
 #ifndef _WIN32
 
 #include <algorithm>
+#include <atomic>
 #include <copilot/process.hpp>
 #include <cstdlib>
 #include <cstring>
@@ -221,6 +222,23 @@ bool WritePipe::is_open() const
 // Process implementation
 // =============================================================================
 
+struct Process::ProcessWatch
+{
+    std::atomic<bool> cancelled{false};
+    std::thread thread;
+    ~ProcessWatch()
+    {
+        cancelled.store(true);
+        if (thread.joinable())
+        {
+            if (thread.get_id() == std::this_thread::get_id())
+                thread.detach();
+            else
+                thread.join();
+        }
+    }
+};
+
 Process::Process()
     : handle_(std::make_unique<ProcessHandle>()), stdin_(std::make_unique<WritePipe>()),
       stdout_(std::make_unique<ReadPipe>()), stderr_(std::make_unique<ReadPipe>())
@@ -348,7 +366,13 @@ void Process::spawn(
 
     if (pid == 0)
     {
-        // Child process
+        // Child process: an isolated group allows terminating descendants as well.
+        if (::setpgid(0, 0) != 0)
+        {
+            int error = errno;
+            (void)::write(error_pipe[1], &error, sizeof(error));
+            ::_exit(127);
+        }
 
         // Close error pipe read end - we only write to it
         ::close(error_pipe[0]);
@@ -605,13 +629,45 @@ std::optional<int> Process::wait_for(std::chrono::milliseconds timeout)
 void Process::terminate()
 {
     if (handle_ && handle_->pid > 0 && handle_->running)
-        ::kill(handle_->pid, SIGTERM);
+        ::kill(-handle_->pid, SIGTERM);
 }
 
 void Process::kill()
 {
     if (handle_ && handle_->pid > 0 && handle_->running)
-        ::kill(handle_->pid, SIGKILL);
+        ::kill(-handle_->pid, SIGKILL);
+}
+
+void Process::on_exit(std::function<void()> callback)
+{
+    watch_.reset();
+    watch_ = std::make_unique<ProcessWatch>();
+    const auto child = handle_->pid;
+    watch_->thread = std::thread(
+        [state = watch_.get(), child, callback = std::move(callback)]
+        {
+            while (!state->cancelled.load())
+            {
+                siginfo_t info{};
+                const auto result = ::waitid(P_PID, child, &info, WEXITED | WNOHANG | WNOWAIT);
+                if ((result == 0 && info.si_pid != 0) || (result < 0 && errno == ECHILD))
+                {
+                    if (!state->cancelled.load())
+                    {
+                        try
+                        {
+                            callback();
+                        }
+                        catch (...)
+                        {
+                        }
+                    }
+                    return;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+        }
+    );
 }
 
 void Process::close_pipes()

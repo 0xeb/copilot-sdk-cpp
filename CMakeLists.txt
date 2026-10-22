@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(copilot_sdk_cpp VERSION 0.4.1 LANGUAGES CXX)
+project(copilot_sdk_cpp VERSION 0.4.2 LANGUAGES CXX)
 
 # Enable folder organization in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -13,9 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
-option(COPILOT_BUILD_TESTS "Build tests" ON)
 option(COPILOT_BUILD_EXAMPLES "Build examples" ON)
-option(COPILOT_BUILD_SNAPSHOT_TESTS "Build snapshot conformance tests (requires upstream snapshots + Python)" OFF)
 option(COPILOT_WITH_FASTMCPP "Build in-process MCP examples with fastmcpp" OFF)
 
 # Protocol code generation
@@ -73,7 +71,7 @@ add_library(copilot_sdk_cpp
     include/copilot/types.hpp
     include/copilot/events.hpp
     include/copilot/extension.hpp
-    include/copilot/factory.hpp
+    include/copilot/workflow.hpp
     include/copilot/generated/api_types.hpp
     include/copilot/generated/compatibility_types.hpp
     include/copilot/generated/protocol_version.hpp
@@ -96,7 +94,7 @@ add_library(copilot_sdk_cpp
     src/types.cpp
     src/events.cpp
     src/extension.cpp
-    src/factory.cpp
+    src/workflow.cpp
     src/transport.cpp
     src/transport_ffi.cpp
     src/jsonrpc.cpp
@@ -143,12 +141,6 @@ set_target_properties(copilot_sdk_cpp PROPERTIES
     SOVERSION ${PROJECT_VERSION_MAJOR}
     FOLDER "Libraries"
 )
-
-# Tests
-if(COPILOT_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
-endif()
 
 # Examples
 if(COPILOT_BUILD_EXAMPLES)

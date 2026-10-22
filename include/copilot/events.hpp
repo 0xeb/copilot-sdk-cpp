@@ -23,6 +23,7 @@ struct SessionStartData;
 struct SessionResumeData;
 struct SessionErrorData;
 struct SessionIdleData;
+struct SessionAutopilotStoppedData;
 struct SessionInfoData;
 struct SessionModelChangeData;
 struct SessionHandoffData;
@@ -128,9 +129,9 @@ struct SessionLimitsExhaustedCompletedData;
 struct AutoModeResolvedData;
 struct ManagedSettingsResolvedData;
 struct ManagedSettingsEnforcedData;
-struct FactoryRunUpdatedData;
-struct FactoryRunStartedData;
-struct FactoryRunSettledData;
+struct WorkflowRunUpdatedData;
+struct WorkflowRunStartedData;
+struct WorkflowRunSettledData;
 struct McpListChangedData;
 struct CanvasOpenedData;
 struct CanvasRegistryChangedData;
@@ -403,6 +404,9 @@ struct SessionErrorData
     std::optional<std::string> stack;
     std::optional<double> status_code;
     std::optional<std::string> provider_call_id;
+    /// User message this error belongs to (`originatingMessageId`); absent for
+    /// errors not tied to a send.
+    std::optional<std::string> originating_message_id;
 };
 
 inline void from_json(const json& j, SessionErrorData& d)
@@ -415,13 +419,39 @@ inline void from_json(const json& j, SessionErrorData& d)
         d.status_code = j.at("statusCode").get<double>();
     if (j.contains("providerCallId") && !j["providerCallId"].is_null())
         d.provider_call_id = j.at("providerCallId").get<std::string>();
+    if (j.contains("originatingMessageId") && !j["originatingMessageId"].is_null())
+        d.originating_message_id = j.at("originatingMessageId").get<std::string>();
 }
 
 struct SessionIdleData
 {
+    /// True when the turn ended because it was aborted.
+    std::optional<bool> aborted;
+    /// Session mode the idle was observed in (e.g. "autopilot").
+    std::optional<std::string> mode;
 };
 
-inline void from_json(const json&, SessionIdleData&) {}
+inline void from_json(const json& j, SessionIdleData& d)
+{
+    if (j.contains("aborted") && !j["aborted"].is_null())
+        d.aborted = j.at("aborted").get<bool>();
+    if (j.contains("mode") && !j["mode"].is_null())
+        d.mode = j.at("mode").get<std::string>();
+}
+
+/// Data for session.autopilot_stopped event
+struct SessionAutopilotStoppedData
+{
+    std::optional<std::string> request_id;
+    std::string reason;
+};
+
+inline void from_json(const json& j, SessionAutopilotStoppedData& d)
+{
+    if (j.contains("requestId") && !j["requestId"].is_null())
+        d.request_id = j.at("requestId").get<std::string>();
+    j.at("reason").get_to(d.reason);
+}
 
 struct SessionInfoData
 {
@@ -502,10 +532,12 @@ struct UserMessageData
     std::optional<std::string> transformed_content;
     std::optional<std::vector<UserMessageAttachmentItem>> attachments;
     std::optional<std::string> source;
+    std::string message_id;
 };
 
 inline void from_json(const json& j, UserMessageData& d)
 {
+    d.message_id = j.value("messageId", "");
     j.at("content").get_to(d.content);
     if (j.contains("transformedContent"))
         d.transformed_content = j.at("transformedContent").get<std::string>();
@@ -579,6 +611,8 @@ struct AssistantMessageData
     std::optional<std::string> reasoning_opaque;
     std::optional<std::string> reasoning_text;
     std::optional<std::string> encrypted_content;
+    /// User message this reply answers (`originatingMessageId`).
+    std::optional<std::string> originating_message_id;
 };
 
 inline void from_json(const json& j, AssistantMessageData& d)
@@ -599,6 +633,8 @@ inline void from_json(const json& j, AssistantMessageData& d)
         d.reasoning_text = j.at("reasoningText").get<std::string>();
     if (j.contains("encryptedContent") && !j["encryptedContent"].is_null())
         d.encrypted_content = j.at("encryptedContent").get<std::string>();
+    if (j.contains("originatingMessageId") && !j["originatingMessageId"].is_null())
+        d.originating_message_id = j.at("originatingMessageId").get<std::string>();
 }
 
 struct AssistantMessageDeltaData
@@ -837,7 +873,8 @@ inline void from_json(const json& j, SessionCompactionCompleteData& d)
     if (j.contains("postCompactionMessagesLength"))
         d.post_compaction_messages_length = j.at("postCompactionMessagesLength").get<double>();
     if (j.contains("compactionTokensUsed"))
-        d.compaction_tokens_used = j.at("compactionTokensUsed").get<SessionCompactionCompleteDataTokensUsed>();
+        d.compaction_tokens_used =
+            j.at("compactionTokensUsed").get<SessionCompactionCompleteDataTokensUsed>();
     if (j.contains("messagesRemoved"))
         d.messages_removed = j.at("messagesRemoved").get<double>();
     if (j.contains("tokensRemoved"))
@@ -1158,6 +1195,8 @@ struct SessionWarningData
     std::string warning_type;
     std::string message;
     std::optional<std::string> url;
+    /// User message this warning belongs to (`originatingMessageId`).
+    std::optional<std::string> originating_message_id;
 };
 
 inline void from_json(const json& j, SessionWarningData& d)
@@ -1166,6 +1205,8 @@ inline void from_json(const json& j, SessionWarningData& d)
     j.at("message").get_to(d.message);
     if (j.contains("url") && !j["url"].is_null())
         d.url = j.at("url").get<std::string>();
+    if (j.contains("originatingMessageId") && !j["originatingMessageId"].is_null())
+        d.originating_message_id = j.at("originatingMessageId").get<std::string>();
 }
 
 /// Data for session.mode_changed event
@@ -1663,6 +1704,8 @@ struct McpOauthRequiredData
     std::optional<json> www_authenticate_params;
     std::optional<std::string> resource_metadata;
     std::optional<McpOauthRequiredStaticClientConfig> static_client_config;
+    /// The runtime can refresh credentials itself (`{"kind":"runtimeRefresh"}`).
+    std::optional<bool> runtime_refresh_supported;
 };
 
 inline void from_json(const json& j, McpOauthRequiredData& d)
@@ -1677,7 +1720,10 @@ inline void from_json(const json& j, McpOauthRequiredData& d)
     if (j.contains("resourceMetadata") && !j["resourceMetadata"].is_null())
         d.resource_metadata = j.at("resourceMetadata").get<std::string>();
     if (j.contains("staticClientConfig") && !j["staticClientConfig"].is_null())
-        d.static_client_config = j.at("staticClientConfig").get<McpOauthRequiredStaticClientConfig>();
+        d.static_client_config =
+            j.at("staticClientConfig").get<McpOauthRequiredStaticClientConfig>();
+    if (j.contains("runtimeRefreshSupported") && !j["runtimeRefreshSupported"].is_null())
+        d.runtime_refresh_supported = j.at("runtimeRefreshSupported").get<bool>();
 }
 
 /// Data for mcp.oauth_completed event
@@ -2487,7 +2533,8 @@ inline void from_json(const json& j, ModelCallFinishedData& d)
         d.interaction_id = j.at("interactionId").get<std::string>();
     j.at("dispatchDurationMs").get_to(d.dispatch_duration_ms);
     j.at("outcome").get_to(d.outcome);
-    if (j.contains("containsBuiltInFileEditRequest") && !j["containsBuiltInFileEditRequest"].is_null())
+    if (j.contains("containsBuiltInFileEditRequest") &&
+        !j["containsBuiltInFileEditRequest"].is_null())
         d.contains_built_in_file_edit_request = j.at("containsBuiltInFileEditRequest").get<bool>();
     j.at("editClassifierVersion").get_to(d.edit_classifier_version);
 }
@@ -2741,8 +2788,10 @@ inline void from_json(const json& j, ManagedSettingsResolvedData& d)
     if (j.contains("policyHelperManaged") && !j["policyHelperManaged"].is_null())
         d.policy_helper_managed = j.at("policyHelperManaged").get<bool>();
     j.at("failClosed").get_to(d.fail_closed);
-    if (j.contains("sandboxEnabledByUndeterminedPolicy") && !j["sandboxEnabledByUndeterminedPolicy"].is_null())
-        d.sandbox_enabled_by_undetermined_policy = j.at("sandboxEnabledByUndeterminedPolicy").get<bool>();
+    if (j.contains("sandboxEnabledByUndeterminedPolicy") &&
+        !j["sandboxEnabledByUndeterminedPolicy"].is_null())
+        d.sandbox_enabled_by_undetermined_policy =
+            j.at("sandboxEnabledByUndeterminedPolicy").get<bool>();
     j.at("bypassPermissionsDisabled").get_to(d.bypass_permissions_disabled);
     if (j.contains("permissionsAllowIntersected") && !j["permissionsAllowIntersected"].is_null())
         d.permissions_allow_intersected = j.at("permissionsAllowIntersected").get<bool>();
@@ -2770,33 +2819,33 @@ inline void from_json(const json& j, ManagedSettingsEnforcedData& d)
     j.at("message").get_to(d.message);
 }
 
-struct FactoryRunUpdatedData
+struct WorkflowRunUpdatedData
 {
     std::string run_id;
     int64_t revision;
 };
 
-inline void from_json(const json& j, FactoryRunUpdatedData& d)
+inline void from_json(const json& j, WorkflowRunUpdatedData& d)
 {
     j.at("runId").get_to(d.run_id);
     j.at("revision").get_to(d.revision);
 }
 
-struct FactoryRunStartedData
+struct WorkflowRunStartedData
 {
     std::string run_id;
-    std::string factory_name;
+    std::string workflow_name;
     int64_t attempt;
 };
 
-inline void from_json(const json& j, FactoryRunStartedData& d)
+inline void from_json(const json& j, WorkflowRunStartedData& d)
 {
     j.at("runId").get_to(d.run_id);
-    j.at("factoryName").get_to(d.factory_name);
+    j.at("workflowName").get_to(d.workflow_name);
     j.at("attempt").get_to(d.attempt);
 }
 
-struct FactoryRunSettledData
+struct WorkflowRunSettledData
 {
     std::string run_id;
     json status;
@@ -2806,7 +2855,7 @@ struct FactoryRunSettledData
     std::optional<std::string> failure_type;
 };
 
-inline void from_json(const json& j, FactoryRunSettledData& d)
+inline void from_json(const json& j, WorkflowRunSettledData& d)
 {
     j.at("runId").get_to(d.run_id);
     j.at("status").get_to(d.status);
@@ -3092,9 +3141,9 @@ enum class SessionEventType
     SessionAutoModeResolved,
     SessionManagedSettingsResolved,
     SessionManagedSettingsEnforced,
-    FactoryRunUpdated,
-    FactoryRunStarted,
-    FactoryRunSettled,
+    WorkflowRunUpdated,
+    WorkflowRunStarted,
+    WorkflowRunSettled,
     McpToolsListChanged,
     McpResourcesListChanged,
     McpPromptsListChanged,
@@ -3122,6 +3171,23 @@ enum class SessionEventType
     SkillInvokedRef,
     SkillContextDelivered,
     SkillContextDeliveredRef,
+    // Added with the @github/copilot 1.0.102-1 re-pin (upstream bb8a5c3a).
+    HumanResponseRecorded,
+    McpOauthRecoveryCompleted,
+    ModelCallFinalResult,
+    PermissionAssentDetected,
+    PermissionContextualAuthorization,
+    SessionAutopilotStopped,
+    SessionFusionChangeCheckpoint,
+    SessionIndexedSearch,
+    SessionManagedPluginProgress,
+    SessionMcpServerToolsLoaded,
+    SessionModelDeselected,
+    SessionPermissionRecovery,
+    SessionQuotaObservation,
+    SessionRequestBodyCompressionDisabled,
+    SessionUsageRecord,
+    ToolShellOutput,
     Unknown
 };
 
@@ -3247,9 +3313,9 @@ using SessionEventData = std::variant<
     AutoModeResolvedData,
     ManagedSettingsResolvedData,
     ManagedSettingsEnforcedData,
-    FactoryRunUpdatedData,
-    FactoryRunStartedData,
-    FactoryRunSettledData,
+    WorkflowRunUpdatedData,
+    WorkflowRunStartedData,
+    WorkflowRunSettledData,
     McpListChangedData,
     CanvasOpenedData,
     CanvasRegistryChangedData,
@@ -3259,6 +3325,7 @@ using SessionEventData = std::variant<
     CanvasRemovedData,
     ExtensionsAttachmentsPushedData,
     McpAppToolCallCompleteData,
+    SessionAutopilotStoppedData,
     json // Unknown event fallback
     >;
 
@@ -3348,10 +3415,10 @@ inline SessionEvent parse_session_event(const json& j)
         {"subagent.completed", SessionEventType::CustomAgentCompleted},
         {"subagent.failed", SessionEventType::CustomAgentFailed},
         {"subagent.selected", SessionEventType::CustomAgentSelected},
-        {"custom_agent.started", SessionEventType::CustomAgentStarted},   // legacy alias
+        {"custom_agent.started", SessionEventType::CustomAgentStarted},     // legacy alias
         {"custom_agent.completed", SessionEventType::CustomAgentCompleted}, // legacy alias
-        {"custom_agent.failed", SessionEventType::CustomAgentFailed},     // legacy alias
-        {"custom_agent.selected", SessionEventType::CustomAgentSelected}, // legacy alias
+        {"custom_agent.failed", SessionEventType::CustomAgentFailed},       // legacy alias
+        {"custom_agent.selected", SessionEventType::CustomAgentSelected},   // legacy alias
         {"hook.start", SessionEventType::HookStart},
         {"hook.end", SessionEventType::HookEnd},
         {"system.message", SessionEventType::SystemMessage},
@@ -3441,9 +3508,9 @@ inline SessionEvent parse_session_event(const json& j)
         {"session.auto_mode_resolved", SessionEventType::SessionAutoModeResolved},
         {"session.managed_settings_resolved", SessionEventType::SessionManagedSettingsResolved},
         {"session.managed_settings_enforced", SessionEventType::SessionManagedSettingsEnforced},
-        {"factory.run_updated", SessionEventType::FactoryRunUpdated},
-        {"factory.run_started", SessionEventType::FactoryRunStarted},
-        {"factory.run_settled", SessionEventType::FactoryRunSettled},
+        {"workflow.run_updated", SessionEventType::WorkflowRunUpdated},
+        {"workflow.run_started", SessionEventType::WorkflowRunStarted},
+        {"workflow.run_settled", SessionEventType::WorkflowRunSettled},
         {"mcp.tools.list_changed", SessionEventType::McpToolsListChanged},
         {"mcp.resources.list_changed", SessionEventType::McpResourcesListChanged},
         {"mcp.prompts.list_changed", SessionEventType::McpPromptsListChanged},
@@ -3453,7 +3520,8 @@ inline SessionEvent parse_session_event(const json& j)
         {"session.canvas.unavailable", SessionEventType::SessionCanvasUnavailable},
         {"session.canvas.recorded", SessionEventType::SessionCanvasRecorded},
         {"session.canvas.removed", SessionEventType::SessionCanvasRemoved},
-        {"session.extensions.attachments_pushed", SessionEventType::SessionExtensionsAttachmentsPushed},
+        {"session.extensions.attachments_pushed",
+         SessionEventType::SessionExtensionsAttachmentsPushed},
         {"mcp_app.tool_call_complete", SessionEventType::McpAppToolCallComplete},
         // @github/copilot 1.0.84-5 (upstream f45c46fd). Wire spellings are taken
         // verbatim from the generated kSessionEventWireTypes -- note the mixed
@@ -3465,7 +3533,8 @@ inline SessionEvent parse_session_event(const json& j)
         {"assistant.fusion_phase_activity", SessionEventType::AssistantFusionPhaseActivity},
         {"permission.carriedForward", SessionEventType::PermissionCarriedForward},
         {"permission.messageAuthorization", SessionEventType::PermissionMessageAuthorization},
-        {"permission.messageAuthorizationRead", SessionEventType::PermissionMessageAuthorizationRead},
+        {"permission.messageAuthorizationRead", SessionEventType::PermissionMessageAuthorizationRead
+        },
         {"permission.messageAuthorizationDegraded",
          SessionEventType::PermissionMessageAuthorizationDegraded},
         {"session.mcp_server_removed", SessionEventType::SessionMcpServerRemoved},
@@ -3474,6 +3543,24 @@ inline SessionEvent parse_session_event(const json& j)
         {"skill.invoked_ref", SessionEventType::SkillInvokedRef},
         {"skill.context_delivered", SessionEventType::SkillContextDelivered},
         {"skill.context_delivered_ref", SessionEventType::SkillContextDeliveredRef},
+        // @github/copilot 1.0.102-1 (upstream bb8a5c3a).
+        {"human_response.recorded", SessionEventType::HumanResponseRecorded},
+        {"mcp.oauth_recovery_completed", SessionEventType::McpOauthRecoveryCompleted},
+        {"model.call_final_result", SessionEventType::ModelCallFinalResult},
+        {"permission.assentDetected", SessionEventType::PermissionAssentDetected},
+        {"permission.contextualAuthorization", SessionEventType::PermissionContextualAuthorization},
+        {"session.autopilot_stopped", SessionEventType::SessionAutopilotStopped},
+        {"session.fusion_change_checkpoint", SessionEventType::SessionFusionChangeCheckpoint},
+        {"session.indexed_search", SessionEventType::SessionIndexedSearch},
+        {"session.managed_plugin_progress", SessionEventType::SessionManagedPluginProgress},
+        {"session.mcp_server_tools_loaded", SessionEventType::SessionMcpServerToolsLoaded},
+        {"session.model_deselected", SessionEventType::SessionModelDeselected},
+        {"session.permission_recovery", SessionEventType::SessionPermissionRecovery},
+        {"session.quota_observation", SessionEventType::SessionQuotaObservation},
+        {"session.request_body_compression_disabled",
+         SessionEventType::SessionRequestBodyCompressionDisabled},
+        {"session.usage_record", SessionEventType::SessionUsageRecord},
+        {"tool.shell_output", SessionEventType::ToolShellOutput},
     };
 
     auto it = type_map.find(event.type_string);
@@ -3484,412 +3571,415 @@ inline SessionEvent parse_session_event(const json& j)
         // Parse data based on type
         try
         {
-        switch (event.type)
-        {
-        case SessionEventType::SessionStart:
-            event.data = data_json.get<SessionStartData>();
-            break;
-        case SessionEventType::SessionResume:
-            event.data = data_json.get<SessionResumeData>();
-            break;
-        case SessionEventType::SessionError:
-            event.data = data_json.get<SessionErrorData>();
-            break;
-        case SessionEventType::SessionIdle:
-            event.data = data_json.get<SessionIdleData>();
-            break;
-        case SessionEventType::SessionInfo:
-            event.data = data_json.get<SessionInfoData>();
-            break;
-        case SessionEventType::SessionModelChange:
-            event.data = data_json.get<SessionModelChangeData>();
-            break;
-        case SessionEventType::SessionHandoff:
-            event.data = data_json.get<SessionHandoffData>();
-            break;
-        case SessionEventType::SessionTruncation:
-            event.data = data_json.get<SessionTruncationData>();
-            break;
-        case SessionEventType::UserMessage:
-            event.data = data_json.get<UserMessageData>();
-            break;
-        case SessionEventType::PendingMessagesModified:
-            event.data = data_json.get<PendingMessagesModifiedData>();
-            break;
-        case SessionEventType::AssistantTurnStart:
-            event.data = data_json.get<AssistantTurnStartData>();
-            break;
-        case SessionEventType::AssistantIntent:
-            event.data = data_json.get<AssistantIntentData>();
-            break;
-        case SessionEventType::AssistantReasoning:
-            event.data = data_json.get<AssistantReasoningData>();
-            break;
-        case SessionEventType::AssistantReasoningDelta:
-            event.data = data_json.get<AssistantReasoningDeltaData>();
-            break;
-        case SessionEventType::AssistantMessage:
-            event.data = data_json.get<AssistantMessageData>();
-            break;
-        case SessionEventType::AssistantMessageDelta:
-            event.data = data_json.get<AssistantMessageDeltaData>();
-            break;
-        case SessionEventType::AssistantTurnEnd:
-            event.data = data_json.get<AssistantTurnEndData>();
-            break;
-        case SessionEventType::AssistantUsage:
-            event.data = data_json.get<AssistantUsageData>();
-            break;
-        case SessionEventType::Abort:
-            event.data = data_json.get<AbortData>();
-            break;
-        case SessionEventType::ToolUserRequested:
-            event.data = data_json.get<ToolUserRequestedData>();
-            break;
-        case SessionEventType::ToolExecutionStart:
-            event.data = data_json.get<ToolExecutionStartData>();
-            break;
-        case SessionEventType::ToolExecutionPartialResult:
-            event.data = data_json.get<ToolExecutionPartialResultData>();
-            break;
-        case SessionEventType::ToolExecutionComplete:
-            event.data = data_json.get<ToolExecutionCompleteData>();
-            break;
-        case SessionEventType::ToolExecutionProgress:
-            event.data = data_json.get<ToolExecutionProgressData>();
-            break;
-        case SessionEventType::SessionCompactionStart:
-            event.data = data_json.get<SessionCompactionStartData>();
-            break;
-        case SessionEventType::SessionCompactionComplete:
-            event.data = data_json.get<SessionCompactionCompleteData>();
-            break;
-        case SessionEventType::SessionUsageInfo:
-            event.data = data_json.get<SessionUsageInfoData>();
-            break;
-        case SessionEventType::CustomAgentStarted:
-            event.data = data_json.get<CustomAgentStartedData>();
-            break;
-        case SessionEventType::CustomAgentCompleted:
-            event.data = data_json.get<CustomAgentCompletedData>();
-            break;
-        case SessionEventType::CustomAgentFailed:
-            event.data = data_json.get<CustomAgentFailedData>();
-            break;
-        case SessionEventType::CustomAgentSelected:
-            event.data = data_json.get<CustomAgentSelectedData>();
-            break;
-        case SessionEventType::HookStart:
-            event.data = data_json.get<HookStartData>();
-            break;
-        case SessionEventType::HookEnd:
-            event.data = data_json.get<HookEndData>();
-            break;
-        case SessionEventType::SystemMessage:
-            event.data = data_json.get<SystemMessageData>();
-            break;
-        case SessionEventType::SessionSnapshotRewind:
-            event.data = data_json.get<SessionSnapshotRewindData>();
-            break;
-        case SessionEventType::SessionShutdown:
-            event.data = data_json.get<SessionShutdownData>();
-            break;
-        case SessionEventType::SkillInvoked:
-            event.data = data_json.get<SkillInvokedData>();
-            break;
-        // v0.1.49+ additions
-        case SessionEventType::SessionRemoteSteerableChanged:
-            event.data = data_json.get<SessionRemoteSteerableChangedData>();
-            break;
-        case SessionEventType::SessionTitleChanged:
-            event.data = data_json.get<SessionTitleChangedData>();
-            break;
-        case SessionEventType::SessionScheduleCreated:
-            event.data = data_json.get<SessionScheduleCreatedData>();
-            break;
-        case SessionEventType::SessionScheduleCancelled:
-            event.data = data_json.get<SessionScheduleCancelledData>();
-            break;
-        case SessionEventType::SessionWarning:
-            event.data = data_json.get<SessionWarningData>();
-            break;
-        case SessionEventType::SessionModeChanged:
-            event.data = data_json.get<SessionModeChangedData>();
-            break;
-        case SessionEventType::SessionPlanChanged:
-            event.data = data_json.get<SessionPlanChangedData>();
-            break;
-        case SessionEventType::SessionWorkspaceFileChanged:
-            event.data = data_json.get<SessionWorkspaceFileChangedData>();
-            break;
-        case SessionEventType::SessionContextChanged:
-            event.data = data_json.get<SessionContextChangedData>();
-            break;
-        case SessionEventType::SessionTaskComplete:
-            event.data = data_json.get<SessionTaskCompleteData>();
-            break;
-        case SessionEventType::SessionCustomNotification:
-            event.data = data_json.get<SessionCustomNotificationData>();
-            break;
-        case SessionEventType::SessionToolsUpdated:
-            event.data = data_json.get<SessionToolsUpdatedData>();
-            break;
-        case SessionEventType::SessionBackgroundTasksChanged:
-            event.data = data_json.get<SessionBackgroundTasksChangedData>();
-            break;
-        case SessionEventType::SessionSkillsLoaded:
-            event.data = data_json.get<SessionSkillsLoadedData>();
-            break;
-        case SessionEventType::SessionCustomAgentsUpdated:
-            event.data = data_json.get<SessionCustomAgentsUpdatedData>();
-            break;
-        case SessionEventType::SessionMcpServersLoaded:
-            event.data = data_json.get<SessionMcpServersLoadedData>();
-            break;
-        case SessionEventType::SessionMcpServerStatusChanged:
-            event.data = data_json.get<SessionMcpServerStatusChangedData>();
-            break;
-        case SessionEventType::SessionExtensionsLoaded:
-            event.data = data_json.get<SessionExtensionsLoadedData>();
-            break;
-        case SessionEventType::AssistantStreamingDelta:
-            event.data = data_json.get<AssistantStreamingDeltaData>();
-            break;
-        case SessionEventType::AssistantMessageStart:
-            event.data = data_json.get<AssistantMessageStartData>();
-            break;
-        case SessionEventType::ModelCallFailure:
-            event.data = data_json.get<ModelCallFailureData>();
-            break;
-        case SessionEventType::SubagentDeselected:
-            event.data = data_json.get<SubagentDeselectedData>();
-            break;
-        case SessionEventType::PermissionRequested:
-            event.data = data_json.get<PermissionRequestedData>();
-            break;
-        case SessionEventType::PermissionCompleted:
-            event.data = data_json.get<PermissionCompletedData>();
-            break;
-        case SessionEventType::UserInputRequested:
-            event.data = data_json.get<UserInputRequestedData>();
-            break;
-        case SessionEventType::UserInputCompleted:
-            event.data = data_json.get<UserInputCompletedData>();
-            break;
-        case SessionEventType::ElicitationRequested:
-            event.data = data_json.get<ElicitationRequestedData>();
-            break;
-        case SessionEventType::ElicitationCompleted:
-            event.data = data_json.get<ElicitationCompletedData>();
-            break;
-        case SessionEventType::SamplingRequested:
-            event.data = data_json.get<SamplingRequestedData>();
-            break;
-        case SessionEventType::SamplingCompleted:
-            event.data = data_json.get<SamplingCompletedData>();
-            break;
-        case SessionEventType::McpOauthRequired:
-            event.data = data_json.get<McpOauthRequiredData>();
-            break;
-        case SessionEventType::McpOauthCompleted:
-            event.data = data_json.get<McpOauthCompletedData>();
-            break;
-        case SessionEventType::ExternalToolRequested:
-            event.data = data_json.get<ExternalToolRequestedData>();
-            break;
-        case SessionEventType::ExternalToolCompleted:
-            event.data = data_json.get<ExternalToolCompletedData>();
-            break;
-        case SessionEventType::CommandQueued:
-            event.data = data_json.get<CommandQueuedData>();
-            break;
-        case SessionEventType::CommandExecute:
-            event.data = data_json.get<CommandExecuteData>();
-            break;
-        case SessionEventType::CommandCompleted:
-            event.data = data_json.get<CommandCompletedData>();
-            break;
-        case SessionEventType::AutoModeSwitchRequested:
-            event.data = data_json.get<AutoModeSwitchRequestedData>();
-            break;
-        case SessionEventType::AutoModeSwitchCompleted:
-            event.data = data_json.get<AutoModeSwitchCompletedData>();
-            break;
-        case SessionEventType::CommandsChanged:
-            event.data = data_json.get<CommandsChangedData>();
-            break;
-        case SessionEventType::CapabilitiesChanged:
-            event.data = data_json.get<CapabilitiesChangedData>();
-            break;
-        case SessionEventType::ExitPlanModeRequested:
-            event.data = data_json.get<ExitPlanModeRequestedData>();
-            break;
-        case SessionEventType::ExitPlanModeCompleted:
-            event.data = data_json.get<ExitPlanModeCompletedData>();
-            break;
-        case SessionEventType::SystemNotification:
-            event.data = data_json.get<SystemNotificationData>();
-            break;
-        case SessionEventType::SessionScheduleRearmed:
-            event.data = data_json.get<ScheduleRearmedData>();
-            break;
-        case SessionEventType::SessionAutopilotObjectiveChanged:
-            event.data = data_json.get<AutopilotObjectiveChangedData>();
-            break;
-        case SessionEventType::SessionSessionLimitsChanged:
-            event.data = data_json.get<SessionLimitsChangedData>();
-            break;
-        case SessionEventType::SessionPermissionsChanged:
-            event.data = data_json.get<PermissionsChangedData>();
-            break;
-        case SessionEventType::SessionTodosChanged:
-            event.data = data_json.get<TodosChangedData>();
-            break;
-        case SessionEventType::SessionMemoryChanged:
-            event.data = data_json.get<MemoryChangedData>();
-            break;
-        case SessionEventType::SessionUsageCheckpoint:
-            event.data = data_json.get<UsageCheckpointData>();
-            break;
-        case SessionEventType::SessionContextCleared:
-            event.data = data_json.get<ContextClearedData>();
-            break;
-        case SessionEventType::SessionFusionRouteStarted:
-            event.data = data_json.get<FusionRouteStartedData>();
-            break;
-        case SessionEventType::SessionFusionRouteFailed:
-            event.data = data_json.get<FusionRouteFailedData>();
-            break;
-        case SessionEventType::SessionFusionResolved:
-            event.data = data_json.get<FusionResolvedData>();
-            break;
-        case SessionEventType::SessionFusionHandoff:
-            event.data = data_json.get<FusionHandoffData>();
-            break;
-        case SessionEventType::SessionFusionCommitStarted:
-            event.data = data_json.get<FusionCommitStartedData>();
-            break;
-        case SessionEventType::SessionFusionCompleted:
-            event.data = data_json.get<FusionCompletedData>();
-            break;
-        case SessionEventType::AssistantTurnRetry:
-            event.data = data_json.get<AssistantTurnRetryData>();
-            break;
-        case SessionEventType::AgentInterrupted:
-            event.data = data_json.get<AgentInterruptedData>();
-            break;
-        case SessionEventType::AssistantFusionPhaseStarted:
-            event.data = data_json.get<FusionPhaseStartedData>();
-            break;
-        case SessionEventType::AssistantFusionPhaseCompleted:
-            event.data = data_json.get<FusionPhaseCompletedData>();
-            break;
-        case SessionEventType::AssistantFusionPhaseFailed:
-            event.data = data_json.get<FusionPhaseFailedData>();
-            break;
-        case SessionEventType::AssistantServerToolProgress:
-            event.data = data_json.get<AssistantServerToolProgressData>();
-            break;
-        case SessionEventType::AssistantToolCallDelta:
-            event.data = data_json.get<AssistantToolCallDeltaData>();
-            break;
-        case SessionEventType::AssistantIdle:
-            event.data = data_json.get<AssistantIdleData>();
-            break;
-        case SessionEventType::PromptCacheBreak:
-            event.data = data_json.get<PromptCacheBreakData>();
-            break;
-        case SessionEventType::ModelCallFinished:
-            event.data = data_json.get<ModelCallFinishedData>();
-            break;
-        case SessionEventType::ModelCallStart:
-            event.data = data_json.get<ModelCallStartData>();
-            break;
-        case SessionEventType::ToolSearchActivated:
-            event.data = data_json.get<ToolSearchActivatedData>();
-            break;
-        case SessionEventType::SandboxDecision:
-            event.data = data_json.get<SandboxDecisionData>();
-            break;
-        case SessionEventType::SubagentConfigured:
-            event.data = data_json.get<SubagentConfiguredData>();
-            break;
-        case SessionEventType::HookProgress:
-            event.data = data_json.get<HookProgressData>();
-            break;
-        case SessionEventType::SessionBinaryAsset:
-            event.data = data_json.get<BinaryAssetData>();
-            break;
-        case SessionEventType::McpHeadersRefreshRequired:
-            event.data = data_json.get<McpHeadersRefreshRequiredData>();
-            break;
-        case SessionEventType::McpHeadersRefreshCompleted:
-            event.data = data_json.get<McpHeadersRefreshCompletedData>();
-            break;
-        case SessionEventType::UiEphemeralQuery:
-            event.data = data_json.get<UIEphemeralQueryData>();
-            break;
-        case SessionEventType::SessionLimitsExhaustedRequested:
-            event.data = data_json.get<SessionLimitsExhaustedRequestedData>();
-            break;
-        case SessionEventType::SessionLimitsExhaustedCompleted:
-            event.data = data_json.get<SessionLimitsExhaustedCompletedData>();
-            break;
-        case SessionEventType::SessionAutoModeResolved:
-            event.data = data_json.get<AutoModeResolvedData>();
-            break;
-        case SessionEventType::SessionManagedSettingsResolved:
-            event.data = data_json.get<ManagedSettingsResolvedData>();
-            break;
-        case SessionEventType::SessionManagedSettingsEnforced:
-            event.data = data_json.get<ManagedSettingsEnforcedData>();
-            break;
-        case SessionEventType::FactoryRunUpdated:
-            event.data = data_json.get<FactoryRunUpdatedData>();
-            break;
-        case SessionEventType::FactoryRunStarted:
-            event.data = data_json.get<FactoryRunStartedData>();
-            break;
-        case SessionEventType::FactoryRunSettled:
-            event.data = data_json.get<FactoryRunSettledData>();
-            break;
-        case SessionEventType::McpToolsListChanged:
-            event.data = data_json.get<McpListChangedData>();
-            break;
-        case SessionEventType::McpResourcesListChanged:
-            event.data = data_json.get<McpListChangedData>();
-            break;
-        case SessionEventType::McpPromptsListChanged:
-            event.data = data_json.get<McpListChangedData>();
-            break;
-        case SessionEventType::SessionCanvasOpened:
-            event.data = data_json.get<CanvasOpenedData>();
-            break;
-        case SessionEventType::SessionCanvasRegistryChanged:
-            event.data = data_json.get<CanvasRegistryChangedData>();
-            break;
-        case SessionEventType::SessionCanvasClosed:
-            event.data = data_json.get<CanvasClosedData>();
-            break;
-        case SessionEventType::SessionCanvasUnavailable:
-            event.data = data_json.get<CanvasUnavailableData>();
-            break;
-        case SessionEventType::SessionCanvasRecorded:
-            event.data = data_json.get<CanvasRecordedData>();
-            break;
-        case SessionEventType::SessionCanvasRemoved:
-            event.data = data_json.get<CanvasRemovedData>();
-            break;
-        case SessionEventType::SessionExtensionsAttachmentsPushed:
-            event.data = data_json.get<ExtensionsAttachmentsPushedData>();
-            break;
-        case SessionEventType::McpAppToolCallComplete:
-            event.data = data_json.get<McpAppToolCallCompleteData>();
-            break;
-        default:
-            event.data = data_json; // Fallback to raw JSON
-            break;
-        }
+            switch (event.type)
+            {
+            case SessionEventType::SessionStart:
+                event.data = data_json.get<SessionStartData>();
+                break;
+            case SessionEventType::SessionResume:
+                event.data = data_json.get<SessionResumeData>();
+                break;
+            case SessionEventType::SessionError:
+                event.data = data_json.get<SessionErrorData>();
+                break;
+            case SessionEventType::SessionIdle:
+                event.data = data_json.get<SessionIdleData>();
+                break;
+            case SessionEventType::SessionInfo:
+                event.data = data_json.get<SessionInfoData>();
+                break;
+            case SessionEventType::SessionModelChange:
+                event.data = data_json.get<SessionModelChangeData>();
+                break;
+            case SessionEventType::SessionHandoff:
+                event.data = data_json.get<SessionHandoffData>();
+                break;
+            case SessionEventType::SessionTruncation:
+                event.data = data_json.get<SessionTruncationData>();
+                break;
+            case SessionEventType::UserMessage:
+                event.data = data_json.get<UserMessageData>();
+                break;
+            case SessionEventType::PendingMessagesModified:
+                event.data = data_json.get<PendingMessagesModifiedData>();
+                break;
+            case SessionEventType::AssistantTurnStart:
+                event.data = data_json.get<AssistantTurnStartData>();
+                break;
+            case SessionEventType::AssistantIntent:
+                event.data = data_json.get<AssistantIntentData>();
+                break;
+            case SessionEventType::AssistantReasoning:
+                event.data = data_json.get<AssistantReasoningData>();
+                break;
+            case SessionEventType::AssistantReasoningDelta:
+                event.data = data_json.get<AssistantReasoningDeltaData>();
+                break;
+            case SessionEventType::AssistantMessage:
+                event.data = data_json.get<AssistantMessageData>();
+                break;
+            case SessionEventType::AssistantMessageDelta:
+                event.data = data_json.get<AssistantMessageDeltaData>();
+                break;
+            case SessionEventType::AssistantTurnEnd:
+                event.data = data_json.get<AssistantTurnEndData>();
+                break;
+            case SessionEventType::AssistantUsage:
+                event.data = data_json.get<AssistantUsageData>();
+                break;
+            case SessionEventType::Abort:
+                event.data = data_json.get<AbortData>();
+                break;
+            case SessionEventType::ToolUserRequested:
+                event.data = data_json.get<ToolUserRequestedData>();
+                break;
+            case SessionEventType::ToolExecutionStart:
+                event.data = data_json.get<ToolExecutionStartData>();
+                break;
+            case SessionEventType::ToolExecutionPartialResult:
+                event.data = data_json.get<ToolExecutionPartialResultData>();
+                break;
+            case SessionEventType::ToolExecutionComplete:
+                event.data = data_json.get<ToolExecutionCompleteData>();
+                break;
+            case SessionEventType::ToolExecutionProgress:
+                event.data = data_json.get<ToolExecutionProgressData>();
+                break;
+            case SessionEventType::SessionCompactionStart:
+                event.data = data_json.get<SessionCompactionStartData>();
+                break;
+            case SessionEventType::SessionCompactionComplete:
+                event.data = data_json.get<SessionCompactionCompleteData>();
+                break;
+            case SessionEventType::SessionUsageInfo:
+                event.data = data_json.get<SessionUsageInfoData>();
+                break;
+            case SessionEventType::CustomAgentStarted:
+                event.data = data_json.get<CustomAgentStartedData>();
+                break;
+            case SessionEventType::CustomAgentCompleted:
+                event.data = data_json.get<CustomAgentCompletedData>();
+                break;
+            case SessionEventType::CustomAgentFailed:
+                event.data = data_json.get<CustomAgentFailedData>();
+                break;
+            case SessionEventType::CustomAgentSelected:
+                event.data = data_json.get<CustomAgentSelectedData>();
+                break;
+            case SessionEventType::HookStart:
+                event.data = data_json.get<HookStartData>();
+                break;
+            case SessionEventType::HookEnd:
+                event.data = data_json.get<HookEndData>();
+                break;
+            case SessionEventType::SystemMessage:
+                event.data = data_json.get<SystemMessageData>();
+                break;
+            case SessionEventType::SessionSnapshotRewind:
+                event.data = data_json.get<SessionSnapshotRewindData>();
+                break;
+            case SessionEventType::SessionShutdown:
+                event.data = data_json.get<SessionShutdownData>();
+                break;
+            case SessionEventType::SkillInvoked:
+                event.data = data_json.get<SkillInvokedData>();
+                break;
+            // v0.1.49+ additions
+            case SessionEventType::SessionRemoteSteerableChanged:
+                event.data = data_json.get<SessionRemoteSteerableChangedData>();
+                break;
+            case SessionEventType::SessionTitleChanged:
+                event.data = data_json.get<SessionTitleChangedData>();
+                break;
+            case SessionEventType::SessionScheduleCreated:
+                event.data = data_json.get<SessionScheduleCreatedData>();
+                break;
+            case SessionEventType::SessionScheduleCancelled:
+                event.data = data_json.get<SessionScheduleCancelledData>();
+                break;
+            case SessionEventType::SessionWarning:
+                event.data = data_json.get<SessionWarningData>();
+                break;
+            case SessionEventType::SessionModeChanged:
+                event.data = data_json.get<SessionModeChangedData>();
+                break;
+            case SessionEventType::SessionPlanChanged:
+                event.data = data_json.get<SessionPlanChangedData>();
+                break;
+            case SessionEventType::SessionWorkspaceFileChanged:
+                event.data = data_json.get<SessionWorkspaceFileChangedData>();
+                break;
+            case SessionEventType::SessionContextChanged:
+                event.data = data_json.get<SessionContextChangedData>();
+                break;
+            case SessionEventType::SessionTaskComplete:
+                event.data = data_json.get<SessionTaskCompleteData>();
+                break;
+            case SessionEventType::SessionCustomNotification:
+                event.data = data_json.get<SessionCustomNotificationData>();
+                break;
+            case SessionEventType::SessionToolsUpdated:
+                event.data = data_json.get<SessionToolsUpdatedData>();
+                break;
+            case SessionEventType::SessionBackgroundTasksChanged:
+                event.data = data_json.get<SessionBackgroundTasksChangedData>();
+                break;
+            case SessionEventType::SessionSkillsLoaded:
+                event.data = data_json.get<SessionSkillsLoadedData>();
+                break;
+            case SessionEventType::SessionCustomAgentsUpdated:
+                event.data = data_json.get<SessionCustomAgentsUpdatedData>();
+                break;
+            case SessionEventType::SessionMcpServersLoaded:
+                event.data = data_json.get<SessionMcpServersLoadedData>();
+                break;
+            case SessionEventType::SessionMcpServerStatusChanged:
+                event.data = data_json.get<SessionMcpServerStatusChangedData>();
+                break;
+            case SessionEventType::SessionExtensionsLoaded:
+                event.data = data_json.get<SessionExtensionsLoadedData>();
+                break;
+            case SessionEventType::AssistantStreamingDelta:
+                event.data = data_json.get<AssistantStreamingDeltaData>();
+                break;
+            case SessionEventType::AssistantMessageStart:
+                event.data = data_json.get<AssistantMessageStartData>();
+                break;
+            case SessionEventType::ModelCallFailure:
+                event.data = data_json.get<ModelCallFailureData>();
+                break;
+            case SessionEventType::SubagentDeselected:
+                event.data = data_json.get<SubagentDeselectedData>();
+                break;
+            case SessionEventType::PermissionRequested:
+                event.data = data_json.get<PermissionRequestedData>();
+                break;
+            case SessionEventType::PermissionCompleted:
+                event.data = data_json.get<PermissionCompletedData>();
+                break;
+            case SessionEventType::UserInputRequested:
+                event.data = data_json.get<UserInputRequestedData>();
+                break;
+            case SessionEventType::UserInputCompleted:
+                event.data = data_json.get<UserInputCompletedData>();
+                break;
+            case SessionEventType::ElicitationRequested:
+                event.data = data_json.get<ElicitationRequestedData>();
+                break;
+            case SessionEventType::ElicitationCompleted:
+                event.data = data_json.get<ElicitationCompletedData>();
+                break;
+            case SessionEventType::SamplingRequested:
+                event.data = data_json.get<SamplingRequestedData>();
+                break;
+            case SessionEventType::SamplingCompleted:
+                event.data = data_json.get<SamplingCompletedData>();
+                break;
+            case SessionEventType::McpOauthRequired:
+                event.data = data_json.get<McpOauthRequiredData>();
+                break;
+            case SessionEventType::McpOauthCompleted:
+                event.data = data_json.get<McpOauthCompletedData>();
+                break;
+            case SessionEventType::ExternalToolRequested:
+                event.data = data_json.get<ExternalToolRequestedData>();
+                break;
+            case SessionEventType::ExternalToolCompleted:
+                event.data = data_json.get<ExternalToolCompletedData>();
+                break;
+            case SessionEventType::CommandQueued:
+                event.data = data_json.get<CommandQueuedData>();
+                break;
+            case SessionEventType::CommandExecute:
+                event.data = data_json.get<CommandExecuteData>();
+                break;
+            case SessionEventType::CommandCompleted:
+                event.data = data_json.get<CommandCompletedData>();
+                break;
+            case SessionEventType::AutoModeSwitchRequested:
+                event.data = data_json.get<AutoModeSwitchRequestedData>();
+                break;
+            case SessionEventType::AutoModeSwitchCompleted:
+                event.data = data_json.get<AutoModeSwitchCompletedData>();
+                break;
+            case SessionEventType::CommandsChanged:
+                event.data = data_json.get<CommandsChangedData>();
+                break;
+            case SessionEventType::CapabilitiesChanged:
+                event.data = data_json.get<CapabilitiesChangedData>();
+                break;
+            case SessionEventType::ExitPlanModeRequested:
+                event.data = data_json.get<ExitPlanModeRequestedData>();
+                break;
+            case SessionEventType::ExitPlanModeCompleted:
+                event.data = data_json.get<ExitPlanModeCompletedData>();
+                break;
+            case SessionEventType::SystemNotification:
+                event.data = data_json.get<SystemNotificationData>();
+                break;
+            case SessionEventType::SessionScheduleRearmed:
+                event.data = data_json.get<ScheduleRearmedData>();
+                break;
+            case SessionEventType::SessionAutopilotObjectiveChanged:
+                event.data = data_json.get<AutopilotObjectiveChangedData>();
+                break;
+            case SessionEventType::SessionSessionLimitsChanged:
+                event.data = data_json.get<SessionLimitsChangedData>();
+                break;
+            case SessionEventType::SessionPermissionsChanged:
+                event.data = data_json.get<PermissionsChangedData>();
+                break;
+            case SessionEventType::SessionTodosChanged:
+                event.data = data_json.get<TodosChangedData>();
+                break;
+            case SessionEventType::SessionMemoryChanged:
+                event.data = data_json.get<MemoryChangedData>();
+                break;
+            case SessionEventType::SessionUsageCheckpoint:
+                event.data = data_json.get<UsageCheckpointData>();
+                break;
+            case SessionEventType::SessionContextCleared:
+                event.data = data_json.get<ContextClearedData>();
+                break;
+            case SessionEventType::SessionFusionRouteStarted:
+                event.data = data_json.get<FusionRouteStartedData>();
+                break;
+            case SessionEventType::SessionFusionRouteFailed:
+                event.data = data_json.get<FusionRouteFailedData>();
+                break;
+            case SessionEventType::SessionFusionResolved:
+                event.data = data_json.get<FusionResolvedData>();
+                break;
+            case SessionEventType::SessionFusionHandoff:
+                event.data = data_json.get<FusionHandoffData>();
+                break;
+            case SessionEventType::SessionFusionCommitStarted:
+                event.data = data_json.get<FusionCommitStartedData>();
+                break;
+            case SessionEventType::SessionFusionCompleted:
+                event.data = data_json.get<FusionCompletedData>();
+                break;
+            case SessionEventType::AssistantTurnRetry:
+                event.data = data_json.get<AssistantTurnRetryData>();
+                break;
+            case SessionEventType::AgentInterrupted:
+                event.data = data_json.get<AgentInterruptedData>();
+                break;
+            case SessionEventType::AssistantFusionPhaseStarted:
+                event.data = data_json.get<FusionPhaseStartedData>();
+                break;
+            case SessionEventType::AssistantFusionPhaseCompleted:
+                event.data = data_json.get<FusionPhaseCompletedData>();
+                break;
+            case SessionEventType::AssistantFusionPhaseFailed:
+                event.data = data_json.get<FusionPhaseFailedData>();
+                break;
+            case SessionEventType::AssistantServerToolProgress:
+                event.data = data_json.get<AssistantServerToolProgressData>();
+                break;
+            case SessionEventType::AssistantToolCallDelta:
+                event.data = data_json.get<AssistantToolCallDeltaData>();
+                break;
+            case SessionEventType::AssistantIdle:
+                event.data = data_json.get<AssistantIdleData>();
+                break;
+            case SessionEventType::PromptCacheBreak:
+                event.data = data_json.get<PromptCacheBreakData>();
+                break;
+            case SessionEventType::ModelCallFinished:
+                event.data = data_json.get<ModelCallFinishedData>();
+                break;
+            case SessionEventType::ModelCallStart:
+                event.data = data_json.get<ModelCallStartData>();
+                break;
+            case SessionEventType::ToolSearchActivated:
+                event.data = data_json.get<ToolSearchActivatedData>();
+                break;
+            case SessionEventType::SandboxDecision:
+                event.data = data_json.get<SandboxDecisionData>();
+                break;
+            case SessionEventType::SubagentConfigured:
+                event.data = data_json.get<SubagentConfiguredData>();
+                break;
+            case SessionEventType::HookProgress:
+                event.data = data_json.get<HookProgressData>();
+                break;
+            case SessionEventType::SessionBinaryAsset:
+                event.data = data_json.get<BinaryAssetData>();
+                break;
+            case SessionEventType::McpHeadersRefreshRequired:
+                event.data = data_json.get<McpHeadersRefreshRequiredData>();
+                break;
+            case SessionEventType::McpHeadersRefreshCompleted:
+                event.data = data_json.get<McpHeadersRefreshCompletedData>();
+                break;
+            case SessionEventType::UiEphemeralQuery:
+                event.data = data_json.get<UIEphemeralQueryData>();
+                break;
+            case SessionEventType::SessionLimitsExhaustedRequested:
+                event.data = data_json.get<SessionLimitsExhaustedRequestedData>();
+                break;
+            case SessionEventType::SessionLimitsExhaustedCompleted:
+                event.data = data_json.get<SessionLimitsExhaustedCompletedData>();
+                break;
+            case SessionEventType::SessionAutoModeResolved:
+                event.data = data_json.get<AutoModeResolvedData>();
+                break;
+            case SessionEventType::SessionManagedSettingsResolved:
+                event.data = data_json.get<ManagedSettingsResolvedData>();
+                break;
+            case SessionEventType::SessionManagedSettingsEnforced:
+                event.data = data_json.get<ManagedSettingsEnforcedData>();
+                break;
+            case SessionEventType::WorkflowRunUpdated:
+                event.data = data_json.get<WorkflowRunUpdatedData>();
+                break;
+            case SessionEventType::WorkflowRunStarted:
+                event.data = data_json.get<WorkflowRunStartedData>();
+                break;
+            case SessionEventType::WorkflowRunSettled:
+                event.data = data_json.get<WorkflowRunSettledData>();
+                break;
+            case SessionEventType::SessionAutopilotStopped:
+                event.data = data_json.get<SessionAutopilotStoppedData>();
+                break;
+            case SessionEventType::McpToolsListChanged:
+                event.data = data_json.get<McpListChangedData>();
+                break;
+            case SessionEventType::McpResourcesListChanged:
+                event.data = data_json.get<McpListChangedData>();
+                break;
+            case SessionEventType::McpPromptsListChanged:
+                event.data = data_json.get<McpListChangedData>();
+                break;
+            case SessionEventType::SessionCanvasOpened:
+                event.data = data_json.get<CanvasOpenedData>();
+                break;
+            case SessionEventType::SessionCanvasRegistryChanged:
+                event.data = data_json.get<CanvasRegistryChangedData>();
+                break;
+            case SessionEventType::SessionCanvasClosed:
+                event.data = data_json.get<CanvasClosedData>();
+                break;
+            case SessionEventType::SessionCanvasUnavailable:
+                event.data = data_json.get<CanvasUnavailableData>();
+                break;
+            case SessionEventType::SessionCanvasRecorded:
+                event.data = data_json.get<CanvasRecordedData>();
+                break;
+            case SessionEventType::SessionCanvasRemoved:
+                event.data = data_json.get<CanvasRemovedData>();
+                break;
+            case SessionEventType::SessionExtensionsAttachmentsPushed:
+                event.data = data_json.get<ExtensionsAttachmentsPushedData>();
+                break;
+            case SessionEventType::McpAppToolCallComplete:
+                event.data = data_json.get<McpAppToolCallCompleteData>();
+                break;
+            default:
+                event.data = data_json; // Fallback to raw JSON
+                break;
+            }
         }
         catch (const json::exception&)
         {

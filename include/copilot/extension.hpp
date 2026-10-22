@@ -4,7 +4,7 @@
 #pragma once
 
 #include <copilot/client.hpp>
-#include <copilot/factory.hpp>
+#include <copilot/workflow.hpp>
 
 namespace copilot
 {
@@ -13,7 +13,7 @@ struct JoinSessionConfig
 {
     ResumeSessionConfig session;
     std::vector<std::string> requested_environment_variables;
-    std::vector<std::shared_ptr<FactoryHandle>> factories;
+    std::vector<std::shared_ptr<WorkflowHandle>> workflows;
 };
 
 struct ExtensionSession

@@ -7,19 +7,20 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-## Tests
+## Validation
+
+Build the library and examples, then check the generated protocol catalog:
 
 ```sh
-ctest --test-dir build -C Release --output-on-failure
+cmake --build build --target copilot_codegen_check
 ```
 
-- E2E tests require the Copilot CLI (`copilot`) to be installed and authenticated.
-- Skip E2E tests in CI/non-interactive runs: set `COPILOT_SDK_CPP_SKIP_E2E=1`.
+The catalog check requires Python 3.
 
 ## Style
 
 - Format C++ with `.clang-format` (4 spaces, Allman braces):
-  - `clang-format -i src/*.cpp include/copilot/*.hpp examples/*.cpp tests/*.cpp`
+  - `clang-format -i src/*.cpp include/copilot/*.hpp examples/*.cpp`
 
 ## Pull Requests
 

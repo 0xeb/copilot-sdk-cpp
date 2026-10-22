@@ -23,12 +23,11 @@ namespace copilot
 
 // Forward declaration
 class Client;
-class SessionFactoryApi;
+class SessionWorkflowApi;
 
 json build_mcp_auth_response(
-    const McpAuthHandler& handler,
-    const json& request,
-    const std::string& session_id);
+    const McpAuthHandler& handler, const json& request, const std::string& session_id
+);
 
 // =============================================================================
 // Subscription - RAII subscription handle
@@ -114,10 +113,13 @@ class Session : public std::enable_shared_from_this<Session>
     using PermissionHandlerWithContext = copilot::PermissionHandlerWithContext;
 
     /// Create a session (called by Client)
-    Session(const std::string& session_id, Client* client,
-            const std::optional<std::string>& workspace_path = std::nullopt,
-            SessionCapabilities capabilities = {},
-            bool managed_settings_enabled = false);
+    Session(
+        const std::string& session_id,
+        Client* client,
+        const std::optional<std::string>& workspace_path = std::nullopt,
+        SessionCapabilities capabilities = {},
+        bool managed_settings_enabled = false
+    );
 
     ~Session();
 
@@ -144,11 +146,16 @@ class Session : public std::enable_shared_from_this<Session>
         return workspace_path_;
     }
 
-    const SessionCapabilities& capabilities() const noexcept { return capabilities_; }
-    void set_initial_state(
-        std::optional<std::string> workspace_path,
-        SessionCapabilities capabilities);
-    void set_session_id(std::string session_id) { session_id_ = std::move(session_id); }
+    const SessionCapabilities& capabilities() const noexcept
+    {
+        return capabilities_;
+    }
+    void
+    set_initial_state(std::optional<std::string> workspace_path, SessionCapabilities capabilities);
+    void set_session_id(std::string session_id)
+    {
+        session_id_ = std::move(session_id);
+    }
 
     // =========================================================================
     // Messaging
@@ -172,9 +179,8 @@ class Session : public std::enable_shared_from_this<Session>
     /// @param timeout Maximum time to wait (default: 60 seconds)
     /// @return Future that resolves to the final assistant message, or nullopt if none
     /// @throws std::runtime_error if timeout is reached or session error occurs
-    std::future<std::optional<SessionEvent>> send_and_wait(
-        MessageOptions options,
-        std::chrono::seconds timeout = std::chrono::seconds(60));
+    std::future<std::optional<SessionEvent>>
+    send_and_wait(MessageOptions options, std::chrono::seconds timeout = std::chrono::seconds(60));
 
     // =========================================================================
     // Event Handling
@@ -184,6 +190,7 @@ class Session : public std::enable_shared_from_this<Session>
     /// @param handler Function to call for each event
     /// @return Subscription handle (unsubscribes on destruction)
     Subscription on(EventHandler handler);
+    Subscription on(EventHandler handler, bool root_agent_only);
 
     /// Register an event handler that remains active for the session lifetime.
     void register_persistent_event_handler(EventHandler handler);
@@ -202,16 +209,17 @@ class Session : public std::enable_shared_from_this<Session>
     /// Register multiple tools
     /// @param tools List of tool definitions
     void register_tools(const std::vector<Tool>& tools);
+    std::future<void> set_tools(std::vector<Tool> tools);
 
     /// Get a registered tool by name
     /// @return Tool pointer or nullptr if not found
     const Tool* get_tool(const std::string& name) const;
+    std::optional<Tool> copy_tool(const std::string& name) const;
 
     void register_canvases(const std::vector<std::shared_ptr<Canvas>>& canvases);
     json handle_canvas_request(const std::string& method, const json& params);
-    void register_factories(
-        const std::vector<std::shared_ptr<FactoryHandle>>& factories);
-    json handle_factory_request(const std::string& method, const json& params);
+    void register_workflows(const std::vector<std::shared_ptr<WorkflowHandle>>& workflows);
+    json handle_workflow_request(const std::string& method, const json& params);
 
     // =========================================================================
     // Permission Handling
@@ -222,9 +230,28 @@ class Session : public std::enable_shared_from_this<Session>
     void register_permission_handler(PermissionHandler handler);
     void register_permission_handler(PermissionHandlerWithContext handler);
     void register_mcp_auth_handler(McpAuthHandler handler);
+    void register_mcp_auth_handler(McpAuthResultHandler handler);
+    void register_skill_provider(std::shared_ptr<SkillProvider> provider);
+    json handle_skill_provider_request(
+        const std::string& method, const json& params, const CancellationToken& cancellation = {}
+    );
+    void retire();
+    std::optional<TranscriptRecoveryReport> transcript_recovery() const
+    {
+        return transcript_recovery_;
+    }
+    void set_transcript_recovery(std::optional<TranscriptRecoveryReport> value)
+    {
+        transcript_recovery_ = std::move(value);
+    }
+    std::future<json> send_and_wait_structured(
+        MessageOptions options, std::chrono::seconds timeout = std::chrono::seconds(60)
+    );
 
     /// Handle a permission request (called by Client)
-    PermissionRequestResult handle_permission_request(const PermissionRequest& request);
+    PermissionRequestResult handle_permission_request(
+        const PermissionRequest& request, std::optional<json> prompt_request = std::nullopt
+    );
 
     // =========================================================================
     // User Input Handling
@@ -327,22 +354,21 @@ class Session : public std::enable_shared_from_this<Session>
     std::future<void> destroy();
 
     /// Disconnect this SDK participant while leaving the session resumable.
-    std::future<void> disconnect() { return destroy(); }
+    std::future<void> disconnect()
+    {
+        return destroy();
+    }
 
     /// Invoke any session-scoped RPC. sessionId is injected automatically.
     std::future<json> invoke(const std::string& method, json params = json::object());
 
     template <typename Result>
-    std::future<Result> invoke_typed(
-        const std::string& method,
-        json params = json::object())
+    std::future<Result> invoke_typed(const std::string& method, json params = json::object())
     {
         return std::async(
             std::launch::async,
             [future = invoke(method, std::move(params))]() mutable
-            {
-                return future.get().template get<Result>();
-            }
+            { return future.get().template get<Result>(); }
         );
     }
 
@@ -357,10 +383,9 @@ class Session : public std::enable_shared_from_this<Session>
     std::future<generated::api::RemoteEnableResult> enable_remote(json params = json::object());
     /// Sandbox enforcement status for this session
     /// (`session.sandbox.getEnforcementStatus`).
-    std::future<generated::api::SandboxEnforcementStatus>
-    get_sandbox_enforcement_status();
+    std::future<generated::api::SandboxEnforcementStatus> get_sandbox_enforcement_status();
     std::future<void> disable_remote();
-    SessionFactoryApi factory();
+    SessionWorkflowApi workflow();
 
     // =========================================================================
     // Model & Mode (v0.1.49 additions)
@@ -444,6 +469,15 @@ class Session : public std::enable_shared_from_this<Session>
 
     std::string session_id_;
     Client* client_;
+    std::future<std::optional<SessionEvent>>
+    wait_for_response(MessageOptions options, std::chrono::seconds timeout, bool structured);
+    std::atomic<bool> dispatch_stopped_{false};
+    std::map<int, std::function<void()>> retirement_handlers_;
+    std::optional<TranscriptRecoveryReport> transcript_recovery_;
+    std::mutex set_tools_mutex_;
+    mutable std::mutex callbacks_mutex_;
+    std::shared_ptr<SkillProvider> skill_provider_;
+    McpAuthResultHandler mcp_auth_result_handler_;
     std::optional<std::string> workspace_path_;
     SessionCapabilities capabilities_;
     bool managed_settings_enabled_ = false;
@@ -459,7 +493,7 @@ class Session : public std::enable_shared_from_this<Session>
     mutable std::mutex tools_mutex_;
     std::map<std::string, Tool> tools_;
     std::map<std::string, std::shared_ptr<Canvas>> canvases_;
-    std::map<std::string, std::shared_ptr<FactoryHandle>> factories_;
+    std::map<std::string, std::shared_ptr<WorkflowHandle>> workflows_;
 
     // Permission handler
     PermissionHandler permission_handler_;

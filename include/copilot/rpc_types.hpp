@@ -16,6 +16,7 @@
 /// to match upstream exactly. All `sessionId` fields are spelled
 /// `session_id` in C++.
 
+#include <copilot/generated/api_types.hpp>
 #include <copilot/jsonrpc.hpp>
 #include <copilot/rpc_methods.hpp>
 #include <copilot/types.hpp>
@@ -82,8 +83,14 @@ struct NameSetRequest
     std::string name;
 };
 
-inline void to_json(json& j, const NameSetRequest& r) { j = json{{"name", r.name}}; }
-inline void from_json(const json& j, NameSetRequest& r) { j.at("name").get_to(r.name); }
+inline void to_json(json& j, const NameSetRequest& r)
+{
+    j = json{{"name", r.name}};
+}
+inline void from_json(const json& j, NameSetRequest& r)
+{
+    j.at("name").get_to(r.name);
+}
 
 // =============================================================================
 // session.mode.*  (mode is "interactive" | "plan" | "autopilot")
@@ -94,16 +101,28 @@ struct ModeSetRequest
     std::string mode;
 };
 
-inline void to_json(json& j, const ModeSetRequest& r) { j = json{{"mode", r.mode}}; }
-inline void from_json(const json& j, ModeSetRequest& r) { j.at("mode").get_to(r.mode); }
+inline void to_json(json& j, const ModeSetRequest& r)
+{
+    j = json{{"mode", r.mode}};
+}
+inline void from_json(const json& j, ModeSetRequest& r)
+{
+    j.at("mode").get_to(r.mode);
+}
 
 struct ModeGetResult
 {
     std::string mode;
 };
 
-inline void to_json(json& j, const ModeGetResult& r) { j = json{{"mode", r.mode}}; }
-inline void from_json(const json& j, ModeGetResult& r) { j.at("mode").get_to(r.mode); }
+inline void to_json(json& j, const ModeGetResult& r)
+{
+    j = json{{"mode", r.mode}};
+}
+inline void from_json(const json& j, ModeGetResult& r)
+{
+    j.at("mode").get_to(r.mode);
+}
 
 // =============================================================================
 // session.model.*
@@ -158,7 +177,7 @@ inline void to_json(json& j, const PlanReadResult& r)
 {
     j = json{{"exists", r.exists}};
     j["content"] = r.content.has_value() ? json(*r.content) : json(nullptr);
-    j["path"]    = r.path.has_value()    ? json(*r.path)    : json(nullptr);
+    j["path"] = r.path.has_value() ? json(*r.path) : json(nullptr);
 }
 
 inline void from_json(const json& j, PlanReadResult& r)
@@ -179,8 +198,14 @@ struct PlanUpdateRequest
     std::string content;
 };
 
-inline void to_json(json& j, const PlanUpdateRequest& r) { j = json{{"content", r.content}}; }
-inline void from_json(const json& j, PlanUpdateRequest& r) { j.at("content").get_to(r.content); }
+inline void to_json(json& j, const PlanUpdateRequest& r)
+{
+    j = json{{"content", r.content}};
+}
+inline void from_json(const json& j, PlanUpdateRequest& r)
+{
+    j.at("content").get_to(r.content);
+}
 
 // =============================================================================
 // session.history.* (compact / truncate)
@@ -314,8 +339,14 @@ struct ShellExecResult
     std::string process_id;
 };
 
-inline void to_json(json& j, const ShellExecResult& r) { j = json{{"processId", r.process_id}}; }
-inline void from_json(const json& j, ShellExecResult& r) { j.at("processId").get_to(r.process_id); }
+inline void to_json(json& j, const ShellExecResult& r)
+{
+    j = json{{"processId", r.process_id}};
+}
+inline void from_json(const json& j, ShellExecResult& r)
+{
+    j.at("processId").get_to(r.process_id);
+}
 
 struct ShellKillRequest
 {
@@ -340,8 +371,14 @@ struct ShellKillResult
     bool killed = false;
 };
 
-inline void to_json(json& j, const ShellKillResult& r) { j = json{{"killed", r.killed}}; }
-inline void from_json(const json& j, ShellKillResult& r) { j.at("killed").get_to(r.killed); }
+inline void to_json(json& j, const ShellKillResult& r)
+{
+    j = json{{"killed", r.killed}};
+}
+inline void from_json(const json& j, ShellKillResult& r)
+{
+    j.at("killed").get_to(r.killed);
+}
 
 // =============================================================================
 // session.commands.*
@@ -459,22 +496,29 @@ inline void from_json(const json& j, PermissionsSetApproveAllResult& r)
 // sessionFs.*  (server-to-client requests; SDK client implements these)
 // =============================================================================
 
+using SessionFsReadFileBytesRequest = generated::api::SessionFsReadFileBytesRequest;
+using SessionFsReadFileBytesResult = generated::api::SessionFsReadFileBytesResult;
+using SessionFsWriteFileBytesRequest = generated::api::SessionFsWriteFileBytesRequest;
+
 struct SessionFsError
 {
     std::string code; ///< "ENOENT" | "UNKNOWN"
     std::optional<std::string> message;
+    std::optional<bool> write_changed;
 };
 
 inline void to_json(json& j, const SessionFsError& e)
 {
     j = json{{"code", e.code}};
     detail::set_opt(j, "message", e.message);
+    detail::set_opt(j, "writeChanged", e.write_changed);
 }
 
 inline void from_json(const json& j, SessionFsError& e)
 {
     j.at("code").get_to(e.code);
     detail::get_opt(j, "message", e.message);
+    detail::get_opt(j, "writeChanged", e.write_changed);
 }
 
 struct SessionFsReadFileRequest
@@ -592,8 +636,14 @@ struct SessionFsExistsResult
     bool exists = false;
 };
 
-inline void to_json(json& j, const SessionFsExistsResult& r) { j = json{{"exists", r.exists}}; }
-inline void from_json(const json& j, SessionFsExistsResult& r) { j.at("exists").get_to(r.exists); }
+inline void to_json(json& j, const SessionFsExistsResult& r)
+{
+    j = json{{"exists", r.exists}};
+}
+inline void from_json(const json& j, SessionFsExistsResult& r)
+{
+    j.at("exists").get_to(r.exists);
+}
 
 struct SessionFsStatRequest
 {
@@ -771,15 +821,15 @@ inline void from_json(const json& j, SessionFsRenameRequest& r)
 
 struct SessionFsHandlers
 {
-    std::function<SessionFsReadFileResult(const SessionFsReadFileRequest&)>       read_file;
+    std::function<SessionFsReadFileResult(const SessionFsReadFileRequest&)> read_file;
     std::function<std::optional<SessionFsError>(const SessionFsWriteFileRequest&)> write_file;
     std::function<std::optional<SessionFsError>(const SessionFsAppendFileRequest&)> append_file;
-    std::function<SessionFsExistsResult(const SessionFsExistsRequest&)>           exists;
-    std::function<SessionFsStatResult(const SessionFsStatRequest&)>               stat;
-    std::function<std::optional<SessionFsError>(const SessionFsMkdirRequest&)>    mkdir;
-    std::function<SessionFsReaddirResult(const SessionFsReaddirRequest&)>         readdir;
-    std::function<std::optional<SessionFsError>(const SessionFsRmRequest&)>       rm;
-    std::function<std::optional<SessionFsError>(const SessionFsRenameRequest&)>   rename;
+    std::function<SessionFsExistsResult(const SessionFsExistsRequest&)> exists;
+    std::function<SessionFsStatResult(const SessionFsStatRequest&)> stat;
+    std::function<std::optional<SessionFsError>(const SessionFsMkdirRequest&)> mkdir;
+    std::function<SessionFsReaddirResult(const SessionFsReaddirRequest&)> readdir;
+    std::function<std::optional<SessionFsError>(const SessionFsRmRequest&)> rm;
+    std::function<std::optional<SessionFsError>(const SessionFsRenameRequest&)> rename;
 };
 
 namespace detail
@@ -788,7 +838,8 @@ namespace detail
 template <typename Req, typename Fn>
 inline auto wrap_fs_error_handler(Fn fn)
 {
-    return [fn = std::move(fn)](const json& params) -> json {
+    return [fn = std::move(fn)](const json& params) -> json
+    {
         auto req = params.get<Req>();
         auto err = fn(req);
         if (err.has_value())
@@ -801,7 +852,8 @@ inline auto wrap_fs_error_handler(Fn fn)
 template <typename Req, typename Res, typename Fn>
 inline auto wrap_value_handler(Fn fn)
 {
-    return [fn = std::move(fn)](const json& params) -> json {
+    return [fn = std::move(fn)](const json& params) -> json
+    {
         auto req = params.get<Req>();
         Res res = fn(req);
         return json(res);
@@ -813,8 +865,8 @@ inline auto wrap_value_handler(Fn fn)
 /// Register a SessionFs handler bundle on a `RpcRequestDispatcher`.
 /// Only the methods whose `std::function` is populated are wired; the rest
 /// remain unregistered so the runtime gets a clean method-not-found.
-inline void register_session_fs_handlers(
-    RpcRequestDispatcher& dispatcher, const SessionFsHandlers& handlers)
+inline void
+register_session_fs_handlers(RpcRequestDispatcher& dispatcher, const SessionFsHandlers& handlers)
 {
     using namespace copilot::rpc::methods;
 
@@ -823,55 +875,62 @@ inline void register_session_fs_handlers(
         dispatcher.on(
             kSessionFsReadFile,
             detail::wrap_value_handler<SessionFsReadFileRequest, SessionFsReadFileResult>(
-                handlers.read_file));
+                handlers.read_file
+            )
+        );
     }
     if (handlers.write_file)
     {
         dispatcher.on(
             kSessionFsWriteFile,
-            detail::wrap_fs_error_handler<SessionFsWriteFileRequest>(handlers.write_file));
+            detail::wrap_fs_error_handler<SessionFsWriteFileRequest>(handlers.write_file)
+        );
     }
     if (handlers.append_file)
     {
         dispatcher.on(
             kSessionFsAppendFile,
-            detail::wrap_fs_error_handler<SessionFsAppendFileRequest>(handlers.append_file));
+            detail::wrap_fs_error_handler<SessionFsAppendFileRequest>(handlers.append_file)
+        );
     }
     if (handlers.exists)
     {
         dispatcher.on(
             kSessionFsExists,
             detail::wrap_value_handler<SessionFsExistsRequest, SessionFsExistsResult>(
-                handlers.exists));
+                handlers.exists
+            )
+        );
     }
     if (handlers.stat)
     {
         dispatcher.on(
             kSessionFsStat,
-            detail::wrap_value_handler<SessionFsStatRequest, SessionFsStatResult>(handlers.stat));
+            detail::wrap_value_handler<SessionFsStatRequest, SessionFsStatResult>(handlers.stat)
+        );
     }
     if (handlers.mkdir)
     {
         dispatcher.on(
-            kSessionFsMkdir,
-            detail::wrap_fs_error_handler<SessionFsMkdirRequest>(handlers.mkdir));
+            kSessionFsMkdir, detail::wrap_fs_error_handler<SessionFsMkdirRequest>(handlers.mkdir)
+        );
     }
     if (handlers.readdir)
     {
         dispatcher.on(
             kSessionFsReaddir,
             detail::wrap_value_handler<SessionFsReaddirRequest, SessionFsReaddirResult>(
-                handlers.readdir));
+                handlers.readdir
+            )
+        );
     }
     if (handlers.rm)
-    {
-        dispatcher.on(
-            kSessionFsRm, detail::wrap_fs_error_handler<SessionFsRmRequest>(handlers.rm));
-    }
+        dispatcher.on(kSessionFsRm, detail::wrap_fs_error_handler<SessionFsRmRequest>(handlers.rm));
     if (handlers.rename)
     {
         dispatcher.on(
-            kSessionFsRename, detail::wrap_fs_error_handler<SessionFsRenameRequest>(handlers.rename));
+            kSessionFsRename, detail::wrap_fs_error_handler<SessionFsRenameRequest>(handlers.rename)
+        );
     }
 }
 

@@ -21,15 +21,15 @@ std::future<ExtensionSession> join_session(JoinSessionConfig config)
             config.session.disable_resume = true;
             config.session.requested_environment_variables =
                 std::move(config.requested_environment_variables);
-            if (!config.factories.empty())
+            if (!config.workflows.empty())
             {
-                config.session.factories = std::vector<json>{};
-                for (const auto& factory : config.factories)
+                config.session.workflows = std::vector<json>{};
+                for (const auto& workflow : config.workflows)
                 {
-                    if (factory)
-                        config.session.factories->push_back(factory->meta);
+                    if (workflow)
+                        config.session.workflows->push_back(workflow->meta);
                 }
-                config.session.factory_objects = config.factories;
+                config.session.workflow_objects = config.workflows;
             }
 
             ClientOptions options;

@@ -10,8 +10,9 @@
 /// @file process.hpp
 /// @brief Cross-platform process management for Copilot CLI
 
-#include <map>
 #include <chrono>
+#include <functional>
+#include <map>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -222,11 +223,15 @@ class Process
     /// Close redirected pipe handles to unblock transport readers.
     void close_pipes();
 
+    void on_exit(std::function<void()> callback);
+
     /// Get process ID
     /// @return Process ID, or 0 if not spawned
     int pid() const;
 
   private:
+    struct ProcessWatch;
+    std::unique_ptr<ProcessWatch> watch_;
     std::unique_ptr<ProcessHandle> handle_;
     std::unique_ptr<WritePipe> stdin_;
     std::unique_ptr<ReadPipe> stdout_;

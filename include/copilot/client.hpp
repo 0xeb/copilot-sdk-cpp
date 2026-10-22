@@ -27,6 +27,8 @@
 namespace copilot
 {
 
+json build_tool_definition(const Tool& tool);
+
 // Forward declaration
 class Session;
 class Subscription;
@@ -40,8 +42,8 @@ class CopilotRequestHandlerBridge;
 /// @param config Session configuration
 /// @return JSON object ready to send to server
 json build_session_create_request(
-    const SessionConfig& config,
-    ClientMode mode = ClientMode::CopilotCli);
+    const SessionConfig& config, ClientMode mode = ClientMode::CopilotCli
+);
 
 /// Build the JSON request for session.resume RPC
 /// @param session_id ID of the session to resume
@@ -50,7 +52,8 @@ json build_session_create_request(
 json build_session_resume_request(
     const std::string& session_id,
     const ResumeSessionConfig& config,
-    ClientMode mode = ClientMode::CopilotCli);
+    ClientMode mode = ClientMode::CopilotCli
+);
 
 /// Build the CLI argument vector that {@link Client} will pass to the spawned
 /// Copilot CLI process, given a fully-populated {@link ClientOptions}.
@@ -158,8 +161,7 @@ class Client
     /// Get metadata for a specific session by ID (O(1) lookup).
     /// @param session_id ID of the session
     /// @return Future that resolves to metadata, or nullopt if not found
-    std::future<std::optional<SessionMetadata>>
-    get_session_metadata(const std::string& session_id);
+    std::future<std::optional<SessionMetadata>> get_session_metadata(const std::string& session_id);
 
     /// Delete a session
     /// @param session_id ID of the session to delete
@@ -250,6 +252,14 @@ class Client
     std::shared_ptr<Session> get_session(const std::string& session_id);
 
     /// Get the JSON-RPC client (internal use)
+    std::shared_ptr<JsonRpcClient> rpc_client_shared()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (!rpc_)
+            throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client disconnected");
+        return rpc_;
+    }
+
     JsonRpcClient* rpc_client()
     {
         return rpc_.get();
@@ -307,7 +317,8 @@ class Client
     // Components
     std::unique_ptr<Process> process_;
     std::unique_ptr<ITransport> transport_;
-    std::unique_ptr<JsonRpcClient> rpc_;
+    std::shared_ptr<JsonRpcClient> rpc_;
+    bool session_admission_closed_ = true;
     std::shared_ptr<CopilotRequestHandlerBridge> request_handler_bridge_;
 
     // Sessions

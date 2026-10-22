@@ -15,8 +15,8 @@ struct CopilotRequestHandlerBridge::Exchange
 };
 
 CopilotRequestHandlerBridge::CopilotRequestHandlerBridge(
-    std::shared_ptr<CopilotRequestHandler> handler,
-    SendRpc send_rpc)
+    std::shared_ptr<CopilotRequestHandler> handler, SendRpc send_rpc
+)
     : handler_(std::move(handler)), send_rpc_(std::move(send_rpc))
 {
 }
@@ -26,8 +26,7 @@ CopilotRequestHandlerBridge::~CopilotRequestHandlerBridge()
     cancel_all();
 }
 
-json CopilotRequestHandlerBridge::handle(
-    const std::string& method, const json& params)
+json CopilotRequestHandlerBridge::handle(const std::string& method, const json& params)
 {
     if (method == "llmInference.httpRequestStart")
     {
@@ -37,16 +36,16 @@ json CopilotRequestHandlerBridge::handle(
             exchange->context.session_id = params["sessionId"].get<std::string>();
         if (params.contains("agentId") && params["agentId"].is_string())
             exchange->context.agent_id = params["agentId"].get<std::string>();
+        if (params.contains("agentInvocationId") && params["agentInvocationId"].is_string())
+            exchange->context.agent_invocation_id = params["agentInvocationId"].get<std::string>();
         if (params.contains("parentAgentId") && params["parentAgentId"].is_string())
-            exchange->context.parent_agent_id =
-                params["parentAgentId"].get<std::string>();
+            exchange->context.parent_agent_id = params["parentAgentId"].get<std::string>();
         if (params.contains("interactionType") && params["interactionType"].is_string())
-            exchange->context.interaction_type =
-                params["interactionType"].get<std::string>();
+            exchange->context.interaction_type = params["interactionType"].get<std::string>();
         exchange->context.transport = params.value("transport", "http");
         exchange->context.url = params.at("url").get<std::string>();
-        exchange->context.headers = params.value(
-            "headers", std::map<std::string, std::vector<std::string>>{});
+        exchange->context.headers =
+            params.value("headers", std::map<std::string, std::vector<std::string>>{});
         exchange->context.cancelled = std::make_shared<std::atomic_bool>(false);
         exchange->request.method = params.at("method").get<std::string>();
         exchange->request.url = exchange->context.url;
@@ -60,12 +59,15 @@ json CopilotRequestHandlerBridge::handle(
             const auto request_id = exchange->context.request_id;
             const auto send_rpc = send_rpc_;
             exchange->websocket->bind_response_sender(
-                [request_id, send_rpc](
+                [request_id, send_rpc, cancelled = exchange->context.cancelled](
                     const std::string& data,
                     bool binary,
                     bool end,
-                    const std::optional<std::string>& error)
+                    const std::optional<std::string>& error
+                )
                 {
+                    if (cancelled->load())
+                        return;
                     json params{
                         {"requestId", request_id},
                         {"data", data},
@@ -75,14 +77,16 @@ json CopilotRequestHandlerBridge::handle(
                     if (error)
                         params["error"] = json{{"message", *error}};
                     send_rpc("llmInference.httpResponseChunk", params);
-                });
+                }
+            );
             send_rpc_(
                 "llmInference.httpResponseStart",
                 json{
                     {"requestId", exchange->context.request_id},
                     {"status", 101},
                     {"headers", json::object()},
-                });
+                }
+            );
             exchange->websocket->open(exchange->context);
         }
 
@@ -108,10 +112,9 @@ json CopilotRequestHandlerBridge::handle(
     {
         exchange->context.cancelled->store(true);
         if (exchange->websocket)
-            exchange->websocket->close(
-                CopilotWebSocketCloseStatus{
-                    .description = params.value("cancelReason", "cancelled"),
-                });
+            exchange->websocket->close(CopilotWebSocketCloseStatus{
+                .description = params.value("cancelReason", "cancelled"),
+            });
         std::lock_guard<std::mutex> lock(mutex_);
         pending_.erase(request_id);
         return json::object();
@@ -120,7 +123,12 @@ json CopilotRequestHandlerBridge::handle(
     const auto data = params.value("data", "");
     const bool binary = params.value("binary", false);
     if (exchange->websocket)
-        exchange->websocket->send_request_message(data, binary);
+    {
+        CopilotWebSocketMessage message{data, binary};
+        if (params.contains("agentInvocationId") && params["agentInvocationId"].is_string())
+            message.agent_invocation_id = params["agentInvocationId"].get<std::string>();
+        exchange->websocket->send_request_message(message);
+    }
     else
         exchange->request.body += data;
 
@@ -135,25 +143,20 @@ json CopilotRequestHandlerBridge::handle(
         else
         {
             auto self = shared_from_this();
-            std::thread(
-                [self = std::move(self), exchange]
-                {
-                    self->complete_http(exchange);
-                }).detach();
+            std::thread([self = std::move(self), exchange] { self->complete_http(exchange); }
+            ).detach();
         }
     }
     return json::object();
 }
 
-void CopilotRequestHandlerBridge::complete_http(
-    const std::shared_ptr<Exchange>& exchange)
+void CopilotRequestHandlerBridge::complete_http(const std::shared_ptr<Exchange>& exchange)
 {
     try
     {
         if (exchange->context.is_cancelled())
             return;
-        const auto response = handler_->send_request(
-            exchange->request, exchange->context);
+        const auto response = handler_->send_request(exchange->request, exchange->context);
         if (exchange->context.is_cancelled())
             return;
         json start{
@@ -166,18 +169,24 @@ void CopilotRequestHandlerBridge::complete_http(
         send_rpc_("llmInference.httpResponseStart", start);
         if (response.chunks.empty())
         {
+            if (exchange->context.is_cancelled())
+                return;
             send_rpc_(
                 "llmInference.httpResponseChunk",
                 json{
                     {"requestId", exchange->context.request_id},
                     {"data", ""},
                     {"end", true},
-                });
+                }
+            );
         }
         else
         {
             for (std::size_t i = 0; i < response.chunks.size(); ++i)
             {
+                // C# REFERENCE: CopilotHttpMessageHandler cancellation before each chunk RPC.
+                if (exchange->context.is_cancelled())
+                    break;
                 send_rpc_(
                     "llmInference.httpResponseChunk",
                     json{
@@ -185,7 +194,8 @@ void CopilotRequestHandlerBridge::complete_http(
                         {"data", response.chunks[i]},
                         {"binary", response.binary},
                         {"end", i + 1 == response.chunks.size()},
-                    });
+                    }
+                );
             }
         }
     }
@@ -200,7 +210,8 @@ void CopilotRequestHandlerBridge::complete_http(
 }
 
 void CopilotRequestHandlerBridge::fail(
-    const std::shared_ptr<Exchange>& exchange, const std::string& message)
+    const std::shared_ptr<Exchange>& exchange, const std::string& message
+)
 {
     try
     {
@@ -211,7 +222,8 @@ void CopilotRequestHandlerBridge::fail(
                 {"data", ""},
                 {"end", true},
                 {"error", {{"message", message}}},
-            });
+            }
+        );
     }
     catch (...)
     {
@@ -229,8 +241,17 @@ void CopilotRequestHandlerBridge::cancel_all()
     {
         exchange->context.cancelled->store(true);
         if (exchange->websocket)
-            exchange->websocket->close(
-                CopilotWebSocketCloseStatus{.description = "client disposed"});
+        {
+            try
+            {
+                exchange->websocket->close(
+                    CopilotWebSocketCloseStatus{.description = "client disposed"}
+                );
+            }
+            catch (...)
+            {
+            }
+        }
     }
 }
 
