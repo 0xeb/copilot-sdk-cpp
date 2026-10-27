@@ -189,6 +189,7 @@ class Session : public std::enable_shared_from_this<Session>
     /// Subscribe to session events
     /// @param handler Function to call for each event
     /// @return Subscription handle (unsubscribes on destruction)
+    /// @throws std::runtime_error if session event dispatch has stopped
     Subscription on(EventHandler handler);
     Subscription on(EventHandler handler, bool root_agent_only);
 
