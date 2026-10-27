@@ -204,7 +204,7 @@ struct JsonRpcResponse
         if (j.contains("id") && !j.at("id").is_null())
             resp.id = id_from_json(j.at("id"));
         if (j.contains("result"))
-            resp.result = j.at("result");
+            resp.result.emplace(j.at("result"));
         if (j.contains("error"))
             resp.error = JsonRpcErrorObject::from_json(j.at("error"));
         return resp;
@@ -480,7 +480,7 @@ class JsonRpcClient
 
         void send_response(const JsonRpcId& id, const json& result)
         {
-            send(JsonRpcResponse{id, result, std::nullopt}.to_json());
+            send(JsonRpcResponse{id, std::optional<json>{result}, std::nullopt}.to_json());
         }
 
         void send_error(

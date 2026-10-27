@@ -6,9 +6,12 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.2
+## Version 0.4.3
 
 Targets Copilot CLI 1.0.102-1 and SDK protocol version 3.
+
+Fixes MSVC compilation of JSON-RPC responses with nlohmann/json 3.12.0 and
+vcpkg's optional-conversion backport, preserving explicit JSON null results.
 
 - Correlate message waiters with the originating request, including sub-agent,
   abort, and autopilot events; receive structured JSON with `response_schema`
