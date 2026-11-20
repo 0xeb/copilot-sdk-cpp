@@ -2003,6 +2003,11 @@ const char* fusion_tier_wire(Session::FusionTier tier)
 }
 } // namespace
 
+std::future<void> Session::set_model(const std::string& model_id)
+{
+    return set_model(model_id, SetModelOptions{});
+}
+
 // C# REFERENCE: dotnet/src/Session.cs SetModelAsync(string, SetModelOptions)
 // NODEJS REFERENCE: nodejs/src/session.ts setModel
 std::future<void> Session::set_model(const std::string& model_id, SetModelOptions options)

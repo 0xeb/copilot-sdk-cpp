@@ -522,7 +522,10 @@ class Session : public std::enable_shared_from_this<Session>
     /// @param model_id Identifier of the target model
     /// @param options Optional reasoning effort override
     /// @return Future that completes when the switch is acknowledged
-    std::future<void> set_model(const std::string& model_id, SetModelOptions options = {});
+    std::future<void> set_model(const std::string& model_id, SetModelOptions options);
+    // An overload rather than `= {}`: GCC and Clang reject a default argument that
+    // needs the default member initializers of a nested class of the enclosing class.
+    std::future<void> set_model(const std::string& model_id);
 
     /// Get the currently selected model for the session.
     /// Calls the v3 session.model.getCurrent RPC.
