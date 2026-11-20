@@ -62,11 +62,11 @@ int main()
         std::cout << "\n";
 
         // Create session with reasoning effort
-        copilot::SessionConfig config;
-        config.reasoning_effort = copilot::ReasoningEffort::Medium;
+        copilot::CreateSessionOptions config;
+        config.inference.reasoning_effort = copilot::ReasoningEffort::Medium;
 
         // Permission handler
-        config.on_permission_request = [](const copilot::PermissionRequest&)
+        config.permissions.on_request = [](const copilot::PermissionRequest&)
             -> copilot::PermissionRequestResult
         {
             copilot::PermissionRequestResult r;

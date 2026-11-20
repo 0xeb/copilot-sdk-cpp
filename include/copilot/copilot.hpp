@@ -11,6 +11,7 @@
 
 #include <copilot/client.hpp>
 #include <copilot/canvas.hpp>
+#include <copilot/decisions.hpp>
 #include <copilot/events.hpp>
 #include <copilot/extension.hpp>
 #include <copilot/workflow.hpp>
@@ -26,6 +27,7 @@
 #include <copilot/rpc_methods.hpp>
 #include <copilot/rpc_types.hpp>
 #include <copilot/session.hpp>
+#include <copilot/session_fs.hpp>
 #include <copilot/tool_builder.hpp>
 #include <copilot/transport.hpp>
 #include <copilot/transport_stdio.hpp>
@@ -37,6 +39,6 @@ namespace copilot
 {
 
 /// SDK version string
-inline constexpr const char* kSdkVersion = "0.1.0";
+inline constexpr const char* kSdkVersion = "0.4.4";
 
 } // namespace copilot

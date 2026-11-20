@@ -3,11 +3,16 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <copilot/cancellation.hpp>
+#include <copilot/generated/api_types.hpp>
 #include <copilot/generated/protocol_version.hpp>
+#include <copilot/session_fs.hpp>
+#include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <functional>
 #include <map>
 #include <memory>
@@ -15,6 +20,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 #include <variant>
 #include <vector>
 
@@ -32,6 +38,36 @@ struct WorkflowHandle;
 /// JSON type alias for cleaner API
 using json = nlohmann::json;
 
+namespace detail
+{
+/// Value of an environment variable, or nullopt when unset. Uses _dupenv_s on MSVC so
+/// consumers compiling with /W4 /WX do not trip C4996 on std::getenv.
+inline std::optional<std::string> env_value(const char* name)
+{
+#ifdef _MSC_VER
+    char* buffer = nullptr;
+    size_t length = 0;
+    if (_dupenv_s(&buffer, &length, name) != 0 || buffer == nullptr)
+        return std::nullopt;
+    std::string value(buffer);
+    std::free(buffer);
+    return value;
+#else
+    const char* value = std::getenv(name);
+    return value ? std::optional<std::string>(value) : std::nullopt;
+#endif
+}
+
+/// Like env_value(), but an empty value counts as unset.
+inline std::optional<std::string> non_empty_env_value(const char* name)
+{
+    auto value = env_value(name);
+    if (value && value->empty())
+        return std::nullopt;
+    return value;
+}
+} // namespace detail
+
 // Forward declarations
 class Session;
 struct SessionEvent;
@@ -47,6 +83,83 @@ inline constexpr int kSdkProtocolVersion = generated::kSdkProtocolVersion;
 /// Minimum SDK protocol version this SDK can communicate with.
 /// Older servers (reporting < kMinProtocolVersion) are rejected.
 inline constexpr int kMinProtocolVersion = generated::kMinProtocolVersion;
+
+/// Thrown by Client::start() when the runtime's protocol version is outside
+/// [kMinProtocolVersion, kSdkProtocolVersion] or the runtime does not report one.
+/// Lets a host tell an incompatible CLI apart from network or authentication failures.
+class ProtocolVersionMismatch : public std::runtime_error
+{
+  public:
+    ProtocolVersionMismatch(
+        std::optional<int> server_version,
+        std::optional<std::string> cli_version,
+        std::optional<std::string> cli_path
+    )
+        : std::runtime_error(format(server_version, cli_version, cli_path)),
+          server_version_(server_version), cli_version_(std::move(cli_version)),
+          cli_path_(std::move(cli_path))
+    {
+    }
+
+    /// Protocol version the runtime reported; nullopt when it reported none.
+    const std::optional<int>& server_version() const noexcept
+    {
+        return server_version_;
+    }
+    int min_version() const noexcept
+    {
+        return kMinProtocolVersion;
+    }
+    int max_version() const noexcept
+    {
+        return kSdkProtocolVersion;
+    }
+    /// Runtime (CLI) version string from the handshake, when reported.
+    const std::optional<std::string>& cli_version() const noexcept
+    {
+        return cli_version_;
+    }
+    /// Resolved executable this client spawned; nullopt for external/in-process runtimes.
+    const std::optional<std::string>& cli_path() const noexcept
+    {
+        return cli_path_;
+    }
+
+  private:
+    static std::string format(
+        const std::optional<int>& server_version,
+        const std::optional<std::string>& cli_version,
+        const std::optional<std::string>& cli_path
+    )
+    {
+        // TS REFERENCE: nodejs/src/client.ts verifyProtocolVersion (message prefix)
+        std::string message = "SDK protocol version mismatch: SDK supports versions " +
+                              std::to_string(kMinProtocolVersion) + "-" +
+                              std::to_string(kSdkProtocolVersion) + ", but server ";
+        message += server_version ? "reports version " + std::to_string(*server_version)
+                                  : std::string("does not report a protocol version");
+        message += ".";
+        if (cli_path || cli_version)
+        {
+            message += " Runtime:";
+            if (cli_path)
+                message += " " + *cli_path;
+            if (cli_version)
+                message += " (CLI " + *cli_version + ")";
+            message += ".";
+        }
+        message += server_version && *server_version > kSdkProtocolVersion
+                       ? " Use a copilot-sdk-cpp release that supports protocol " +
+                             std::to_string(*server_version) +
+                             ", or run a CLI that speaks this SDK's protocol."
+                       : " Please update your SDK or server to ensure compatibility.";
+        return message;
+    }
+
+    std::optional<int> server_version_;
+    std::optional<std::string> cli_version_;
+    std::optional<std::string> cli_path_;
+};
 
 // =============================================================================
 // Enums
@@ -275,6 +388,8 @@ struct ToolInvocation
     std::optional<std::string> tracestate;
     std::optional<std::string> agent_id;
     std::optional<std::string> request_id;
+    /// Cancelled when the runtime completes this request or the session disconnects.
+    CancellationToken cancellation;
 };
 
 /// Tool handler function type
@@ -356,6 +471,8 @@ struct PermissionInvocation
     std::string session_id;
     bool managed_settings_enabled = false;
     std::optional<json> prompt_request;
+    std::optional<json> assisted_approval_assessment;
+    std::optional<std::string> program_tool_call_id;
 };
 
 /// Permission handler function type
@@ -363,22 +480,148 @@ using PermissionHandler = std::function<PermissionRequestResult(const Permission
 using PermissionHandlerWithContext =
     std::function<PermissionRequestResult(const PermissionRequest&, const PermissionInvocation&)>;
 
+// =============================================================================
+// MCP OAuth (host-provided credentials)
+// =============================================================================
+// NODEJS REFERENCE: nodejs/src/types.ts McpAuthRequest / McpAuthResult / McpAuthHandler
+// C# REFERENCE: dotnet/src/Types.cs McpAuthContext / McpAuthResult
+
+/// Parsed parameters from an MCP server's WWW-Authenticate response.
+struct McpAuthWwwAuthenticateParams
+{
+    std::optional<std::string> resource_metadata_url;
+    std::optional<std::string> scope;
+    std::optional<std::string> error;
+};
+
+inline void to_json(json& j, const McpAuthWwwAuthenticateParams& p)
+{
+    j = json::object();
+    if (p.resource_metadata_url)
+        j["resourceMetadataUrl"] = *p.resource_metadata_url;
+    if (p.scope)
+        j["scope"] = *p.scope;
+    if (p.error)
+        j["error"] = *p.error;
+}
+
+inline void from_json(const json& j, McpAuthWwwAuthenticateParams& p)
+{
+    if (j.contains("resourceMetadataUrl") && j["resourceMetadataUrl"].is_string())
+        p.resource_metadata_url = j["resourceMetadataUrl"].get<std::string>();
+    if (j.contains("scope") && j["scope"].is_string())
+        p.scope = j["scope"].get<std::string>();
+    if (j.contains("error") && j["error"].is_string())
+        p.error = j["error"].get<std::string>();
+}
+
+/// Static OAuth client configuration supplied by the MCP server.
+struct McpAuthStaticClientConfig
+{
+    std::string client_id;
+    std::optional<std::string> client_secret;
+    /// "client_credentials" when set.
+    std::optional<std::string> grant_type;
+    std::optional<bool> public_client;
+    /// Configured scope used when the server challenge omits one.
+    std::optional<std::string> scope;
+};
+
+inline void to_json(json& j, const McpAuthStaticClientConfig& c)
+{
+    j = json{{"clientId", c.client_id}};
+    if (c.client_secret)
+        j["clientSecret"] = *c.client_secret;
+    if (c.grant_type)
+        j["grantType"] = *c.grant_type;
+    if (c.public_client)
+        j["publicClient"] = *c.public_client;
+    if (c.scope)
+        j["scope"] = *c.scope;
+}
+
+/// MCP OAuth request the host can satisfy with a host-acquired token.
+struct McpAuthRequest
+{
+    std::string request_id;
+    std::string server_name;
+    std::string server_url;
+    /// "initial" | "refresh" | "reauth" | "upscope"
+    std::string reason;
+    /// Whether this refresh request supports a noninteractive runtime handoff.
+    bool runtime_refresh_supported = false;
+    std::optional<McpAuthWwwAuthenticateParams> www_authenticate_params;
+    /// Raw RFC 9728 protected-resource metadata JSON, if fetched.
+    std::optional<std::string> resource_metadata;
+    std::optional<McpAuthStaticClientConfig> static_client_config;
+};
+
+inline void to_json(json& j, const McpAuthRequest& r)
+{
+    j = json{
+        {"requestId", r.request_id},
+        {"serverName", r.server_name},
+        {"serverUrl", r.server_url},
+        {"reason", r.reason},
+    };
+    if (r.runtime_refresh_supported)
+        j["runtimeRefreshSupported"] = true;
+    if (r.www_authenticate_params)
+        j["wwwAuthenticateParams"] = *r.www_authenticate_params;
+    if (r.resource_metadata)
+        j["resourceMetadata"] = *r.resource_metadata;
+    if (r.static_client_config)
+        j["staticClientConfig"] = *r.static_client_config;
+}
+
+/// Context passed alongside an McpAuthRequest.
+struct McpAuthInvocation
+{
+    std::string session_id;
+};
+
+/// Host-provided OAuth token data.
 struct McpAuthToken
 {
     std::string access_token;
+    /// Defaults to Bearer when omitted.
     std::optional<std::string> token_type;
     std::optional<int64_t> expires_in;
 };
 
+/// Result of an MCP auth handler. Cancelled wins; then a non-empty token; then
+/// runtime_refresh (honored only when the request advertises runtime_refresh_supported).
+/// Anything else cancels.
 struct McpAuthResult
 {
-    std::optional<McpAuthToken> token;
+    bool cancelled = false;
     bool runtime_refresh = false;
-};
-using McpAuthResultHandler = std::function<McpAuthResult(const json&, const std::string&)>;
+    std::optional<McpAuthToken> token;
 
-using McpAuthHandler =
-    std::function<std::optional<McpAuthToken>(const json& request, const std::string& session_id)>;
+    static McpAuthResult from_token(McpAuthToken token)
+    {
+        McpAuthResult r;
+        r.token = std::move(token);
+        return r;
+    }
+    static McpAuthResult cancel()
+    {
+        McpAuthResult r;
+        r.cancelled = true;
+        return r;
+    }
+    /// Hand an advertised refresh back to the runtime. Acceptance is not reconnect completion.
+    static McpAuthResult refresh_in_runtime()
+    {
+        McpAuthResult r;
+        r.runtime_refresh = true;
+        return r;
+    }
+};
+
+/// Returning std::nullopt cancels the pending request; so does throwing.
+using McpAuthHandler = std::function<
+    std::optional<McpAuthResult>(const McpAuthRequest& request, const McpAuthInvocation& invocation)>;
 
 // =============================================================================
 // User Input Types
@@ -390,6 +633,10 @@ struct UserInputRequest
     std::string question;
     std::optional<std::vector<std::string>> choices;
     std::optional<bool> allow_freeform;
+    /// Runtime ID of the pending `user_input.requested` request; pass it as
+    /// `requestId` to answer this exact request through the session UI RPCs.
+    /// Absent when the runtime predates the field.
+    std::optional<std::string> request_id;
 };
 
 inline void from_json(const json& j, UserInputRequest& r)
@@ -399,6 +646,8 @@ inline void from_json(const json& j, UserInputRequest& r)
         r.choices = j.at("choices").get<std::vector<std::string>>();
     if (j.contains("allowFreeform") && !j["allowFreeform"].is_null())
         r.allow_freeform = j.at("allowFreeform").get<bool>();
+    if (j.contains("requestId") && j["requestId"].is_string())
+        r.request_id = j.at("requestId").get<std::string>();
 }
 
 inline void to_json(json& j, const UserInputRequest& r)
@@ -408,6 +657,8 @@ inline void to_json(json& j, const UserInputRequest& r)
         j["choices"] = *r.choices;
     if (r.allow_freeform)
         j["allowFreeform"] = *r.allow_freeform;
+    if (r.request_id)
+        j["requestId"] = *r.request_id;
 }
 
 /// Response to a user input request
@@ -567,6 +818,59 @@ inline void from_json(const json& j, ElicitationResult& r)
 /// Elicitation handler function type
 using ElicitationHandler = std::function<ElicitationResult(const ElicitationContext&)>;
 
+/// Parameters for Session::ui().elicitation().
+// NODEJS REFERENCE: nodejs/src/types.ts ElicitationParams
+struct ElicitationParams
+{
+    std::string message;
+    ElicitationSchema requested_schema;
+};
+
+/// Options for Session::ui().input().
+// C# REFERENCE: dotnet/src/Types.cs UiInputOptions
+struct UiInputOptions
+{
+    std::optional<std::string> title;
+    std::optional<std::string> description;
+    std::optional<int> min_length;
+    std::optional<int> max_length;
+    /// Semantic format hint: "email", "uri", "date", "date-time".
+    std::optional<std::string> format;
+    std::optional<std::string> default_value;
+};
+
+// =============================================================================
+// Session Log Types
+// =============================================================================
+
+enum class SessionLogLevel
+{
+    Info,
+    Warning,
+    Error
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SessionLogLevel,
+    {
+        {SessionLogLevel::Info, "info"},
+        {SessionLogLevel::Warning, "warning"},
+        {SessionLogLevel::Error, "error"},
+    }
+)
+
+/// Options for Session::log().
+// C# REFERENCE: dotnet/src/Session.cs LogAsync
+struct LogOptions
+{
+    /// Defaults to info on the runtime side.
+    std::optional<SessionLogLevel> level;
+    /// When true the message is not persisted to the session event log.
+    std::optional<bool> ephemeral;
+    /// URL the user can open for more details.
+    std::optional<std::string> url;
+};
+
 // =============================================================================
 // Exit Plan Mode Types
 // =============================================================================
@@ -578,6 +882,9 @@ struct ExitPlanModeRequest
     std::optional<std::string> plan_content;
     std::vector<std::string> actions;
     std::string recommended_action = "autopilot";
+    /// Runtime ID of the pending `exit_plan_mode.requested` request. Absent when
+    /// the runtime predates the field.
+    std::optional<std::string> request_id;
 };
 
 inline void from_json(const json& j, ExitPlanModeRequest& r)
@@ -589,6 +896,8 @@ inline void from_json(const json& j, ExitPlanModeRequest& r)
         r.actions = j.at("actions").get<std::vector<std::string>>();
     if (j.contains("recommendedAction"))
         j.at("recommendedAction").get_to(r.recommended_action);
+    if (j.contains("requestId") && j["requestId"].is_string())
+        r.request_id = j.at("requestId").get<std::string>();
 }
 
 inline void to_json(json& j, const ExitPlanModeRequest& r)
@@ -598,6 +907,8 @@ inline void to_json(json& j, const ExitPlanModeRequest& r)
         j["planContent"] = *r.plan_content;
     if (!r.actions.empty())
         j["actions"] = r.actions;
+    if (r.request_id)
+        j["requestId"] = *r.request_id;
 }
 
 /// Response to an exit-plan-mode request
@@ -640,11 +951,49 @@ using ExitPlanModeHandler =
 // Auto Mode Switch Types
 // =============================================================================
 
+/// Recovery metadata attached when the switch request is an auto-mode recovery consent.
+// NODEJS REFERENCE: nodejs/src/types.ts AutoModeRecoveryContext
+struct AutoModeRecoveryContext
+{
+    std::string request_id;
+    std::string original_model;
+    bool allow_always = false;
+    std::optional<std::string> interaction_id;
+    std::optional<std::string> originating_message_id;
+};
+
+inline void from_json(const json& j, AutoModeRecoveryContext& c)
+{
+    j.at("requestId").get_to(c.request_id);
+    j.at("originalModel").get_to(c.original_model);
+    if (j.contains("allowAlways") && j["allowAlways"].is_boolean())
+        c.allow_always = j["allowAlways"].get<bool>();
+    if (j.contains("interactionId") && j["interactionId"].is_string())
+        c.interaction_id = j["interactionId"].get<std::string>();
+    if (j.contains("originatingMessageId") && j["originatingMessageId"].is_string())
+        c.originating_message_id = j["originatingMessageId"].get<std::string>();
+}
+
+inline void to_json(json& j, const AutoModeRecoveryContext& c)
+{
+    j = json{
+        {"requestId", c.request_id},
+        {"originalModel", c.original_model},
+        {"allowAlways", c.allow_always},
+    };
+    if (c.interaction_id)
+        j["interactionId"] = *c.interaction_id;
+    if (c.originating_message_id)
+        j["originatingMessageId"] = *c.originating_message_id;
+}
+
 /// Request to switch to auto mode after a rate limit
 struct AutoModeSwitchRequest
 {
     std::optional<std::string> error_code;
     std::optional<double> retry_after_seconds;
+    /// Present when the request is an auto-mode recovery consent.
+    std::optional<AutoModeRecoveryContext> auto_mode_recovery;
 };
 
 inline void from_json(const json& j, AutoModeSwitchRequest& r)
@@ -653,6 +1002,8 @@ inline void from_json(const json& j, AutoModeSwitchRequest& r)
         r.error_code = j.at("errorCode").get<std::string>();
     if (j.contains("retryAfterSeconds") && !j["retryAfterSeconds"].is_null())
         r.retry_after_seconds = j.at("retryAfterSeconds").get<double>();
+    if (j.contains("autoModeRecovery") && j["autoModeRecovery"].is_object())
+        r.auto_mode_recovery = j.at("autoModeRecovery").get<AutoModeRecoveryContext>();
 }
 
 inline void to_json(json& j, const AutoModeSwitchRequest& r)
@@ -662,6 +1013,8 @@ inline void to_json(json& j, const AutoModeSwitchRequest& r)
         j["errorCode"] = *r.error_code;
     if (r.retry_after_seconds)
         j["retryAfterSeconds"] = *r.retry_after_seconds;
+    if (r.auto_mode_recovery)
+        j["autoModeRecovery"] = *r.auto_mode_recovery;
 }
 
 /// Response to auto-mode-switch request
@@ -744,6 +1097,42 @@ inline void parse_hook_actor(const json& j, HookActor& a)
         a.parent_agent_id = j["parentAgentId"].get<std::string>();
 }
 
+/// Fields shared by every hook input.
+// NODEJS REFERENCE: nodejs/src/types.ts BaseHookInput
+struct HookInputBase : HookActor
+{
+    /// Unix epoch milliseconds (wire `timestamp` number).
+    int64_t timestamp = 0;
+    /// Set instead of `timestamp` when the runtime sends an ISO 8601 string.
+    std::optional<std::string> timestamp_iso;
+    /// Runtime session ID for the hook. Child tool hooks carry the child session ID;
+    /// sub-agent lifecycle hooks carry the parent's, which can differ from
+    /// `HookInvocation::session_id`.
+    std::optional<std::string> session_id;
+    /// Working directory (wire `cwd`).
+    std::string cwd;
+    /// W3C trace context of the runtime span for this hook, when available.
+    std::optional<std::string> traceparent;
+    std::optional<std::string> tracestate;
+};
+
+inline void parse_hook_input_base(const json& j, HookInputBase& h)
+{
+    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
+    parse_hook_actor(j, h);
+    if (j.contains("traceparent") && j["traceparent"].is_string())
+        h.traceparent = j["traceparent"].get<std::string>();
+    if (j.contains("tracestate") && j["tracestate"].is_string())
+        h.tracestate = j["tracestate"].get<std::string>();
+}
+
+inline std::optional<std::string> optional_hook_string(const json& j, const char* key)
+{
+    if (j.contains(key) && j[key].is_string())
+        return j[key].get<std::string>();
+    return std::nullopt;
+}
+
 /// Text of the `error` field of an errorOccurred / sessionEnd hook input.
 /// The CLI sends an error object (`{name, message, stack}` or `{message}`): its
 /// string `message` becomes the text, and an object without one becomes its JSON.
@@ -767,20 +1156,18 @@ inline std::string hook_error_text(const json& error)
 }
 
 /// Input for a pre-tool-use hook
-struct PreToolUseHookInput : HookActor
+struct PreToolUseHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
+    /// Existing tool-call ID; correlate using (session_id, tool_call_id).
+    std::optional<std::string> tool_call_id;
     std::string tool_name;
     std::optional<json> tool_args;
 };
 
 inline void from_json(const json& j, PreToolUseHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
+    h.tool_call_id = optional_hook_string(j, "toolCallId");
     if (j.contains("toolName"))
         j.at("toolName").get_to(h.tool_name);
     if (j.contains("toolArgs") && !j["toolArgs"].is_null())
@@ -816,12 +1203,10 @@ using PreToolUseHandler = std::function<
     std::optional<PreToolUseHookOutput>(const PreToolUseHookInput&, const HookInvocation&)>;
 
 /// Input for a post-tool-use hook
-struct PostToolUseHookInput : HookActor
+struct PostToolUseHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
+    /// Existing tool-call ID; correlate using (session_id, tool_call_id).
+    std::optional<std::string> tool_call_id;
     std::string tool_name;
     std::optional<json> tool_args;
     std::optional<json> tool_result;
@@ -829,8 +1214,8 @@ struct PostToolUseHookInput : HookActor
 
 inline void from_json(const json& j, PostToolUseHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
+    h.tool_call_id = optional_hook_string(j, "toolCallId");
     if (j.contains("toolName"))
         j.at("toolName").get_to(h.tool_name);
     if (j.contains("toolArgs") && !j["toolArgs"].is_null())
@@ -862,19 +1247,14 @@ using PostToolUseHandler = std::function<
     std::optional<PostToolUseHookOutput>(const PostToolUseHookInput&, const HookInvocation&)>;
 
 /// Input for a user-prompt-submitted hook
-struct UserPromptSubmittedHookInput : HookActor
+struct UserPromptSubmittedHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
     std::string prompt;
 };
 
 inline void from_json(const json& j, UserPromptSubmittedHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
     if (j.contains("prompt"))
         j.at("prompt").get_to(h.prompt);
 }
@@ -911,20 +1291,15 @@ using UserPromptSubmittedHandler = std::function<std::optional<
     UserPromptSubmittedHookOutput>(const UserPromptSubmittedHookInput&, const HookInvocation&)>;
 
 /// Input for a session-start hook
-struct SessionStartHookInput : HookActor
+struct SessionStartHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
     std::string source; ///< "startup", "resume", or "new"
     std::optional<std::string> initial_prompt;
 };
 
 inline void from_json(const json& j, SessionStartHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
     if (j.contains("source"))
         j.at("source").get_to(h.source);
     if (j.contains("initialPrompt") && !j["initialPrompt"].is_null())
@@ -951,12 +1326,8 @@ using SessionStartHandler = std::function<
     std::optional<SessionStartHookOutput>(const SessionStartHookInput&, const HookInvocation&)>;
 
 /// Input for a session-end hook
-struct SessionEndHookInput : HookActor
+struct SessionEndHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
     std::string reason; ///< "complete", "error", "abort", "timeout", or "user_exit"
     std::optional<std::string> final_message;
     std::optional<std::string> error;
@@ -964,8 +1335,7 @@ struct SessionEndHookInput : HookActor
 
 inline void from_json(const json& j, SessionEndHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
     if (j.contains("reason"))
         j.at("reason").get_to(h.reason);
     if (j.contains("finalMessage") && !j["finalMessage"].is_null())
@@ -997,12 +1367,8 @@ using SessionEndHandler = std::function<
     std::optional<SessionEndHookOutput>(const SessionEndHookInput&, const HookInvocation&)>;
 
 /// Input for an error-occurred hook
-struct ErrorOccurredHookInput : HookActor
+struct ErrorOccurredHookInput : HookInputBase
 {
-    int64_t timestamp = 0;
-    std::optional<std::string> timestamp_iso;
-    std::optional<std::string> session_id;
-    std::string cwd;
     std::string error;
     std::string error_context; ///< "model_call", "tool_execution", "system", or "user_input"
     bool recoverable = false;
@@ -1010,8 +1376,7 @@ struct ErrorOccurredHookInput : HookActor
 
 inline void from_json(const json& j, ErrorOccurredHookInput& h)
 {
-    parse_hook_base(j, h.timestamp, h.timestamp_iso, h.cwd, h.session_id);
-    parse_hook_actor(j, h);
+    parse_hook_input_base(j, h);
     if (j.contains("error") && !j["error"].is_null())
         h.error = hook_error_text(j.at("error"));
     if (j.contains("errorContext"))
@@ -1045,35 +1410,283 @@ inline void to_json(json& j, const ErrorOccurredHookOutput& h)
 using ErrorOccurredHandler = std::function<
     std::optional<ErrorOccurredHookOutput>(const ErrorOccurredHookInput&, const HookInvocation&)>;
 
-/// Generic hook handler for newer hook payloads whose schema is preserved as JSON.
-using JsonHookHandler = std::function<std::optional<json>(const json&, const HookInvocation&)>;
+/// Input for a pre-MCP-tool-call hook
+// NODEJS REFERENCE: nodejs/src/types.ts PreMcpToolCallHookInput
+struct PreMcpToolCallHookInput : HookInputBase
+{
+    std::optional<std::string> tool_call_id;
+    std::string server_name;
+    std::string tool_name;
+    std::optional<json> arguments;
+    /// The outgoing request's `_meta` object.
+    std::optional<json> meta;
+};
+
+inline void from_json(const json& j, PreMcpToolCallHookInput& h)
+{
+    parse_hook_input_base(j, h);
+    h.tool_call_id = optional_hook_string(j, "toolCallId");
+    if (j.contains("serverName"))
+        j.at("serverName").get_to(h.server_name);
+    if (j.contains("toolName"))
+        j.at("toolName").get_to(h.tool_name);
+    if (j.contains("arguments") && !j["arguments"].is_null())
+        h.arguments = j["arguments"];
+    if (j.contains("_meta") && !j["_meta"].is_null())
+        h.meta = j["_meta"];
+}
+
+/// Output for a pre-MCP-tool-call hook.
+/// `meta_to_use` controls the outgoing MCP request `_meta`:
+/// - nullopt: preserve the current request `_meta`;
+/// - an object: use it as the request `_meta`;
+/// - `json(nullptr)`: drop hook-controlled `_meta`. The runtime still sends its own
+///   `com.github.copilot/toolCallId` and `com.github.copilot/turnId` keys (the latter
+///   only when the turn was started with a `client_turn_id`).
+struct PreMcpToolCallHookOutput
+{
+    std::optional<json> meta_to_use;
+};
+
+inline void to_json(json& j, const PreMcpToolCallHookOutput& h)
+{
+    j = json::object();
+    if (h.meta_to_use)
+        j["metaToUse"] = *h.meta_to_use;
+}
+
+using PreMcpToolCallHandler = std::function<
+    std::optional<PreMcpToolCallHookOutput>(const PreMcpToolCallHookInput&, const HookInvocation&)>;
+
+/// Input for a post-tool-use-failure hook. The runtime forwards only the failure
+/// message (`error`), not the full tool result.
+// NODEJS REFERENCE: nodejs/src/types.ts PostToolUseFailureHookInput
+struct PostToolUseFailureHookInput : HookInputBase
+{
+    std::optional<std::string> tool_call_id;
+    std::string tool_name;
+    std::optional<json> tool_args;
+    std::string error;
+};
+
+inline void from_json(const json& j, PostToolUseFailureHookInput& h)
+{
+    parse_hook_input_base(j, h);
+    h.tool_call_id = optional_hook_string(j, "toolCallId");
+    if (j.contains("toolName"))
+        j.at("toolName").get_to(h.tool_name);
+    if (j.contains("toolArgs") && !j["toolArgs"].is_null())
+        h.tool_args = j["toolArgs"];
+    if (j.contains("error") && j["error"].is_string())
+        h.error = j["error"].get<std::string>();
+}
+
+/// Output for a post-tool-use-failure hook. Only `additional_context` is honored; it
+/// is appended as hidden guidance next to the failed tool result.
+struct PostToolUseFailureHookOutput
+{
+    std::optional<std::string> additional_context;
+};
+
+inline void to_json(json& j, const PostToolUseFailureHookOutput& h)
+{
+    j = json::object();
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+}
+
+/// Fires only for `"failure"` tool results; `on_post_tool_use` fires only for successes.
+using PostToolUseFailureHandler = std::function<std::optional<
+    PostToolUseFailureHookOutput>(const PostToolUseFailureHookInput&, const HookInvocation&)>;
+
+/// Input for a user-prompt-transformed hook: runs after the runtime adds generated
+/// context to the prompt, before it is stored or sent to the model.
+// NODEJS REFERENCE: nodejs/src/types.ts UserPromptTransformedHookInput
+struct UserPromptTransformedHookInput : HookInputBase
+{
+    std::string prompt;
+    std::string transformed_prompt;
+};
+
+inline void from_json(const json& j, UserPromptTransformedHookInput& h)
+{
+    parse_hook_input_base(j, h);
+    if (j.contains("prompt"))
+        j.at("prompt").get_to(h.prompt);
+    if (j.contains("transformedPrompt"))
+        j.at("transformedPrompt").get_to(h.transformed_prompt);
+}
+
+struct UserPromptTransformedHookOutput
+{
+    std::optional<std::string> modified_transformed_prompt;
+};
+
+inline void to_json(json& j, const UserPromptTransformedHookOutput& h)
+{
+    j = json::object();
+    if (h.modified_transformed_prompt)
+        j["modifiedTransformedPrompt"] = *h.modified_transformed_prompt;
+}
+
+using UserPromptTransformedHandler = std::function<std::optional<
+    UserPromptTransformedHookOutput>(const UserPromptTransformedHookInput&, const HookInvocation&)>;
+
+/// Input for an agent-stop hook: the top-level agent reached a natural terminal stop.
+// NODEJS REFERENCE: nodejs/src/types.ts AgentStopHookInput
+struct AgentStopHookInput : HookInputBase
+{
+    /// Why the agent stopped (for example, "end_turn").
+    std::optional<std::string> stop_reason;
+    std::optional<std::string> transcript_path;
+    /// True when this stop re-enters after a previous `block` decision.
+    std::optional<bool> stop_hook_active;
+};
+
+inline void from_json(const json& j, AgentStopHookInput& h)
+{
+    parse_hook_input_base(j, h);
+    h.stop_reason = optional_hook_string(j, "stopReason");
+    h.transcript_path = optional_hook_string(j, "transcriptPath");
+    // NODEJS REFERENCE: session.ts deserializeHookInput (stop_hook_active -> stopHookActive)
+    for (const char* key : {"stop_hook_active", "stopHookActive"})
+    {
+        if (j.contains(key) && j[key].is_boolean())
+            h.stop_hook_active = j[key].get<bool>();
+    }
+}
+
+/// `decision = "block"` keeps the agent running with `reason` enqueued as a follow-up
+/// user message. The runtime caps consecutive blocks.
+struct AgentStopHookOutput
+{
+    std::optional<std::string> decision;
+    std::optional<std::string> reason;
+};
+
+inline void to_json(json& j, const AgentStopHookOutput& h)
+{
+    j = json::object();
+    if (h.decision)
+        j["decision"] = *h.decision;
+    if (h.reason)
+        j["reason"] = *h.reason;
+}
+
+using AgentStopHandler = std::function<
+    std::optional<AgentStopHookOutput>(const AgentStopHookInput&, const HookInvocation&)>;
+
+/// Input for the hook fired before a sub-agent's first turn. Session metadata
+/// belongs to the parent session.
+// NODEJS REFERENCE: nodejs/src/types.ts SubagentStartHookInput
+struct SubagentStartHookInput : HookInputBase
+{
+    std::string transcript_path;
+    std::string agent_name;
+    std::optional<std::string> agent_display_name;
+    std::optional<std::string> agent_description;
+};
+
+inline void parse_subagent_start_fields(const json& j, SubagentStartHookInput& h)
+{
+    parse_hook_input_base(j, h);
+    if (j.contains("transcriptPath") && j["transcriptPath"].is_string())
+        h.transcript_path = j["transcriptPath"].get<std::string>();
+    if (j.contains("agentName") && j["agentName"].is_string())
+        h.agent_name = j["agentName"].get<std::string>();
+    h.agent_display_name = optional_hook_string(j, "agentDisplayName");
+    h.agent_description = optional_hook_string(j, "agentDescription");
+}
+
+inline void from_json(const json& j, SubagentStartHookInput& h)
+{
+    parse_subagent_start_fields(j, h);
+}
+
+/// Context prepended to the child's initial prompt.
+struct SubagentStartHookOutput
+{
+    std::optional<std::string> additional_context;
+};
+
+inline void to_json(json& j, const SubagentStartHookOutput& h)
+{
+    j = json::object();
+    if (h.additional_context)
+        j["additionalContext"] = *h.additional_context;
+}
+
+using SubagentStartHandler = std::function<
+    std::optional<SubagentStartHookOutput>(const SubagentStartHookInput&, const HookInvocation&)>;
+
+/// Input for the hook fired after a sub-agent completes a turn. `response` is the
+/// child's last assistant message before any hook rewrite.
+// NODEJS REFERENCE: nodejs/src/types.ts SubagentStopHookInput
+struct SubagentStopHookInput : SubagentStartHookInput
+{
+    /// "end_turn".
+    std::string stop_reason;
+    std::string response;
+};
+
+inline void from_json(const json& j, SubagentStopHookInput& h)
+{
+    parse_subagent_start_fields(j, h);
+    if (j.contains("stopReason") && j["stopReason"].is_string())
+        h.stop_reason = j["stopReason"].get<std::string>();
+    if (j.contains("response") && j["response"].is_string())
+        h.response = j["response"].get<std::string>();
+}
+
+/// `decision = "block"` with a nonempty `reason` continues the child; otherwise
+/// `modified_response` replaces the response reported to the parent. A valid block
+/// takes precedence over the rewrite. Other decision values fail the sub-agent.
+struct SubagentStopHookOutput
+{
+    std::optional<std::string> decision; ///< "block" or "allow"
+    std::optional<std::string> reason;
+    std::optional<std::string> modified_response;
+};
+
+inline void to_json(json& j, const SubagentStopHookOutput& h)
+{
+    j = json::object();
+    if (h.decision)
+        j["decision"] = *h.decision;
+    if (h.reason)
+        j["reason"] = *h.reason;
+    if (h.modified_response)
+        j["modifiedResponse"] = *h.modified_response;
+}
+
+using SubagentStopHandler = std::function<
+    std::optional<SubagentStopHookOutput>(const SubagentStopHookInput&, const HookInvocation&)>;
 
 /// Hook handlers configuration for a session
+// NODEJS REFERENCE: nodejs/src/types.ts SessionHooks
 struct SessionHooks
 {
     std::optional<PreToolUseHandler> on_pre_tool_use;
+    std::optional<PreMcpToolCallHandler> on_pre_mcp_tool_call;
+    /// Fires only for successful tool results; see `on_post_tool_use_failure`.
     std::optional<PostToolUseHandler> on_post_tool_use;
+    std::optional<PostToolUseFailureHandler> on_post_tool_use_failure;
     std::optional<UserPromptSubmittedHandler> on_user_prompt_submitted;
+    std::optional<UserPromptTransformedHandler> on_user_prompt_transformed;
     std::optional<SessionStartHandler> on_session_start;
     std::optional<SessionEndHandler> on_session_end;
     std::optional<ErrorOccurredHandler> on_error_occurred;
-    std::optional<JsonHookHandler> on_pre_mcp_tool_call;
-    std::optional<JsonHookHandler> on_post_tool_use_failure;
-    std::optional<JsonHookHandler> on_user_prompt_transformed;
-    std::optional<JsonHookHandler> on_agent_stop;
-    /// `subagentStart`: input carries agentName/agentDisplayName/agentDescription
-    /// plus the actor fields; output may set `additionalContext`.
-    std::optional<JsonHookHandler> on_subagent_start;
-    std::optional<JsonHookHandler> on_subagent_stop;
-    std::optional<JsonHookHandler> on_permission_request;
+    std::optional<AgentStopHandler> on_agent_stop;
+    std::optional<SubagentStartHandler> on_subagent_start;
+    std::optional<SubagentStopHandler> on_subagent_stop;
 
     /// Returns true if any hook handler is registered
     bool has_any() const
     {
-        return on_pre_tool_use || on_post_tool_use || on_user_prompt_submitted ||
-               on_session_start || on_session_end || on_error_occurred || on_pre_mcp_tool_call ||
-               on_post_tool_use_failure || on_user_prompt_transformed || on_agent_stop ||
-               on_subagent_start || on_subagent_stop || on_permission_request;
+        return on_pre_tool_use || on_pre_mcp_tool_call || on_post_tool_use ||
+               on_post_tool_use_failure || on_user_prompt_submitted ||
+               on_user_prompt_transformed || on_session_start || on_session_end ||
+               on_error_occurred || on_agent_stop || on_subagent_start || on_subagent_stop;
     }
 };
 
@@ -1081,15 +1694,28 @@ struct SessionHooks
 // Configuration Types
 // =============================================================================
 
+/// Rewrites a rendered system prompt section. Receives the current content and
+/// returns the replacement. A throwing callback leaves the section unchanged.
+// NODEJS REFERENCE: nodejs/src/types.ts SectionTransformFn
+using SectionTransformFn = std::function<std::string(const std::string& content)>;
+
 /// Override operation for a single system prompt section
 struct SectionOverride
 {
     SectionOverrideAction action = SectionOverrideAction::Replace;
     std::optional<std::string> content;
+    /// When set, the section is sent as `action: "transform"` and the runtime calls
+    /// back through `systemMessage.transform`; `action` and `content` are ignored.
+    SectionTransformFn transform;
 };
 
 inline void to_json(json& j, const SectionOverride& c)
 {
+    if (c.transform)
+    {
+        j = json{{"action", SectionOverrideAction::Transform}};
+        return;
+    }
     j = json{{"action", c.action}};
     if (c.content)
         j["content"] = *c.content;
@@ -1151,218 +1777,474 @@ inline void from_json(const json& j, AzureOptions& o)
         o.api_version = j.at("apiVersion").get<std::string>();
 }
 
-/// Provider configuration for BYOK (Bring Your Own Key)
-struct ProviderConfig
+/// Arguments passed to a BearerTokenProvider.
+// NODEJS REFERENCE: nodejs/src/types.ts ProviderTokenArgs
+struct ProviderTokenArgs
 {
-    std::optional<std::string> type;
-    std::optional<std::string> wire_api;
-    std::string base_url;
-    std::optional<std::string> api_key;
-    std::optional<std::string> bearer_token;
-    std::optional<AzureOptions> azure;
-    std::optional<std::map<std::string, std::string>> headers;
-    std::optional<std::string> model_id;
-    std::optional<std::string> wire_model;
-    std::optional<int> max_input_tokens;
-    std::optional<int> max_output_tokens;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // Environment Variable Support
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /// Environment variable names for BYOK configuration
-    static constexpr const char* ENV_API_KEY = "COPILOT_SDK_BYOK_API_KEY";
-    static constexpr const char* ENV_BASE_URL = "COPILOT_SDK_BYOK_BASE_URL";
-    static constexpr const char* ENV_PROVIDER_TYPE = "COPILOT_SDK_BYOK_PROVIDER_TYPE";
-    static constexpr const char* ENV_MODEL = "COPILOT_SDK_BYOK_MODEL";
-
-    /// Check if BYOK environment variables are configured
-    /// @return true if COPILOT_SDK_BYOK_API_KEY is set and non-empty
-    static bool is_env_configured()
-    {
-        const char* key = std::getenv(ENV_API_KEY);
-        return key != nullptr && key[0] != '\0';
-    }
-
-    /// Load ProviderConfig from COPILOT_SDK_BYOK_* environment variables
-    /// @return ProviderConfig if API key is set, nullopt otherwise
-    static std::optional<ProviderConfig> from_env()
-    {
-        if (!is_env_configured())
-            return std::nullopt;
-
-        ProviderConfig config;
-
-        // Required: API key
-        config.api_key = std::getenv(ENV_API_KEY);
-
-        // Optional: Base URL (default to OpenAI)
-        if (const char* url = std::getenv(ENV_BASE_URL))
-            config.base_url = url;
-        else
-            config.base_url = "https://api.openai.com/v1";
-
-        // Optional: Provider type (default to openai)
-        if (const char* ptype = std::getenv(ENV_PROVIDER_TYPE))
-            config.type = ptype;
-        else
-            config.type = "openai";
-
-        return config;
-    }
-
-    /// Load model from COPILOT_SDK_BYOK_MODEL environment variable
-    /// @return Model string if set, nullopt otherwise
-    static std::optional<std::string> model_from_env()
-    {
-        const char* model = std::getenv(ENV_MODEL);
-        if (model != nullptr && model[0] != '\0')
-            return std::string(model);
-        return std::nullopt;
-    }
-    std::optional<std::string> model_provider;
-    std::optional<std::string> api_key_command;
+    std::string provider_name;
+    std::string session_id;
 };
 
-inline void to_json(json& j, const ProviderConfig& c)
+/// Supplies a bearer token for a named provider on demand. Never serialized: the
+/// SDK strips it and sends `hasBearerTokenProvider: true`; the runtime calls back
+/// through `providerToken.getToken` when it needs a token.
+using BearerTokenProvider = std::function<std::string(const ProviderTokenArgs&)>;
+
+/// A named model-provider connection (BYOK).
+// NODEJS REFERENCE: nodejs/src/types.ts NamedProviderConfig
+struct NamedProviderConfig
 {
-    j = json{{"baseUrl", c.base_url}};
+    std::string name;
+    /// "openai" | "azure" | "anthropic"
+    std::optional<std::string> type;
+    std::optional<json> local_model;
+    /// "completions" | "responses"
+    std::optional<std::string> wire_api;
+    /// "http" | "websockets"
+    std::optional<std::string> transport;
+    std::optional<std::string> model_provider;
+    std::string base_url;
+    std::optional<std::string> api_key;
+    std::optional<std::string> api_key_command;
+    std::optional<std::string> bearer_token;
+    BearerTokenProvider bearer_token_provider;
+    std::optional<AzureOptions> azure;
+    std::optional<std::map<std::string, std::string>> headers;
+};
+
+inline void to_json(json& j, const NamedProviderConfig& c)
+{
+    j = json{{"name", c.name}};
     if (c.type)
         j["type"] = *c.type;
+    if (c.local_model)
+        j["localModel"] = *c.local_model;
     if (c.wire_api)
         j["wireApi"] = *c.wire_api;
+    if (c.transport)
+        j["transport"] = *c.transport;
+    if (c.model_provider)
+        j["modelProvider"] = *c.model_provider;
+    j["baseUrl"] = c.base_url;
     if (c.api_key)
         j["apiKey"] = *c.api_key;
+    if (c.api_key_command)
+        j["apiKeyCommand"] = *c.api_key_command;
     if (c.bearer_token)
         j["bearerToken"] = *c.bearer_token;
     if (c.azure)
         j["azure"] = *c.azure;
     if (c.headers)
         j["headers"] = *c.headers;
-    if (c.model_id)
-        j["modelId"] = *c.model_id;
-    if (c.wire_model)
-        j["wireModel"] = *c.wire_model;
-    if (c.max_input_tokens)
-        j["maxPromptTokens"] = *c.max_input_tokens;
-    if (c.max_output_tokens)
-        j["maxOutputTokens"] = *c.max_output_tokens;
-    if (c.model_provider)
-        j["modelProvider"] = *c.model_provider;
-    if (c.api_key_command)
-        j["apiKeyCommand"] = *c.api_key_command;
 }
 
-inline void from_json(const json& j, ProviderConfig& c)
+inline void from_json(const json& j, NamedProviderConfig& c)
 {
+    j.at("name").get_to(c.name);
     j.at("baseUrl").get_to(c.base_url);
-    if (j.contains("type"))
-        c.type = j.at("type").get<std::string>();
-    if (j.contains("wireApi"))
-        c.wire_api = j.at("wireApi").get<std::string>();
-    if (j.contains("apiKey"))
-        c.api_key = j.at("apiKey").get<std::string>();
-    if (j.contains("bearerToken"))
-        c.bearer_token = j.at("bearerToken").get<std::string>();
-    if (j.contains("azure"))
-        c.azure = j.at("azure").get<AzureOptions>();
-    if (j.contains("headers"))
-        c.headers = j.at("headers").get<std::map<std::string, std::string>>();
-    if (j.contains("modelId"))
-        c.model_id = j.at("modelId").get<std::string>();
-    if (j.contains("wireModel"))
-        c.wire_model = j.at("wireModel").get<std::string>();
-    if (j.contains("maxPromptTokens"))
-        c.max_input_tokens = j.at("maxPromptTokens").get<int>();
-    if (j.contains("maxOutputTokens"))
-        c.max_output_tokens = j.at("maxOutputTokens").get<int>();
-    if (j.contains("modelProvider") && !j["modelProvider"].is_null())
-        c.model_provider = j.at("modelProvider").get<std::string>();
-    if (j.contains("apiKeyCommand") && !j["apiKeyCommand"].is_null())
-        c.api_key_command = j.at("apiKeyCommand").get<std::string>();
+    auto opt = [&j](const char* key, std::optional<std::string>& out)
+    {
+        if (j.contains(key) && !j[key].is_null())
+            out = j[key].get<std::string>();
+    };
+    opt("type", c.type);
+    opt("wireApi", c.wire_api);
+    opt("transport", c.transport);
+    opt("modelProvider", c.model_provider);
+    opt("apiKey", c.api_key);
+    opt("apiKeyCommand", c.api_key_command);
+    opt("bearerToken", c.bearer_token);
+    if (j.contains("localModel") && !j["localModel"].is_null())
+        c.local_model = j["localModel"];
+    if (j.contains("azure") && !j["azure"].is_null())
+        c.azure = j["azure"].get<AzureOptions>();
+    if (j.contains("headers") && !j["headers"].is_null())
+        c.headers = j["headers"].get<std::map<std::string, std::string>>();
 }
+
+/// Per-property model capability overrides, deep-merged over runtime defaults.
+// C# REFERENCE: dotnet/src/Generated/Rpc.cs ModelCapabilitiesOverride
+// NODEJS REFERENCE: nodejs/src/types.ts ModelCapabilitiesOverride
+struct ModelCapabilitiesOverrideLimitsVision
+{
+    std::optional<std::vector<std::string>> supported_media_types;
+    std::optional<int64_t> max_prompt_images;
+    std::optional<int64_t> max_prompt_image_size;
+};
+
+struct ModelCapabilitiesOverrideLimits
+{
+    std::optional<int64_t> max_prompt_tokens;
+    std::optional<int64_t> max_output_tokens;
+    std::optional<int64_t> max_context_window_tokens;
+    std::optional<ModelCapabilitiesOverrideLimitsVision> vision;
+};
+
+struct ModelCapabilitiesOverrideSupports
+{
+    std::optional<bool> vision;
+    std::optional<bool> tool_calls;
+    std::optional<bool> reasoning_effort;
+    /// "unsupported" | "optional" | "required" | "adaptive_only"
+    std::optional<std::string> adaptive_thinking;
+};
+
+struct ModelCapabilitiesOverride
+{
+    std::optional<ModelCapabilitiesOverrideSupports> supports;
+    std::optional<ModelCapabilitiesOverrideLimits> limits;
+};
+
+namespace detail
+{
+template <typename T>
+void put_optional(json& j, const char* key, const std::optional<T>& value)
+{
+    if (value)
+        j[key] = *value;
+}
+
+template <typename T>
+void get_optional(const json& j, const char* key, std::optional<T>& value)
+{
+    if (j.contains(key) && !j.at(key).is_null())
+        value = j.at(key).get<T>();
+}
+} // namespace detail
+
+inline void to_json(json& j, const ModelCapabilitiesOverrideLimitsVision& v)
+{
+    j = json::object();
+    detail::put_optional(j, "supported_media_types", v.supported_media_types);
+    detail::put_optional(j, "max_prompt_images", v.max_prompt_images);
+    detail::put_optional(j, "max_prompt_image_size", v.max_prompt_image_size);
+}
+
+inline void from_json(const json& j, ModelCapabilitiesOverrideLimitsVision& v)
+{
+    detail::get_optional(j, "supported_media_types", v.supported_media_types);
+    detail::get_optional(j, "max_prompt_images", v.max_prompt_images);
+    detail::get_optional(j, "max_prompt_image_size", v.max_prompt_image_size);
+}
+
+inline void to_json(json& j, const ModelCapabilitiesOverrideLimits& l)
+{
+    j = json::object();
+    detail::put_optional(j, "max_prompt_tokens", l.max_prompt_tokens);
+    detail::put_optional(j, "max_output_tokens", l.max_output_tokens);
+    detail::put_optional(j, "max_context_window_tokens", l.max_context_window_tokens);
+    detail::put_optional(j, "vision", l.vision);
+}
+
+inline void from_json(const json& j, ModelCapabilitiesOverrideLimits& l)
+{
+    detail::get_optional(j, "max_prompt_tokens", l.max_prompt_tokens);
+    detail::get_optional(j, "max_output_tokens", l.max_output_tokens);
+    detail::get_optional(j, "max_context_window_tokens", l.max_context_window_tokens);
+    detail::get_optional(j, "vision", l.vision);
+}
+
+inline void to_json(json& j, const ModelCapabilitiesOverrideSupports& s)
+{
+    j = json::object();
+    detail::put_optional(j, "vision", s.vision);
+    detail::put_optional(j, "toolCalls", s.tool_calls);
+    detail::put_optional(j, "reasoningEffort", s.reasoning_effort);
+    detail::put_optional(j, "adaptive_thinking", s.adaptive_thinking);
+}
+
+inline void from_json(const json& j, ModelCapabilitiesOverrideSupports& s)
+{
+    detail::get_optional(j, "vision", s.vision);
+    detail::get_optional(j, "toolCalls", s.tool_calls);
+    detail::get_optional(j, "reasoningEffort", s.reasoning_effort);
+    detail::get_optional(j, "adaptive_thinking", s.adaptive_thinking);
+}
+
+inline void to_json(json& j, const ModelCapabilitiesOverride& c)
+{
+    j = json::object();
+    detail::put_optional(j, "supports", c.supports);
+    detail::put_optional(j, "limits", c.limits);
+}
+
+inline void from_json(const json& j, ModelCapabilitiesOverride& c)
+{
+    detail::get_optional(j, "supports", c.supports);
+    detail::get_optional(j, "limits", c.limits);
+}
+
+/// A model registered against a named provider.
+// NODEJS REFERENCE: nodejs/src/types.ts ProviderModelConfig
+struct ProviderModelConfig
+{
+    std::optional<json> auto_local;
+    std::optional<json> metadata;
+    std::string id;
+    std::string provider;
+    std::optional<std::string> wire_model;
+    std::optional<std::string> model_id;
+    std::optional<std::string> name;
+    std::optional<int64_t> max_prompt_tokens;
+    std::optional<int64_t> max_context_window_tokens;
+    std::optional<int64_t> max_output_tokens;
+    std::optional<ModelCapabilitiesOverride> capabilities;
+};
+
+inline void to_json(json& j, const ProviderModelConfig& c)
+{
+    j = json::object();
+    if (c.auto_local)
+        j["autoLocal"] = *c.auto_local;
+    if (c.metadata)
+        j["metadata"] = *c.metadata;
+    j["id"] = c.id;
+    j["provider"] = c.provider;
+    if (c.wire_model)
+        j["wireModel"] = *c.wire_model;
+    if (c.model_id)
+        j["modelId"] = *c.model_id;
+    if (c.name)
+        j["name"] = *c.name;
+    if (c.max_prompt_tokens)
+        j["maxPromptTokens"] = *c.max_prompt_tokens;
+    if (c.max_context_window_tokens)
+        j["maxContextWindowTokens"] = *c.max_context_window_tokens;
+    if (c.max_output_tokens)
+        j["maxOutputTokens"] = *c.max_output_tokens;
+    if (c.capabilities)
+        j["capabilities"] = *c.capabilities;
+}
+
+inline void from_json(const json& j, ProviderModelConfig& c)
+{
+    j.at("id").get_to(c.id);
+    j.at("provider").get_to(c.provider);
+    auto opt_str = [&j](const char* key, std::optional<std::string>& out)
+    {
+        if (j.contains(key) && !j[key].is_null())
+            out = j[key].get<std::string>();
+    };
+    auto opt_int = [&j](const char* key, std::optional<int64_t>& out)
+    {
+        if (j.contains(key) && !j[key].is_null())
+            out = j[key].get<int64_t>();
+    };
+    auto opt_json = [&j](const char* key, std::optional<json>& out)
+    {
+        if (j.contains(key) && !j[key].is_null())
+            out = j[key];
+    };
+    opt_json("autoLocal", c.auto_local);
+    opt_json("metadata", c.metadata);
+    opt_str("wireModel", c.wire_model);
+    opt_str("modelId", c.model_id);
+    opt_str("name", c.name);
+    opt_int("maxPromptTokens", c.max_prompt_tokens);
+    opt_int("maxContextWindowTokens", c.max_context_window_tokens);
+    opt_int("maxOutputTokens", c.max_output_tokens);
+    detail::get_optional(j, "capabilities", c.capabilities);
+}
+
+/// BYOK helpers that read COPILOT_SDK_BYOK_* environment variables.
+struct ProviderConfig
+{
+    static constexpr const char* ENV_API_KEY = "COPILOT_SDK_BYOK_API_KEY";
+    static constexpr const char* ENV_BASE_URL = "COPILOT_SDK_BYOK_BASE_URL";
+    static constexpr const char* ENV_PROVIDER_TYPE = "COPILOT_SDK_BYOK_PROVIDER_TYPE";
+    static constexpr const char* ENV_MODEL = "COPILOT_SDK_BYOK_MODEL";
+
+    /// Provider name used by from_env(); pair with SessionInferenceOptions::default_provider.
+    static constexpr const char* ENV_PROVIDER_NAME = "byok";
+
+    /// True when COPILOT_SDK_BYOK_API_KEY is set and non-empty.
+    static bool is_env_configured()
+    {
+        return detail::non_empty_env_value(ENV_API_KEY).has_value();
+    }
+
+    /// Named provider "byok" from the environment, or nullopt when no API key is set.
+    /// Base URL defaults to https://api.openai.com/v1 and type to "openai".
+    static std::optional<NamedProviderConfig> from_env()
+    {
+        auto key = detail::non_empty_env_value(ENV_API_KEY);
+        if (!key)
+            return std::nullopt;
+
+        NamedProviderConfig config;
+        config.name = ENV_PROVIDER_NAME;
+        config.api_key = std::move(*key);
+        config.base_url =
+            detail::non_empty_env_value(ENV_BASE_URL).value_or("https://api.openai.com/v1");
+        config.type = detail::non_empty_env_value(ENV_PROVIDER_TYPE).value_or("openai");
+        return config;
+    }
+
+    /// Model from COPILOT_SDK_BYOK_MODEL, or nullopt when unset.
+    static std::optional<std::string> model_from_env()
+    {
+        return detail::non_empty_env_value(ENV_MODEL);
+    }
+};
 
 // =============================================================================
 // MCP Server Configuration
 // =============================================================================
 
+// NODEJS REFERENCE: nodejs/src/types.ts MCPStdioServerConfig / MCPHTTPServerConfig
+// C# REFERENCE: dotnet/src/Types.cs McpStdioServerConfig / McpHttpServerConfig
+
+namespace detail
+{
+inline void mcp_base_to_json(
+    json& j, const std::optional<std::vector<std::string>>& tools, const std::optional<int>& timeout
+)
+{
+    if (tools)
+        j["tools"] = *tools;
+    if (timeout)
+        j["timeout"] = *timeout;
+}
+
+inline void mcp_base_from_json(
+    const json& j, std::optional<std::vector<std::string>>& tools, std::optional<int>& timeout
+)
+{
+    if (j.contains("tools") && j["tools"].is_array())
+        tools = j["tools"].get<std::vector<std::string>>();
+    if (j.contains("timeout") && j["timeout"].is_number())
+        timeout = j["timeout"].get<int>();
+}
+} // namespace detail
+
 /// Configuration for a local/stdio MCP server
 struct McpLocalServerConfig
 {
-    std::vector<std::string> tools;
+    /// Tools to include; unset or {"*"} includes all, empty includes none.
+    std::optional<std::vector<std::string>> tools;
+    /// "local" | "stdio" (runtime default: stdio)
     std::optional<std::string> type;
+    /// Tool-call timeout in milliseconds.
     std::optional<int> timeout;
     std::string command;
-    std::vector<std::string> args;
+    std::optional<std::vector<std::string>> args;
     std::optional<std::map<std::string, std::string>> env;
-    std::optional<std::string> cwd;
+    /// Sent as "cwd" on the wire.
+    std::optional<std::string> working_directory;
 };
 
 inline void to_json(json& j, const McpLocalServerConfig& c)
 {
-    j = json{{"tools", c.tools}, {"command", c.command}, {"args", c.args}};
+    j = json::object();
+    detail::mcp_base_to_json(j, c.tools, c.timeout);
     if (c.type)
         j["type"] = *c.type;
-    if (c.timeout)
-        j["timeout"] = *c.timeout;
+    j["command"] = c.command;
+    if (c.args)
+        j["args"] = *c.args;
     if (c.env)
         j["env"] = *c.env;
-    if (c.cwd)
-        j["cwd"] = *c.cwd;
+    if (c.working_directory)
+        j["cwd"] = *c.working_directory;
 }
 
 inline void from_json(const json& j, McpLocalServerConfig& c)
 {
-    j.at("tools").get_to(c.tools);
+    detail::mcp_base_from_json(j, c.tools, c.timeout);
     j.at("command").get_to(c.command);
-    j.at("args").get_to(c.args);
-    if (j.contains("type"))
-        c.type = j.at("type").get<std::string>();
-    if (j.contains("timeout"))
-        c.timeout = j.at("timeout").get<int>();
-    if (j.contains("env"))
-        c.env = j.at("env").get<std::map<std::string, std::string>>();
-    if (j.contains("cwd"))
-        c.cwd = j.at("cwd").get<std::string>();
+    if (j.contains("type") && j["type"].is_string())
+        c.type = j["type"].get<std::string>();
+    if (j.contains("args") && j["args"].is_array())
+        c.args = j["args"].get<std::vector<std::string>>();
+    if (j.contains("env") && j["env"].is_object())
+        c.env = j["env"].get<std::map<std::string, std::string>>();
+    if (j.contains("cwd") && j["cwd"].is_string())
+        c.working_directory = j["cwd"].get<std::string>();
 }
 
 /// Configuration for a remote MCP server (HTTP or SSE)
 struct McpRemoteServerConfig
 {
-    std::vector<std::string> tools;
+    /// Tools to include; unset or {"*"} includes all, empty includes none.
+    std::optional<std::vector<std::string>> tools;
+    /// "http" | "sse"
     std::string type = "http";
+    /// Tool-call timeout in milliseconds.
     std::optional<int> timeout;
     std::string url;
     std::optional<std::map<std::string, std::string>> headers;
+    std::optional<std::string> oauth_client_id;
+    std::optional<bool> oauth_public_client;
+    /// "authorization_code" | "client_credentials"
+    std::optional<std::string> oauth_grant_type;
     std::optional<std::vector<std::string>> oauth_scopes;
 };
 
 inline void to_json(json& j, const McpRemoteServerConfig& c)
 {
-    j = json{{"tools", c.tools}, {"type", c.type}, {"url", c.url}};
-    if (c.timeout)
-        j["timeout"] = *c.timeout;
+    j = json::object();
+    detail::mcp_base_to_json(j, c.tools, c.timeout);
+    j["type"] = c.type;
+    j["url"] = c.url;
     if (c.headers)
         j["headers"] = *c.headers;
+    if (c.oauth_client_id)
+        j["oauthClientId"] = *c.oauth_client_id;
+    if (c.oauth_public_client)
+        j["oauthPublicClient"] = *c.oauth_public_client;
+    if (c.oauth_grant_type)
+        j["oauthGrantType"] = *c.oauth_grant_type;
     if (c.oauth_scopes)
         j["oauthScopes"] = *c.oauth_scopes;
 }
 
 inline void from_json(const json& j, McpRemoteServerConfig& c)
 {
-    j.at("tools").get_to(c.tools);
-    j.at("type").get_to(c.type);
+    detail::mcp_base_from_json(j, c.tools, c.timeout);
+    if (j.contains("type") && j["type"].is_string())
+        c.type = j["type"].get<std::string>();
     j.at("url").get_to(c.url);
-    if (j.contains("timeout"))
-        c.timeout = j.at("timeout").get<int>();
-    if (j.contains("headers"))
-        c.headers = j.at("headers").get<std::map<std::string, std::string>>();
-    if (j.contains("oauthScopes") && !j["oauthScopes"].is_null())
-        c.oauth_scopes = j.at("oauthScopes").get<std::vector<std::string>>();
+    if (j.contains("headers") && j["headers"].is_object())
+        c.headers = j["headers"].get<std::map<std::string, std::string>>();
+    if (j.contains("oauthClientId") && j["oauthClientId"].is_string())
+        c.oauth_client_id = j["oauthClientId"].get<std::string>();
+    if (j.contains("oauthPublicClient") && j["oauthPublicClient"].is_boolean())
+        c.oauth_public_client = j["oauthPublicClient"].get<bool>();
+    if (j.contains("oauthGrantType") && j["oauthGrantType"].is_string())
+        c.oauth_grant_type = j["oauthGrantType"].get<std::string>();
+    if (j.contains("oauthScopes") && j["oauthScopes"].is_array())
+        c.oauth_scopes = j["oauthScopes"].get<std::vector<std::string>>();
 }
 
 /// Union type for MCP server configuration
 using MCPServerConfig = std::variant<McpLocalServerConfig, McpRemoteServerConfig>;
+
+} // namespace copilot
+
+namespace nlohmann
+{
+template <> struct adl_serializer<copilot::MCPServerConfig>
+{
+    static void to_json(json& j, const copilot::MCPServerConfig& config)
+    {
+        std::visit([&j](const auto& c) { j = c; }, config);
+    }
+
+    /// Remote when a url is present or the type is http/sse; local otherwise.
+    static void from_json(const json& j, copilot::MCPServerConfig& config)
+    {
+        const auto type = j.contains("type") && j["type"].is_string() ? j["type"].get<std::string>()
+                                                                        : std::string{};
+        if (j.contains("url") || type == "http" || type == "sse")
+            config = j.get<copilot::McpRemoteServerConfig>();
+        else
+            config = j.get<copilot::McpLocalServerConfig>();
+    }
+};
+} // namespace nlohmann
+
+namespace copilot
+{
 
 // =============================================================================
 // Custom Agent Configuration
@@ -1376,7 +2258,7 @@ struct CustomAgentConfig
     std::optional<std::string> description;
     std::optional<std::vector<std::string>> tools;
     std::string prompt;
-    std::optional<std::map<std::string, json>> mcp_servers;
+    std::optional<std::map<std::string, MCPServerConfig>> mcp_servers;
     std::optional<bool> infer;
     std::optional<std::vector<std::string>> skills;
     /// Model identifier for this agent (e.g. "claude-haiku-4.5").
@@ -1384,7 +2266,10 @@ struct CustomAgentConfig
     /// falling back to the parent session model if unavailable.
     std::optional<std::string> model;
     std::optional<std::map<std::string, std::vector<json>>> hooks;
-    std::optional<json> model_policy;
+    /// "preferred" (default) | "required"
+    std::optional<std::string> model_policy;
+    /// Reasoning effort for this agent's model.
+    std::optional<std::string> reasoning_effort;
 };
 
 inline void to_json(json& j, const CustomAgentConfig& c)
@@ -1408,6 +2293,8 @@ inline void to_json(json& j, const CustomAgentConfig& c)
         j["hooks"] = *c.hooks;
     if (c.model_policy)
         j["modelPolicy"] = *c.model_policy;
+    if (c.reasoning_effort)
+        j["reasoningEffort"] = *c.reasoning_effort;
 }
 
 inline void from_json(const json& j, CustomAgentConfig& c)
@@ -1421,7 +2308,7 @@ inline void from_json(const json& j, CustomAgentConfig& c)
     if (j.contains("tools"))
         c.tools = j.at("tools").get<std::vector<std::string>>();
     if (j.contains("mcpServers"))
-        c.mcp_servers = j.at("mcpServers").get<std::map<std::string, json>>();
+        c.mcp_servers = j.at("mcpServers").get<std::map<std::string, MCPServerConfig>>();
     if (j.contains("infer"))
         c.infer = j.at("infer").get<bool>();
     if (j.contains("skills"))
@@ -1431,7 +2318,9 @@ inline void from_json(const json& j, CustomAgentConfig& c)
     if (j.contains("hooks") && !j["hooks"].is_null())
         c.hooks = j.at("hooks").get<std::map<std::string, std::vector<json>>>();
     if (j.contains("modelPolicy") && !j["modelPolicy"].is_null())
-        c.model_policy = j.at("modelPolicy").get<json>();
+        c.model_policy = j.at("modelPolicy").get<std::string>();
+    if (j.contains("reasoningEffort") && j["reasoningEffort"].is_string())
+        c.reasoning_effort = j["reasoningEffort"].get<std::string>();
 }
 
 struct DefaultAgentConfig
@@ -1624,6 +2513,8 @@ inline void from_json(const json& j, ToolNamespace& value)
 struct Tool
 {
     std::string name;
+    /// Human-readable display name.
+    std::optional<std::string> title;
     std::string description;
     json parameters_schema;
     ToolHandler handler;
@@ -1645,6 +2536,9 @@ struct Tool
 
     /// Successful execution terminates the current agent turn.
     bool is_terminal = false;
+
+    /// Repeated calls with the same arguments have no additional effect.
+    bool idempotent = false;
 
     /// Fluent setter — mark this tool as not requiring permission prompts.
     Tool& with_skip_permission(bool value = true) &
@@ -1731,25 +2625,6 @@ inline void from_json(const json& j, InfiniteSessionConfig& c)
 // Session Configuration
 // =============================================================================
 
-/// Configuration for creating a new session
-/// Remote session mode (matches upstream nodejs RemoteSessionMode).
-/// Controls how the session is exposed to remote consumers (Mission Control).
-enum class RemoteSessionMode
-{
-    Off,
-    Export,
-    On,
-};
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-    RemoteSessionMode,
-    {
-        {RemoteSessionMode::Off, "off"},
-        {RemoteSessionMode::Export, "export"},
-        {RemoteSessionMode::On, "on"},
-    }
-)
-
 // C# REFERENCE: dotnet/src/Types.cs ISkillProvider and SessionConfigBase.
 struct SkillProviderDescriptor
 {
@@ -1801,317 +2676,868 @@ inline void from_json(const json& j, TranscriptRecoveryReport& value)
     value.session_start_moved = j.value("sessionStartMoved", false);
 }
 
-struct SessionConfig
+// -----------------------------------------------------------------------------
+// GitHub token provider (session-scoped)
+// -----------------------------------------------------------------------------
+
+/// Why the runtime is asking for a GitHub credential (`GitHubTokenAcquireReason`).
+enum class GitHubTokenAcquireReason
 {
+    Initial, ///< First acquisition for this session.
+    Refresh, ///< The previously supplied credential is expiring or expired.
+};
+
+/// Inbound GitHub credential request routed to SessionGitHubOptions::token_provider.
+// NODEJS REFERENCE: nodejs/src/client.ts handleGitHubTokenRequest
+struct GitHubTokenRequest
+{
+    /// Authentication host the credential is wanted for.
+    std::string host;
+    /// Absent only before a cloud session has been assigned its id.
     std::optional<std::string> session_id;
-    std::optional<std::string> model;
-    std::optional<json> model_capabilities;
-    std::vector<Tool> tools;
-    std::optional<std::vector<json>> commands;
-    std::optional<SystemMessageConfig> system_message;
-    std::optional<std::vector<std::string>> available_tools;
-    std::optional<std::vector<std::string>> excluded_tools;
-    std::optional<ProviderConfig> provider;
-    std::optional<PermissionHandler> on_permission_request;
-    bool streaming = false;
-    std::optional<std::map<std::string, json>> mcp_servers;
-    std::optional<std::vector<CustomAgentConfig>> custom_agents;
-    std::optional<DefaultAgentConfig> default_agent;
-    std::optional<std::string> agent;
+    GitHubTokenAcquireReason reason = GitHubTokenAcquireReason::Initial;
+};
 
-    /// Directories to load skills from.
-    std::optional<std::vector<std::string>> skill_directories;
+/// Credential returned by a GitHubTokenProvider (`GitHubTokenAcquireResult`, kind "token").
+struct GitHubToken
+{
+    std::string access_token;
+    /// Seconds until expiry. The schema requires at least kMinGitHubTokenExpiresIn so
+    /// the value outlives the runtime's one-hour preflight refresh window.
+    int64_t expires_in = 0;
+    std::optional<std::string> token_type;
+};
 
-    /// List of skill names to disable.
-    std::optional<std::vector<std::string>> disabled_skills;
+/// Schema-mandated lower bound for GitHubToken::expires_in.
+inline constexpr int64_t kMinGitHubTokenExpiresIn = 3601;
 
-    /// Infinite session configuration for persistent workspaces and automatic compaction.
-    /// When enabled (default), sessions automatically manage context limits and persist state.
-    std::optional<InfiniteSessionConfig> infinite_sessions;
+/// Supplies GitHub credentials on demand. Return std::nullopt to decline (marshalled
+/// as `{"kind":"cancelled"}`).
+using GitHubTokenProvider = std::function<std::optional<GitHubToken>(const GitHubTokenRequest&)>;
 
-    /// Custom configuration directory for the CLI.
-    /// When set, overrides the default config location.
-    std::optional<std::string> config_dir;
+// -----------------------------------------------------------------------------
+// Memory store
+// -----------------------------------------------------------------------------
 
-    /// If true and provider/model not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
-    /// Default: false (explicit configuration preferred over environment variables)
-    bool auto_byok_from_env = false;
+/// A memory the runtime asks the host to persist.
+// NODEJS REFERENCE: nodejs/src/types.ts StoredMemory
+struct StoredMemory
+{
+    std::string session_id;
+    std::string subject;
+    std::string fact;
+    std::string citations;
+    std::string reason;
+};
 
-    /// Reasoning effort level for models that support it.
-    std::optional<ReasoningEffort> reasoning_effort;
+inline void from_json(const json& j, StoredMemory& m)
+{
+    m.session_id = j.value("sessionId", "");
+    m.subject = j.value("subject", "");
+    m.fact = j.value("fact", "");
+    m.citations = j.value("citations", "");
+    m.reason = j.value("reason", "");
+}
 
-    /// Handler for user input requests from the agent (enables ask_user tool).
-    std::optional<UserInputHandler> on_user_input_request;
+/// Persists a memory. The token is cancelled when the runtime abandons the call.
+using MemoryStoreHandler = std::function<void(const StoredMemory&, const CancellationToken&)>;
 
-    /// Handler for elicitation requests from the server.
-    std::optional<ElicitationHandler> on_elicitation_request;
+/// Creates and supervises a separate session for this session's management tools.
+/// Use `newSessionId` as the child's exact identity and apply the requested launch
+/// options and permission ceiling. Route approvals independently, retain the new
+/// session, and dispose it with the host. Do not copy the parent's conversation.
+/// Receives a `SessionManagementCreateHostRequest` and returns a
+/// `SessionManagementCreateResult` (wire JSON).
+// NODEJS REFERENCE: nodejs/src/types.ts SessionCreationHandler
+using SessionCreationHandler = std::function<json(const json& request, const CancellationToken&)>;
 
-    /// Handler for exit-plan-mode requests from the agent.
-    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
+// NODEJS REFERENCE: nodejs/src/types.ts MemoryConfiguration
+struct MemoryConfiguration
+{
+    bool enabled = false;
+    /// "system-prompt" | "user-prompt"
+    std::optional<std::string> mode;
+    /// Host-side memory store; requires enabled == true. Never serialized.
+    MemoryStoreHandler store_memory;
+};
 
-    /// Handler for auto-mode-switch requests.
-    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
+inline void to_json(json& j, const MemoryConfiguration& c)
+{
+    j = json{{"enabled", c.enabled}};
+    if (c.mode)
+        j["mode"] = *c.mode;
+}
 
-    /// Pre-registered event handler - wired up when session is created.
-    std::optional<EventHandler> on_event;
+inline void from_json(const json& j, MemoryConfiguration& c)
+{
+    c.enabled = j.value("enabled", false);
+    detail::get_optional(j, "mode", c.mode);
+}
 
-    /// Hook handlers for session lifecycle events.
-    std::optional<SessionHooks> hooks;
+// -----------------------------------------------------------------------------
+// Slash commands
+// -----------------------------------------------------------------------------
 
-    /// Working directory for the session.
-    std::optional<std::string> working_directory;
+/// Context passed to a CommandHandler when the user runs a registered slash command.
+// NODEJS REFERENCE: nodejs/src/types.ts CommandContext
+struct CommandContext
+{
+    std::string session_id;
+    /// Full command text, e.g. "/deploy production".
+    std::string command;
+    /// Command name without the leading slash.
+    std::string command_name;
+    /// Raw argument string after the command name.
+    std::string args;
+};
 
-    /// GitHub token for per-session authentication.
-    std::optional<std::string> github_token;
+/// Runs a slash command. Throwing reports the exception message back to the runtime.
+using CommandHandler = std::function<void(const CommandContext&)>;
 
-    // ===== @github/copilot 1.0.84-5 additions =====
+// NODEJS REFERENCE: nodejs/src/types.ts CommandDefinition
+struct CommandDefinition
+{
+    std::string name;
+    std::optional<std::string> description;
+    CommandHandler handler;
+};
 
-    /// Feature-flag values resolved by the host, forwarded to the session.
-    std::optional<std::map<std::string, bool>> feature_flags;
+// -----------------------------------------------------------------------------
+// Shell authentication
+// -----------------------------------------------------------------------------
 
-    /// OAuth Client ID Metadata Document URL this host uses for MCP authorization.
-    std::optional<std::string> auth_client_id_metadata_url;
+enum class ShellAuthenticationInputKind
+{
+    Secret,
+    Text,
+    Confirm
+};
 
-    // ===== v0.1.49 additions =====
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ShellAuthenticationInputKind,
+    {
+        {ShellAuthenticationInputKind::Secret, "secret"},
+        {ShellAuthenticationInputKind::Text, "text"},
+        {ShellAuthenticationInputKind::Confirm, "confirm"},
+    }
+)
 
-    /// Client identifier reported to the CLI (PR #510).
-    std::optional<std::string> client_name;
+/// A shell command is waiting on interactive authentication input.
+// NODEJS REFERENCE: nodejs/src/types.ts ShellAuthenticationRequest
+struct ShellAuthenticationRequest
+{
+    std::string request_id;
+    std::string program;
+    std::string prompt;
+    ShellAuthenticationInputKind input_kind = ShellAuthenticationInputKind::Secret;
+    std::string command;
+    std::string cwd;
+};
 
-    /// Enable per-session telemetry events (PR #1224).
-    std::optional<bool> enable_session_telemetry;
+struct ShellAuthenticationInvocation
+{
+    std::string session_id;
+    /// Cancelled when the runtime withdraws the request (`shellAuthentication.cancel`).
+    CancellationToken cancellation;
+};
 
-    /// Forward streaming events emitted by sub-agents (PR #1108).
-    std::optional<bool> include_sub_agent_streaming_events;
+/// `{action:"accept", value}` or `{action:"cancel"}`.
+struct ShellAuthenticationResponse
+{
+    bool accepted = false;
+    std::string value;
 
-    /// Allow the CLI to discover and apply config files in the working directory
-    /// (and ancestors). Default behavior is server-side; this opts in/out (PR #1044).
-    std::optional<bool> enable_config_discovery;
+    static ShellAuthenticationResponse accept(std::string value)
+    {
+        return ShellAuthenticationResponse{.accepted = true, .value = std::move(value)};
+    }
+    static ShellAuthenticationResponse cancel()
+    {
+        return ShellAuthenticationResponse{};
+    }
+};
 
-    /// Per-session instruction directories merged with the global instruction set (PR #1190).
-    std::optional<std::vector<std::string>> instruction_directories;
+using ShellAuthenticationHandler = std::function<ShellAuthenticationResponse(
+    const ShellAuthenticationRequest&, const ShellAuthenticationInvocation&
+)>;
 
-    /// Remote-session mode for Mission Control integration (PR #1295).
-    std::optional<RemoteSessionMode> remote_session;
+// -----------------------------------------------------------------------------
+// Typed option payloads
+// -----------------------------------------------------------------------------
+// Runtime-owned shapes the official SDKs re-export from their generated RPC types.
+using AutopilotOptions = generated::api::AutopilotOptions;
+using SandboxConfig = generated::api::SandboxConfig;
+using SessionLimitsConfig = generated::api::SessionLimitsConfig;
+using DiagnosticsConfiguration = generated::api::DiagnosticsConfiguration;
+using LifecycleDiagnosticsConfiguration = generated::api::LifecycleDiagnosticsConfiguration;
+using HostDiagnostics = generated::api::HostDiagnostics;
+using OpenCanvasInstance = generated::api::OpenCanvasInstance;
 
-    // Current official public session surface. Complex schema-owned values use
-    // JSON so handwritten ergonomic wrappers can evolve independently.
-    std::optional<std::string> reasoning_summary;
-    std::optional<bool> enable_experimental_mode;
-    std::optional<std::string> context_tier;
-    std::optional<json> large_output;
-    std::optional<std::vector<json>> canvases;
-    std::vector<std::shared_ptr<Canvas>> canvas_objects;
-    std::optional<bool> request_canvas_renderer;
-    std::optional<bool> request_extensions;
-    std::optional<std::string> extension_sdk_path;
-    std::optional<json> extension_info;
-    std::optional<json> canvas_provider;
-    std::optional<json> tool_search;
-    std::optional<ToolSet> available_tool_set;
-    std::optional<ToolSet> excluded_tool_set;
-    std::optional<std::vector<std::string>> excluded_builtin_agents;
-    std::optional<json> capi;
-    std::optional<std::vector<json>> providers;
-    std::optional<std::vector<json>> models;
-    std::optional<bool> enable_citations;
-    std::optional<bool> enable_file_change_tracking;
-    std::optional<json> session_limits;
-    std::optional<bool> skip_custom_instructions;
-    std::optional<bool> custom_agents_local_only;
-    std::optional<bool> coauthor_enabled;
-    std::optional<bool> manage_schedule_enabled;
-    std::optional<PermissionHandlerWithContext> on_permission_request_with_context;
-    std::optional<McpAuthHandler> on_mcp_auth_request;
-    std::optional<bool> enable_mcp_apps;
-    std::optional<json> github_mcp_tool_config;
-    std::optional<std::vector<std::string>> additional_directories;
-    std::optional<std::string> mcp_oauth_token_storage;
-    std::optional<std::vector<std::string>> plugin_directories;
-    std::optional<std::vector<std::string>> disabled_mcp_servers;
-    std::optional<json> memory;
-    std::optional<bool> enable_managed_settings;
-    std::optional<json> managed_settings;
-    std::optional<bool> skip_embedding_retrieval;
-    std::optional<std::string> embedding_cache_storage;
-    std::optional<std::string> organization_custom_instructions;
-    std::optional<bool> enable_on_demand_instruction_discovery;
-    std::optional<bool> enable_file_hooks;
-    std::optional<bool> enable_host_git_operations;
-    std::optional<bool> enable_session_store;
-    std::optional<bool> enable_skills;
-    std::optional<json> cloud;
-    std::optional<json> exp_assignments;
-    // C# REFERENCE: dotnet/src/Types.cs SessionConfigBase.
-    std::optional<json> diagnostics;
-    std::optional<std::vector<std::string>> agent_directories;
-    std::optional<std::vector<std::string>> hook_directories;
-    std::optional<bool> enforce_managed_model_defaults;
-    std::optional<bool> interactive_user;
-    std::optional<json> image_generation;
-    std::optional<json> sandbox_config;
-    std::optional<json> autopilot;
-    std::shared_ptr<SkillProvider> skill_provider;
-    std::optional<McpAuthResultHandler> on_mcp_auth_request_with_result;
-    std::optional<bool> refresh_custom_instructions;
+/// Non-persisted opt-in to image generation (experimental).
+// NODEJS REFERENCE: nodejs/src/types.ts ImageGenerationConfig
+struct ImageGenerationConfig
+{
+    std::optional<bool> enabled;
+    /// Request a visible "Made with AI" label on generated images.
+    std::optional<bool> watermark;
+    /// Save generated images under the session-state images folder (runtime default: true).
+    std::optional<bool> save_to_disk;
+};
+
+inline void to_json(json& j, const ImageGenerationConfig& c)
+{
+    j = json::object();
+    if (c.enabled)
+        j["enabled"] = *c.enabled;
+    if (c.watermark)
+        j["watermark"] = *c.watermark;
+    if (c.save_to_disk)
+        j["saveToDisk"] = *c.save_to_disk;
+}
+
+inline void from_json(const json& j, ImageGenerationConfig& c)
+{
+    detail::get_optional(j, "enabled", c.enabled);
+    detail::get_optional(j, "watermark", c.watermark);
+    detail::get_optional(j, "saveToDisk", c.save_to_disk);
+}
+
+/// Override for the runtime's built-in tool-search behavior.
+// NODEJS REFERENCE: nodejs/src/types.ts ToolSearchConfig
+struct ToolSearchConfig
+{
+    std::optional<bool> enabled;
+    /// Tool count above which MCP/external tools are deferred (runtime default: 30).
+    std::optional<int> defer_threshold;
+};
+
+inline void to_json(json& j, const ToolSearchConfig& c)
+{
+    j = json::object();
+    if (c.enabled)
+        j["enabled"] = *c.enabled;
+    if (c.defer_threshold)
+        j["deferThreshold"] = *c.defer_threshold;
+}
+
+inline void from_json(const json& j, ToolSearchConfig& c)
+{
+    detail::get_optional(j, "enabled", c.enabled);
+    detail::get_optional(j, "deferThreshold", c.defer_threshold);
+}
+
+/// Configuration for the built-in GitHub MCP server.
+// NODEJS REFERENCE: nodejs/src/types.ts GitHubMcpToolConfig
+struct GitHubMcpToolConfig
+{
+    std::optional<bool> enable_all_tools;
+    std::optional<std::vector<std::string>> additional_toolsets;
+    std::optional<std::vector<std::string>> additional_tools;
+    std::optional<bool> enable_insiders_mode;
+    std::optional<bool> disable_form_deferral;
+};
+
+inline void to_json(json& j, const GitHubMcpToolConfig& c)
+{
+    j = json::object();
+    if (c.enable_all_tools)
+        j["enableAllTools"] = *c.enable_all_tools;
+    if (c.additional_toolsets)
+        j["additionalToolsets"] = *c.additional_toolsets;
+    if (c.additional_tools)
+        j["additionalTools"] = *c.additional_tools;
+    if (c.enable_insiders_mode)
+        j["enableInsidersMode"] = *c.enable_insiders_mode;
+    if (c.disable_form_deferral)
+        j["disableFormDeferral"] = *c.disable_form_deferral;
+}
+
+inline void from_json(const json& j, GitHubMcpToolConfig& c)
+{
+    detail::get_optional(j, "enableAllTools", c.enable_all_tools);
+    detail::get_optional(j, "additionalToolsets", c.additional_toolsets);
+    detail::get_optional(j, "additionalTools", c.additional_tools);
+    detail::get_optional(j, "enableInsidersMode", c.enable_insiders_mode);
+    detail::get_optional(j, "disableFormDeferral", c.disable_form_deferral);
+}
+
+/// Well-known values for ManagedSettingsPermissions::disable_bypass_permissions_mode.
+namespace disable_bypass_permissions_modes
+{
+inline constexpr const char* kDisable = "disable";
+inline constexpr const char* kAllowAutoOnly = "allow-auto-only";
+} // namespace disable_bypass_permissions_modes
+
+/// Permissions-only managed policy injected by the host.
+// NODEJS REFERENCE: nodejs/src/types.ts ManagedSettingsPermissions
+struct ManagedSettingsPermissions
+{
+    /// Unknown values are forwarded so newer runtime policies fail closed.
+    std::optional<std::string> disable_bypass_permissions_mode;
+    std::optional<bool> disable_assisted_permissions_mode;
+    std::optional<std::vector<std::string>> deny;
+    std::optional<std::vector<std::string>> ask;
+    std::optional<std::vector<std::string>> allow;
+    /// Closed-world host boundary as Domain(...) rules; empty denies all hosts.
+    std::optional<std::vector<std::string>> limit_to;
+};
+
+inline void to_json(json& j, const ManagedSettingsPermissions& p)
+{
+    j = json::object();
+    if (p.disable_bypass_permissions_mode)
+        j["disableBypassPermissionsMode"] = *p.disable_bypass_permissions_mode;
+    if (p.disable_assisted_permissions_mode)
+        j["disableAssistedPermissionsMode"] = *p.disable_assisted_permissions_mode;
+    if (p.deny)
+        j["deny"] = *p.deny;
+    if (p.ask)
+        j["ask"] = *p.ask;
+    if (p.allow)
+        j["allow"] = *p.allow;
+    if (p.limit_to)
+        j["limitTo"] = *p.limit_to;
+}
+
+inline void from_json(const json& j, ManagedSettingsPermissions& p)
+{
+    detail::get_optional(j, "disableBypassPermissionsMode", p.disable_bypass_permissions_mode);
+    detail::get_optional(j, "disableAssistedPermissionsMode", p.disable_assisted_permissions_mode);
+    detail::get_optional(j, "deny", p.deny);
+    detail::get_optional(j, "ask", p.ask);
+    detail::get_optional(j, "allow", p.allow);
+    detail::get_optional(j, "limitTo", p.limit_to);
+}
+
+/// Host-injected enterprise managed settings.
+// NODEJS REFERENCE: nodejs/src/types.ts ManagedSettings
+struct ManagedSettings
+{
+    std::optional<ManagedSettingsPermissions> permissions;
+};
+
+inline void to_json(json& j, const ManagedSettings& s)
+{
+    j = json::object();
+    if (s.permissions)
+        j["permissions"] = *s.permissions;
+}
+
+inline void from_json(const json& j, ManagedSettings& s)
+{
+    detail::get_optional(j, "permissions", s.permissions);
+}
+
+/// One configuration entry of an ExP assignment response.
+// NODEJS REFERENCE: nodejs/src/types.ts ExpConfigEntry
+struct ExpConfigEntry
+{
+    std::string id;
+    /// Parameter values (string, number, or boolean) keyed by name.
+    std::map<std::string, json> parameters;
+};
+
+inline void to_json(json& j, const ExpConfigEntry& e)
+{
+    j = json{{"Id", e.id}, {"Parameters", e.parameters}};
+}
+
+inline void from_json(const json& j, ExpConfigEntry& e)
+{
+    e.id = j.value("Id", std::string{});
+    e.parameters = j.value("Parameters", std::map<std::string, json>{});
+}
+
+/// ExP ("flight") assignment data in the experimentation service's PascalCase wire shape.
+// NODEJS REFERENCE: nodejs/src/types.ts CopilotExpAssignmentResponse
+struct CopilotExpAssignmentResponse
+{
+    std::vector<std::string> features;
+    std::map<std::string, std::string> flights;
+    std::vector<ExpConfigEntry> configs;
+    /// Opaque payload passed through untouched.
+    std::optional<json> parameter_groups;
+    std::optional<double> flighting_version;
+    std::optional<std::string> impression_id;
+    std::string assignment_context;
+};
+
+inline void to_json(json& j, const CopilotExpAssignmentResponse& r)
+{
+    j = json{
+        {"Features", r.features},
+        {"Flights", r.flights},
+        {"Configs", r.configs},
+        {"AssignmentContext", r.assignment_context},
+    };
+    if (r.parameter_groups)
+        j["ParameterGroups"] = *r.parameter_groups;
+    if (r.flighting_version)
+        j["FlightingVersion"] = *r.flighting_version;
+    if (r.impression_id)
+        j["ImpressionId"] = *r.impression_id;
+}
+
+inline void from_json(const json& j, CopilotExpAssignmentResponse& r)
+{
+    r.features = j.value("Features", std::vector<std::string>{});
+    r.flights = j.value("Flights", std::map<std::string, std::string>{});
+    r.configs = j.value("Configs", std::vector<ExpConfigEntry>{});
+    if (j.contains("ParameterGroups"))
+        r.parameter_groups = j.at("ParameterGroups");
+    detail::get_optional(j, "FlightingVersion", r.flighting_version);
+    detail::get_optional(j, "ImpressionId", r.impression_id);
+    r.assignment_context = j.value("AssignmentContext", std::string{});
+}
+
+/// Stable extension identity for session participants that provide canvases.
+// NODEJS REFERENCE: nodejs/src/types.ts ExtensionInfo
+struct ExtensionInfo
+{
+    /// Namespace/source, e.g. "github-app".
+    std::string source;
+    std::string name;
+};
+
+inline void to_json(json& j, const ExtensionInfo& e)
+{
+    j = json{{"source", e.source}, {"name", e.name}};
+}
+
+inline void from_json(const json& j, ExtensionInfo& e)
+{
+    e.source = j.value("source", std::string{});
+    e.name = j.value("name", std::string{});
+}
+
+/// Stable identity for a connection that supplies built-in canvases. The id is used
+/// verbatim as the canvas extension id; ids starting with "connection:" are reserved.
+// NODEJS REFERENCE: nodejs/src/types.ts CanvasProviderIdentity
+struct CanvasProviderIdentity
+{
+    std::string id;
     std::optional<std::string> name;
+};
+
+inline void to_json(json& j, const CanvasProviderIdentity& p)
+{
+    j = json{{"id", p.id}};
+    if (p.name)
+        j["name"] = *p.name;
+}
+
+inline void from_json(const json& j, CanvasProviderIdentity& p)
+{
+    p.id = j.value("id", std::string{});
+    detail::get_optional(j, "name", p.name);
+}
+
+// -----------------------------------------------------------------------------
+// Session option groups
+// -----------------------------------------------------------------------------
+// NODEJS REFERENCE: nodejs/src/types.ts SessionOptionsBase and its Session*Options groups.
+// Every group is a plain aggregate; unset fields are omitted from the wire.
+
+struct SessionInferenceOptions
+{
+    std::optional<bool> allow_multiple_tool_calls;
+    std::optional<ReasoningEffort> reasoning_effort;
+    std::optional<std::string> reasoning_summary;
+    /// "default" | "long_context"
+    std::optional<std::string> context_tier;
+    std::optional<ModelCapabilitiesOverride> capabilities;
+    std::optional<std::vector<NamedProviderConfig>> providers;
+    std::optional<std::vector<ProviderModelConfig>> models;
+    /// Provider name for unqualified model selections. A JSON null clears it on resume;
+    /// leaving it unset preserves the current value.
+    std::optional<json> default_provider;
+    std::optional<bool> enable_citations;
+};
+
+struct SessionPolicyOptions
+{
+    std::optional<std::vector<std::string>> allowed_models;
+    std::optional<std::vector<std::string>> excluded_managed_settings;
+    std::optional<bool> enforce_managed_model_defaults;
+    std::optional<ManagedSettings> managed_settings;
+};
+
+struct SessionExperimentOptions
+{
+    std::optional<bool> enable_experimental_mode;
+    std::optional<std::map<std::string, bool>> flags;
+    std::optional<CopilotExpAssignmentResponse> assignments;
+};
+
+struct LargeToolOutputConfig
+{
+    std::optional<bool> enabled;
+    std::optional<int64_t> max_size_bytes;
+    std::optional<std::string> output_directory;
+};
+
+inline void to_json(json& j, const LargeToolOutputConfig& c)
+{
+    j = json::object();
+    if (c.enabled)
+        j["enabled"] = *c.enabled;
+    if (c.max_size_bytes)
+        j["maxSizeBytes"] = *c.max_size_bytes;
+    if (c.output_directory)
+        j["outputDir"] = *c.output_directory;
+}
+
+inline void from_json(const json& j, LargeToolOutputConfig& c)
+{
+    detail::get_optional(j, "enabled", c.enabled);
+    detail::get_optional(j, "maxSizeBytes", c.max_size_bytes);
+    detail::get_optional(j, "outputDir", c.output_directory);
+}
+
+struct SessionToolOptions
+{
+    std::optional<LargeToolOutputConfig> large_output;
+    std::vector<Tool> definitions;
+    std::optional<ToolSearchConfig> search;
+    std::optional<ImageGenerationConfig> image_generation;
+    /// Allow-list. available_tool_set wins when both are set.
+    std::optional<std::vector<std::string>> available_tools;
+    std::optional<ToolSet> available_tool_set;
+    /// Deny-list. excluded_tool_set wins when both are set.
+    std::optional<std::vector<std::string>> excluded_tools;
+    std::optional<ToolSet> excluded_tool_set;
+    std::optional<bool> manage_schedule_enabled;
+};
+
+struct SessionCanvasOptions
+{
+    std::vector<std::shared_ptr<Canvas>> definitions;
+    /// Raw canvas declarations, sent after those of definitions.
+    std::optional<std::vector<json>> declarations;
+    std::optional<bool> request_renderer;
+    std::optional<CanvasProviderIdentity> provider;
+};
+
+struct ResumeSessionCanvasOptions
+{
+    std::vector<std::shared_ptr<Canvas>> definitions;
+    /// Raw canvas declarations, sent after those of definitions.
+    std::optional<std::vector<json>> declarations;
+    std::optional<bool> request_renderer;
+    std::optional<CanvasProviderIdentity> provider;
+    /// Canvases that were open when the session was suspended.
+    std::optional<std::vector<OpenCanvasInstance>> open;
+};
+
+struct SessionExtensionOptions
+{
+    std::optional<bool> enabled;
+    std::optional<std::string> sdk_path;
+    std::optional<ExtensionInfo> identity;
+};
+
+struct SessionInteractionOptions
+{
+    /// "legacy" | "elicitation"
+    std::optional<std::string> ask_user_variant;
+    UserInputHandler on_user_input_request;
+    ShellAuthenticationHandler on_shell_authentication_request;
+    std::vector<CommandDefinition> commands;
+    ElicitationHandler on_elicitation_request;
+    ExitPlanModeHandler on_exit_plan_mode_request;
+    AutoModeSwitchHandler on_auto_mode_switch_request;
+    /// Requires on_auto_mode_switch_request.
+    std::optional<bool> auto_mode_recovery;
+};
+
+struct SessionAgentOptions
+{
+    std::optional<std::vector<std::string>> excluded_builtin_agents;
+    std::optional<std::vector<std::string>> included_builtin_agents;
+    std::optional<bool> local_discovery_only;
+    std::optional<std::vector<CustomAgentConfig>> definitions;
+    std::optional<DefaultAgentConfig> default_agent;
+    /// Name of the agent to activate.
+    std::optional<std::string> selected;
+    std::optional<std::vector<std::string>> directories;
+};
+
+struct SessionSkillOptions
+{
+    std::optional<std::vector<std::string>> included_builtin_skills;
+    std::optional<std::vector<std::string>> directories;
+    std::shared_ptr<SkillProvider> provider;
+    std::optional<std::vector<std::string>> disabled_skills;
+    std::optional<bool> enabled;
+};
+
+struct CapiSessionOptions
+{
+    std::optional<bool> enabled;
+    std::optional<std::string> auto_tier;
+    std::optional<std::string> fusion_tier;
+    std::optional<bool> enable_web_socket_responses;
+};
+
+inline void to_json(json& j, const CapiSessionOptions& c)
+{
+    j = json::object();
+    if (c.enabled)
+        j["enabled"] = *c.enabled;
+    if (c.auto_tier)
+        j["autoTier"] = *c.auto_tier;
+    if (c.fusion_tier)
+        j["fusionTier"] = *c.fusion_tier;
+    if (c.enable_web_socket_responses)
+        j["enableWebSocketResponses"] = *c.enable_web_socket_responses;
+}
+
+inline void from_json(const json& j, CapiSessionOptions& c)
+{
+    detail::get_optional(j, "enabled", c.enabled);
+    detail::get_optional(j, "autoTier", c.auto_tier);
+    detail::get_optional(j, "fusionTier", c.fusion_tier);
+    detail::get_optional(j, "enableWebSocketResponses", c.enable_web_socket_responses);
+}
+
+struct SessionGitHubOptions
+{
+    std::optional<CapiSessionOptions> capi;
+    std::optional<bool> telemetry_enabled;
+    std::optional<GitHubMcpToolConfig> mcp;
+    /// Mutually exclusive with token_provider.
+    std::optional<std::string> token;
+    GitHubTokenProvider token_provider;
+    std::optional<bool> fetch_managed_settings;
+    std::optional<bool> interactive_user;
+};
+
+struct SessionFilesystemOptions
+{
+    std::optional<bool> track_file_changes;
+    std::optional<std::vector<std::string>> additional_directories;
+};
+
+struct CreateSessionFilesystemOptions
+{
+    std::optional<bool> track_file_changes;
+    std::optional<std::vector<std::string>> additional_directories;
     std::optional<WorkingDirectoryTrust> trust_working_directory;
 };
 
-/// Configuration for resuming an existing session
-struct ResumeSessionConfig
+struct SessionExecutionOptions
 {
-    std::vector<Tool> tools;
-    std::optional<ProviderConfig> provider;
-    std::optional<PermissionHandler> on_permission_request;
-    bool streaming = false;
-    std::optional<std::map<std::string, json>> mcp_servers;
-    std::optional<std::vector<CustomAgentConfig>> custom_agents;
-    std::optional<DefaultAgentConfig> default_agent;
-    std::optional<std::string> agent;
+    std::optional<SessionLimitsConfig> limits;
+    std::optional<AutopilotOptions> autopilot;
+};
 
-    /// Directories to load skills from.
-    std::optional<std::vector<std::string>> skill_directories;
-
-    /// List of skill names to disable.
-    std::optional<std::vector<std::string>> disabled_skills;
-
-    /// Custom configuration directory for the CLI.
-    /// When set, overrides the default config location.
-    std::optional<std::string> config_dir;
-
-    /// If true and provider not explicitly set, load from COPILOT_SDK_BYOK_* env vars.
-    /// Default: false (explicit configuration preferred over environment variables)
-    bool auto_byok_from_env = false;
-
-    /// Model to use for this session. Can change the model when resuming.
-    std::optional<std::string> model;
-    std::optional<json> model_capabilities;
-
-    /// Reasoning effort level for models that support it.
-    std::optional<ReasoningEffort> reasoning_effort;
-
-    std::optional<std::vector<json>> commands;
-
-    /// System message configuration.
-    std::optional<SystemMessageConfig> system_message;
-
-    /// List of tool names to allow. When specified, only these tools will be available.
-    std::optional<std::vector<std::string>> available_tools;
-
-    /// List of tool names to disable. All other tools remain available.
-    std::optional<std::vector<std::string>> excluded_tools;
-
-    /// Working directory for the session.
-    std::optional<std::string> working_directory;
-
-    /// When true, the session.resume event is not emitted.
-    bool disable_resume = false;
-
-    /// Infinite session configuration.
-    std::optional<InfiniteSessionConfig> infinite_sessions;
-
-    /// Handler for user input requests from the agent (enables ask_user tool).
-    std::optional<UserInputHandler> on_user_input_request;
-
-    /// Handler for elicitation requests from the server.
-    std::optional<ElicitationHandler> on_elicitation_request;
-
-    /// Handler for exit-plan-mode requests from the agent.
-    std::optional<ExitPlanModeHandler> on_exit_plan_mode;
-
-    /// Handler for auto-mode-switch requests.
-    std::optional<AutoModeSwitchHandler> on_auto_mode_switch;
-
-    /// Pre-registered event handler - wired up when session is created.
-    std::optional<EventHandler> on_event;
-
-    /// Hook handlers for session lifecycle events.
-    std::optional<SessionHooks> hooks;
-
-    // ===== v0.1.49 additions (mirror SessionConfig) =====
-
-    std::optional<std::string> client_name;
-    std::optional<bool> enable_session_telemetry;
-    std::optional<bool> include_sub_agent_streaming_events;
-    std::optional<bool> enable_config_discovery;
-    std::optional<std::vector<std::string>> instruction_directories;
-    std::optional<RemoteSessionMode> remote_session;
-
-    std::optional<std::string> reasoning_summary;
-    std::optional<bool> enable_experimental_mode;
-    std::optional<std::string> context_tier;
-    std::optional<json> large_output;
-    std::optional<std::vector<json>> canvases;
-    std::vector<std::shared_ptr<Canvas>> canvas_objects;
-    std::optional<bool> request_canvas_renderer;
-    std::optional<bool> request_extensions;
-    std::optional<std::string> extension_sdk_path;
-    std::optional<json> extension_info;
-    std::optional<json> canvas_provider;
-    std::optional<json> tool_search;
-    std::optional<ToolSet> available_tool_set;
-    std::optional<ToolSet> excluded_tool_set;
-    std::optional<std::vector<std::string>> excluded_builtin_agents;
-    std::optional<json> capi;
-    std::optional<std::vector<json>> providers;
-    std::optional<std::vector<json>> models;
-    std::optional<bool> enable_citations;
-    std::optional<bool> enable_file_change_tracking;
-    std::optional<json> session_limits;
+struct SessionInstructionOptions
+{
     std::optional<bool> skip_custom_instructions;
-    std::optional<bool> custom_agents_local_only;
+    std::optional<std::vector<std::string>> directories;
+    std::optional<std::string> organization_text;
+    std::optional<bool> on_demand_discovery;
+};
+
+struct CreateSessionInstructionOptions
+{
+    std::optional<bool> skip_custom_instructions;
+    std::optional<std::vector<std::string>> directories;
+    std::optional<std::string> organization_text;
+    std::optional<bool> on_demand_discovery;
+    std::optional<bool> refresh_custom_instructions;
+};
+
+struct SessionGitOptions
+{
     std::optional<bool> coauthor_enabled;
-    std::optional<bool> manage_schedule_enabled;
-    std::optional<PermissionHandlerWithContext> on_permission_request_with_context;
-    std::optional<McpAuthHandler> on_mcp_auth_request;
-    std::optional<bool> enable_mcp_apps;
-    std::optional<json> github_mcp_tool_config;
-    std::optional<std::vector<std::string>> additional_directories;
-    std::optional<std::string> mcp_oauth_token_storage;
-    std::optional<std::vector<std::string>> plugin_directories;
-    std::optional<std::vector<std::string>> disabled_mcp_servers;
-    std::optional<json> memory;
-    std::optional<std::string> github_token;
-    /// Mirrors SessionConfig; upstream carries both on SessionConfigBase, so a
-    /// resumed session can restate the host's flags and OAuth metadata URL.
-    std::optional<std::map<std::string, bool>> feature_flags;
-    std::optional<std::string> auth_client_id_metadata_url;
-    std::optional<bool> enable_managed_settings;
-    std::optional<json> managed_settings;
-    std::optional<bool> skip_embedding_retrieval;
-    std::optional<std::string> embedding_cache_storage;
-    std::optional<std::string> organization_custom_instructions;
-    std::optional<bool> enable_on_demand_instruction_discovery;
-    std::optional<bool> enable_file_hooks;
     std::optional<bool> enable_host_git_operations;
-    std::optional<bool> enable_session_store;
-    std::optional<bool> enable_skills;
-    bool continue_pending_work = false;
-    std::optional<std::vector<json>> open_canvases;
-    std::optional<json> exp_assignments;
+};
+
+struct SessionPermissionOptions
+{
+    PermissionHandler on_request;
+    /// Context-aware variant; takes precedence over on_request when both are set.
+    PermissionHandlerWithContext on_request_with_context;
+    std::optional<SandboxConfig> sandbox;
+    std::optional<std::string> mode;
+};
+
+struct SessionMcpOptions
+{
+    McpAuthHandler on_auth_request;
+    std::optional<bool> enable_apps;
+    /// "persistent" | "in-memory"
+    std::optional<std::string> oauth_token_storage;
+    std::optional<std::string> auth_client_id_metadata_url;
+    /// Server name -> config.
+    std::optional<std::map<std::string, MCPServerConfig>> servers;
+    std::optional<std::vector<std::string>> disabled_servers;
+};
+
+struct SessionHookOptions
+{
+    std::optional<SessionHooks> handlers;
+    std::optional<std::vector<std::string>> directories;
+    std::optional<bool> enable_repository_hooks;
+};
+
+struct SessionEventOptions
+{
+    std::optional<bool> streaming;
+    std::optional<bool> include_sub_agent_streaming_events;
+    /// Registered before the create/resume RPC so early events are not missed.
+    EventHandler on_event;
+};
+
+struct SessionPluginOptions
+{
+    std::optional<std::vector<std::string>> directories;
+};
+
+struct SessionStateOptions
+{
+    std::optional<InfiniteSessionConfig> infinite_sessions;
+    std::optional<MemoryConfiguration> memory;
+    std::optional<bool> skip_embedding_retrieval;
+    /// "persistent" | "in-memory"
+    std::optional<std::string> embedding_cache_storage;
+    std::optional<bool> enable_cross_session_store;
+    /// Required when ClientOptions::session_fs is set: builds the filesystem provider
+    /// for each created or resumed session.
+    // NODEJS REFERENCE: nodejs/src/types.ts SessionOptionsBase.state.createSessionFsProvider
+    std::function<std::shared_ptr<SessionFsProvider>(Session& session)> create_session_fs_provider;
+};
+
+struct CloudSessionRepository
+{
+    std::string owner;
+    std::string name;
+    std::optional<std::string> branch;
+};
+
+inline void to_json(json& j, const CloudSessionRepository& r)
+{
+    j = json{{"owner", r.owner}, {"name", r.name}};
+    if (r.branch)
+        j["branch"] = *r.branch;
+}
+
+inline void from_json(const json& j, CloudSessionRepository& r)
+{
+    r.owner = j.value("owner", std::string{});
+    r.name = j.value("name", std::string{});
+    detail::get_optional(j, "branch", r.branch);
+}
+
+struct CloudSessionOptions
+{
+    std::optional<CloudSessionRepository> repository;
+};
+
+inline void to_json(json& j, const CloudSessionOptions& c)
+{
+    j = json::object();
+    if (c.repository)
+        j["repository"] = *c.repository;
+}
+
+inline void from_json(const json& j, CloudSessionOptions& c)
+{
+    detail::get_optional(j, "repository", c.repository);
+}
+
+/// Options for Client::create_session.
+// NODEJS REFERENCE: nodejs/src/types.ts CreateSessionOptions (extends SessionOptionsBase)
+struct CreateSessionOptions
+{
+    /// Caller-chosen session id; generated when omitted (except for cloud sessions).
+    std::optional<std::string> session_id;
+    std::optional<std::string> name;
+
+    SessionInferenceOptions inference;
+    SessionPolicyOptions policy;
+    std::optional<std::string> client_name;
+    std::optional<std::string> model;
+    SessionExperimentOptions experiments;
+    std::optional<DiagnosticsConfiguration> diagnostics;
+    std::optional<LifecycleDiagnosticsConfiguration> lifecycle_diagnostics;
+    SessionToolOptions tools;
+    std::optional<std::string> config_directory;
+    std::optional<bool> enable_config_discovery;
+    SessionCanvasOptions canvases;
+    SessionExtensionOptions extensions;
+    SessionInteractionOptions interaction;
+    std::optional<SystemMessageConfig> system_message;
+    SessionAgentOptions agents;
+    SessionSkillOptions skills;
+    SessionGitHubOptions github;
+    CreateSessionFilesystemOptions filesystem;
+    SessionExecutionOptions execution;
+    CreateSessionInstructionOptions instructions;
+    SessionGitOptions git;
+    SessionPermissionOptions permissions;
+    SessionMcpOptions mcp;
+    SessionHookOptions hooks;
+    std::optional<std::string> working_directory;
+    SessionEventOptions events;
+    SessionPluginOptions plugins;
+    SessionStateOptions state;
+
+    /// Create the session in the cloud instead of locally.
+    std::optional<CloudSessionOptions> cloud;
+};
+
+/// Options for Client::resume_session.
+// NODEJS REFERENCE: nodejs/src/types.ts ResumeSessionOptions (extends SessionOptionsBase)
+struct ResumeSessionOptions
+{
+    SessionInferenceOptions inference;
+    SessionPolicyOptions policy;
+    std::optional<std::string> client_name;
+    std::optional<std::string> model;
+    SessionExperimentOptions experiments;
+    std::optional<DiagnosticsConfiguration> diagnostics;
+    std::optional<LifecycleDiagnosticsConfiguration> lifecycle_diagnostics;
+    SessionToolOptions tools;
+    std::optional<std::string> config_directory;
+    std::optional<bool> enable_config_discovery;
+    ResumeSessionCanvasOptions canvases;
+    SessionExtensionOptions extensions;
+    SessionInteractionOptions interaction;
+    std::optional<SystemMessageConfig> system_message;
+    SessionAgentOptions agents;
+    SessionSkillOptions skills;
+    SessionGitHubOptions github;
+    SessionFilesystemOptions filesystem;
+    SessionExecutionOptions execution;
+    SessionInstructionOptions instructions;
+    SessionGitOptions git;
+    SessionPermissionOptions permissions;
+    SessionMcpOptions mcp;
+    SessionHookOptions hooks;
+    std::optional<std::string> working_directory;
+    SessionEventOptions events;
+    SessionPluginOptions plugins;
+    SessionStateOptions state;
+
+    std::optional<bool> allow_transcript_recovery;
+    /// Do not emit session.resume.
+    std::optional<bool> suppress_resume_event;
+    std::optional<bool> continue_pending_work;
+
+    /// Extension workflows to (re)declare. workflow_objects wins when non-empty.
     std::optional<std::vector<json>> workflows;
     std::vector<std::shared_ptr<WorkflowHandle>> workflow_objects;
     std::optional<std::vector<std::string>> requested_environment_variables;
-    // C# REFERENCE: dotnet/src/Types.cs SessionConfigBase.
-    std::optional<json> diagnostics;
-    std::optional<std::vector<std::string>> agent_directories;
-    std::optional<std::vector<std::string>> hook_directories;
-    std::optional<bool> enforce_managed_model_defaults;
-    std::optional<bool> interactive_user;
-    std::optional<json> image_generation;
-    std::optional<json> sandbox_config;
-    std::optional<json> autopilot;
-    std::shared_ptr<SkillProvider> skill_provider;
-    std::optional<McpAuthResultHandler> on_mcp_auth_request_with_result;
-    std::optional<bool> allow_transcript_recovery;
 };
 
 /// Options for sending a message
 /// Provenance tag copied to the resulting `user.message` event.
 ///
 /// On the wire this is a plain string constrained to
-/// `^(user|system|command-.*|schedule-\d+|agent-.+)$`. Only the three forms the
-/// official SDKs expose are constructible here; `command-` and `schedule-` are
+/// `^(user|system|command-.*|schedule-\d+|agent-.+|automation-.+)$`. Only the forms
+/// the official SDKs expose are constructible here; `command-` and `schedule-` are
 /// runtime-internal provenance the SDK surface does not mint.
 class MessageSource
 {
@@ -2131,6 +3557,15 @@ class MessageSource
     static MessageSource agent(const std::string& id)
     {
         return MessageSource("agent-" + id);
+    }
+    /// A turn sent on behalf of an automation the user configured. It defines the
+    /// session's task like a user message but carries no human authority.
+    /// @throws std::invalid_argument if `id` is empty.
+    static MessageSource automation(const std::string& id)
+    {
+        if (id.empty())
+            throw std::invalid_argument("MessageSource::automation requires a non-empty id");
+        return MessageSource("automation-" + id);
     }
 
     /// The string used on the wire.
@@ -2160,6 +3595,8 @@ struct MessageOptions
     /// Optional provenance tag; omitted from the wire when unset.
     std::optional<MessageSource> source;
     std::optional<json> response_schema;
+    /// Caller-chosen id echoed on the resulting turn events.
+    std::optional<std::string> client_turn_id;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -2177,6 +3614,8 @@ inline void to_json(json& j, const MessageOptions& o)
         j["displayPrompt"] = *o.display_prompt;
     if (o.source)
         j["source"] = o.source->value();
+    if (o.client_turn_id)
+        j["clientTurnId"] = *o.client_turn_id;
     if (o.response_schema)
         j["responseFormat"] = {
             {"type", "json_schema"},
@@ -2197,6 +3636,8 @@ inline void from_json(const json& j, MessageOptions& o)
         o.request_headers = j.at("requestHeaders").get<std::map<std::string, std::string>>();
     if (j.contains("displayPrompt"))
         o.display_prompt = j.at("displayPrompt").get<std::string>();
+    if (j.contains("clientTurnId") && j["clientTurnId"].is_string())
+        o.client_turn_id = j.at("clientTurnId").get<std::string>();
     if (j.contains("responseFormat") && j["responseFormat"].is_object())
     {
         const auto& format = j["responseFormat"];
@@ -2204,299 +3645,6 @@ inline void from_json(const json& j, MessageOptions& o)
             o.response_schema = format["jsonSchema"]["schema"];
     }
 }
-
-// =============================================================================
-// Client Options
-// =============================================================================
-
-/// SDK ambient-default mode.
-enum class ClientMode
-{
-    CopilotCli,
-    Empty
-};
-
-NLOHMANN_JSON_SERIALIZE_ENUM(
-    ClientMode,
-    {
-        {ClientMode::CopilotCli, "copilot-cli"},
-        {ClientMode::Empty, "empty"},
-    }
-)
-
-enum class RuntimeConnectionKind
-{
-    Stdio,
-    Tcp,
-    Uri,
-    InProcess,
-    ParentProcess
-};
-
-/// Runtime transport/process selection. Legacy ClientOptions fields remain supported.
-struct RuntimeConnection
-{
-    RuntimeConnectionKind kind = RuntimeConnectionKind::Stdio;
-    std::optional<std::string> path;
-    std::optional<std::vector<std::string>> args;
-    std::optional<std::map<std::string, std::string>> environment;
-    std::optional<int> port;
-    std::optional<std::string> connection_token;
-    std::optional<std::string> url;
-    std::optional<std::string> ffi_library_path;
-
-    static RuntimeConnection for_stdio(
-        std::optional<std::string> path = std::nullopt,
-        std::optional<std::vector<std::string>> args = std::nullopt
-    )
-    {
-        return RuntimeConnection{
-            .kind = RuntimeConnectionKind::Stdio,
-            .path = std::move(path),
-            .args = std::move(args),
-        };
-    }
-
-    static RuntimeConnection for_tcp(
-        int port = 0,
-        std::optional<std::string> connection_token = std::nullopt,
-        std::optional<std::string> path = std::nullopt
-    )
-    {
-        return RuntimeConnection{
-            .kind = RuntimeConnectionKind::Tcp,
-            .path = std::move(path),
-            .port = port,
-            .connection_token = std::move(connection_token),
-        };
-    }
-
-    static RuntimeConnection
-    for_uri(std::string url, std::optional<std::string> connection_token = std::nullopt)
-    {
-        return RuntimeConnection{
-            .kind = RuntimeConnectionKind::Uri,
-            .connection_token = std::move(connection_token),
-            .url = std::move(url),
-        };
-    }
-
-    static RuntimeConnection for_in_process(
-        std::optional<std::string> cli_entrypoint = std::nullopt,
-        std::optional<std::string> library_path = std::nullopt
-    )
-    {
-        return RuntimeConnection{
-            .kind = RuntimeConnectionKind::InProcess,
-            .path = std::move(cli_entrypoint),
-            .ffi_library_path = std::move(library_path),
-        };
-    }
-
-    static RuntimeConnection for_parent_process()
-    {
-        return RuntimeConnection{.kind = RuntimeConnectionKind::ParentProcess};
-    }
-};
-
-struct TelemetryConfig
-{
-    std::optional<std::string> otlp_endpoint;
-    std::optional<std::string> otlp_protocol;
-    std::optional<std::string> file_path;
-    std::optional<std::string> exporter_type;
-    std::optional<std::string> source_name;
-    std::optional<bool> capture_content;
-};
-
-using TraceContextProvider = std::function<std::map<std::string, std::string>()>;
-using ClientRequestHandler = std::function<json(const std::string& method, const json& params)>;
-using GitHubTelemetryHandler = std::function<void(const json& notification)>;
-using SessionFsHandler = std::function<json(const json& params)>;
-
-/// Why the runtime is asking for a GitHub credential (`GitHubTokenAcquireReason`).
-enum class GitHubTokenAcquireReason
-{
-    Initial, ///< First acquisition for this registration.
-    Refresh, ///< The previously supplied credential is expiring or expired.
-};
-
-/// Inbound `gitHubToken.getToken` request (`GitHubTokenAcquireRequest`).
-struct GitHubTokenRequest
-{
-    /// Opaque identifier the SDK generated for this callback registration.
-    std::string registration_id;
-    /// Authentication host the credential is wanted for.
-    std::string host;
-    /// Absent only before a cloud session has been assigned its id.
-    std::optional<std::string> session_id;
-    GitHubTokenAcquireReason reason = GitHubTokenAcquireReason::Initial;
-};
-
-/// Credential returned by a GitHubTokenProvider (`GitHubTokenAcquireResult`, kind "token").
-struct GitHubToken
-{
-    /// GitHub access token acquired by the SDK host.
-    std::string access_token;
-    /// Seconds until expiry. The official schema requires a minimum of 3601 so the value
-    /// outlives the runtime's one-hour preflight refresh window; see kMinGitHubTokenExpiresIn.
-    int64_t expires_in = 0;
-    std::optional<std::string> token_type;
-};
-
-/// Schema-mandated lower bound for GitHubToken::expires_in.
-inline constexpr int64_t kMinGitHubTokenExpiresIn = 3601;
-
-/// Supplies GitHub credentials on demand. Return std::nullopt to decline, which is
-/// marshalled as the `{"kind":"cancelled"}` variant.
-using GitHubTokenProvider = std::function<std::optional<GitHubToken>(const GitHubTokenRequest&)>;
-
-struct SessionFsConfig
-{
-    std::string initial_cwd;
-    std::string session_state_path;
-    std::string conventions;
-    std::optional<json> capabilities;
-    std::map<std::string, SessionFsHandler> handlers;
-};
-
-/// Identity of the integrating application, sent on the `connect` handshake.
-///
-/// All fields are optional; empty ones are dropped and an entirely empty struct
-/// is omitted from the handshake so the runtime keeps its default attribution.
-///
-/// The public field names deliberately differ from the wire names. Upstream
-/// settled on application/integration terminology for the SDK surface while the
-/// protocol still spells them editor/extension:
-///
-///   application_name    -> editorName
-///   application_version -> editorVersion
-///   integration_name    -> extensionName
-///   integration_version -> extensionVersion
-struct CopilotClientInfo
-{
-    /// Name of the application using the SDK, e.g. "my-editor".
-    std::optional<std::string> application_name;
-    /// Version of the application using the SDK. The runtime ignores values that
-    /// do not look like a version string.
-    std::optional<std::string> application_version;
-    /// Optional named integration within the application, such as an extension
-    /// or plugin.
-    std::optional<std::string> integration_name;
-    /// Version of that integration. Same version-shape caveat as above.
-    std::optional<std::string> integration_version;
-
-    /// Wire form, or nullopt when nothing usable was supplied.
-    std::optional<json> to_wire_json() const
-    {
-        json out = json::object();
-        const auto put = [&out](const char* key, const std::optional<std::string>& value)
-        {
-            if (value && !value->empty())
-                out[key] = *value;
-        };
-        put("editorName", application_name);
-        put("editorVersion", application_version);
-        put("extensionName", integration_name);
-        put("extensionVersion", integration_version);
-        if (out.empty())
-            return std::nullopt;
-        return out;
-    }
-};
-
-/// Options for creating a CopilotClient
-enum class InstallationDecision
-{
-    Confirm,
-    Decline,
-    Cancel
-};
-using InstallationConfirmationHandler =
-    std::function<InstallationDecision(const json&, const CancellationToken&)>;
-using ExtensionLaunchProvider = std::function<json(const json&, const CancellationToken&)>;
-
-struct ClientOptions
-{
-    std::optional<RuntimeConnection> connection;
-    ClientMode mode = ClientMode::CopilotCli;
-    std::optional<std::string> working_directory;
-    std::optional<std::string> base_directory;
-    std::optional<std::vector<std::string>> builtin_plugin_directories;
-    std::optional<TelemetryConfig> telemetry;
-    std::optional<TraceContextProvider> on_get_trace_context;
-    std::optional<SessionFsConfig> session_fs;
-    std::optional<ClientRequestHandler> request_handler;
-    std::shared_ptr<CopilotRequestHandler> copilot_request_handler;
-    std::optional<GitHubTelemetryHandler> on_github_telemetry;
-    /// Answers server-initiated `gitHubToken.getToken` requests. Register the resulting
-    /// Client::github_token_registration_id() with the runtime as a `token-provider`
-    /// AuthInfo so the runtime knows to call back.
-    std::optional<GitHubTokenProvider> github_token_provider;
-
-    std::optional<std::string> cli_path;
-    std::optional<std::vector<std::string>> cli_args;
-    std::optional<std::string> cwd;
-    int port = 0;
-    bool use_stdio = true;
-    std::optional<std::string> cli_url;
-    LogLevel log_level = LogLevel::Info;
-    bool auto_start = true;
-
-    /// @deprecated This option has no effect and will be removed in a future release.
-    /// Retained for source compatibility with v0.1.23 callers; the SDK no longer
-    /// auto-restarts the CLI on exit (matches upstream nodejs SDK semantics).
-    [[deprecated("auto_restart has no effect; will be removed in a future release")]]
-    bool auto_restart = false;
-
-    std::optional<std::map<std::string, std::string>> environment;
-
-    /// GitHub token for authentication. Cannot be used with cli_url.
-    /// On the wire to the CLI, this is forwarded via the COPILOT_SDK_AUTH_TOKEN
-    /// environment variable plus the --auth-token-env CLI flag.
-    std::optional<std::string> github_token;
-
-    /// Whether to use logged-in user for auth. Defaults to true when github_token is empty.
-    /// Cannot be used with cli_url.
-    std::optional<bool> use_logged_in_user;
-
-    /// Connection token for the headless CLI server (TCP only). When the SDK
-    /// spawns its own CLI in TCP mode and this is omitted, a UUID is generated
-    /// automatically so the loopback listener is safe by default. Rejected with
-    /// `use_stdio = true` (stdio is pre-authenticated by transport).
-    /// Forwarded to the CLI via the COPILOT_CONNECTION_TOKEN environment variable.
-    std::optional<std::string> tcp_connection_token;
-
-    /// Identity of the integrating application, declared once on the `connect`
-    /// handshake so the runtime attributes this connection's telemetry to a
-    /// consistent surface instead of its own build. Omitted entirely when unset
-    /// or when every field is empty, which keeps the runtime's default.
-    ///
-    /// The public names are application/integration, but the wire names are
-    /// editor/extension -- see CopilotClientInfo.
-    std::optional<CopilotClientInfo> client_info;
-
-    /// Custom data directory for the Copilot CLI ($COPILOT_HOME). When omitted,
-    /// the CLI uses its default location (typically ~/.copilot).
-    std::optional<std::string> copilot_home;
-
-    /// Server-wide idle timeout for sessions in seconds.
-    /// Sessions without activity for this duration are automatically cleaned up.
-    /// Set to 0 or omit to disable (sessions live indefinitely).
-    /// Only used when the SDK spawns the CLI process; ignored when connecting to
-    /// an external server via {@link cli_url}.
-    std::optional<int> session_idle_timeout_seconds;
-
-    /// Enable remote session support (Mission Control integration).
-    /// When true, sessions in a GitHub repository working directory are accessible
-    /// from GitHub web and mobile.
-    /// Only used when the SDK spawns the CLI process; ignored when connecting to
-    /// an external server via {@link cli_url}.
-    bool remote = false;
-    std::optional<bool> enable_remote_sessions;
-    std::optional<InstallationConfirmationHandler> installation_confirmation_handler;
-    std::optional<ExtensionLaunchProvider> extension_launch_provider;
-};
 
 // =============================================================================
 // Response Types
@@ -2785,12 +3933,16 @@ struct GetStatusResponse
 {
     std::string version;
     int protocol_version;
+    /// Host-level diagnostics, when the runtime reports them.
+    std::optional<HostDiagnostics> host_diagnostics;
 };
 
 inline void from_json(const json& j, GetStatusResponse& r)
 {
     j.at("version").get_to(r.version);
     j.at("protocolVersion").get_to(r.protocol_version);
+    if (j.contains("hostDiagnostics") && j["hostDiagnostics"].is_object())
+        r.host_diagnostics = j["hostDiagnostics"].get<HostDiagnostics>();
 }
 
 /// Response from auth.getStatus request
@@ -2939,6 +4091,415 @@ inline void from_json(const json& j, GetModelsResponse& r)
     if (j.contains("models") && j["models"].is_array())
         j.at("models").get_to(r.models);
 }
+
+// =============================================================================
+// Client Options
+// =============================================================================
+
+/// Ambient-default mode for the SDK.
+// NODEJS REFERENCE: nodejs/src/types.ts CopilotClientOptions.mode
+enum class ClientMode
+{
+    /// Coding-agent defaults: repository config, hooks, skills, memory, git, etc.
+    CodingAgent,
+    /// Nothing ambient: the host supplies everything explicitly.
+    Empty
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ClientMode,
+    {
+        {ClientMode::CodingAgent, "coding-agent"},
+        {ClientMode::Empty, "empty"},
+    }
+)
+
+enum class RuntimeConnectionKind
+{
+    /// The SDK spawns the CLI and talks over its stdio.
+    SpawnedStdio,
+    /// The SDK spawns the CLI as a loopback TCP server.
+    SpawnedTcp,
+    /// Attach to an already-running TCP server.
+    Tcp,
+    /// Load the runtime into this process.
+    InProcess,
+    /// The SDK is running as a child of the CLI (extensions); talk over our own stdio.
+    ParentProcess
+};
+
+/// Runtime transport/process selection.
+// NODEJS REFERENCE: nodejs/src/types.ts RuntimeConnection / RuntimeConnection.for*()
+struct RuntimeConnection
+{
+    RuntimeConnectionKind kind = RuntimeConnectionKind::SpawnedStdio;
+    /// CLI executable (spawned) or CLI entrypoint (in-process). Spawned connections fall
+    /// back to $COPILOT_CLI_PATH and then "copilot".
+    std::optional<std::string> path;
+    /// Extra CLI arguments placed before the SDK-managed ones.
+    std::optional<std::vector<std::string>> args;
+    /// Full environment for the spawned process. When set it replaces the inherited one.
+    std::optional<std::map<std::string, std::string>> environment;
+    /// Working directory of the spawned process.
+    std::optional<std::string> working_directory;
+    /// Runtime state directory ($COPILOT_HOME).
+    std::optional<std::string> base_directory;
+    /// Server-wide session idle timeout; 0 or unset disables it.
+    std::optional<int> session_idle_timeout_seconds;
+    /// TCP port. 0 lets a spawned server pick one.
+    int port = 0;
+    /// Host for attached TCP connections.
+    std::optional<std::string> host;
+    /// TCP connection token. Generated for spawned TCP when unset.
+    std::optional<std::string> connection_token;
+    std::optional<std::string> ffi_library_path;
+    /// In-process only: marshals native UI actions onto the application's UI (process
+    /// main) thread. Call `action` there; it may run synchronously or be posted.
+    // NODEJS REFERENCE: nodejs/src/types.ts InProcessRuntimeConnection.runOnUiThread
+    std::function<void(std::function<void()> action)> run_on_ui_thread;
+
+    static RuntimeConnection for_spawned_stdio(
+        std::optional<std::string> path = std::nullopt,
+        std::optional<std::vector<std::string>> args = std::nullopt,
+        std::optional<std::map<std::string, std::string>> environment = std::nullopt,
+        std::optional<std::string> working_directory = std::nullopt,
+        std::optional<std::string> base_directory = std::nullopt,
+        std::optional<int> session_idle_timeout_seconds = std::nullopt
+    )
+    {
+        return RuntimeConnection{
+            .kind = RuntimeConnectionKind::SpawnedStdio,
+            .path = std::move(path),
+            .args = std::move(args),
+            .environment = std::move(environment),
+            .working_directory = std::move(working_directory),
+            .base_directory = std::move(base_directory),
+            .session_idle_timeout_seconds = session_idle_timeout_seconds,
+        };
+    }
+
+    static RuntimeConnection for_spawned_tcp(
+        int port = 0,
+        std::optional<std::string> connection_token = std::nullopt,
+        std::optional<std::string> path = std::nullopt,
+        std::optional<std::vector<std::string>> args = std::nullopt,
+        std::optional<std::map<std::string, std::string>> environment = std::nullopt,
+        std::optional<std::string> working_directory = std::nullopt,
+        std::optional<std::string> base_directory = std::nullopt,
+        std::optional<int> session_idle_timeout_seconds = std::nullopt
+    )
+    {
+        return RuntimeConnection{
+            .kind = RuntimeConnectionKind::SpawnedTcp,
+            .path = std::move(path),
+            .args = std::move(args),
+            .environment = std::move(environment),
+            .working_directory = std::move(working_directory),
+            .base_directory = std::move(base_directory),
+            .session_idle_timeout_seconds = session_idle_timeout_seconds,
+            .port = port,
+            .connection_token = std::move(connection_token),
+        };
+    }
+
+    static RuntimeConnection for_tcp(
+        std::string host, int port, std::optional<std::string> connection_token = std::nullopt
+    )
+    {
+        return RuntimeConnection{
+            .kind = RuntimeConnectionKind::Tcp,
+            .port = port,
+            .host = std::move(host),
+            .connection_token = std::move(connection_token),
+        };
+    }
+
+    static RuntimeConnection for_in_process(
+        std::optional<std::string> base_directory = std::nullopt,
+        std::optional<int> session_idle_timeout_seconds = std::nullopt,
+        std::optional<std::string> cli_entrypoint = std::nullopt,
+        std::optional<std::string> library_path = std::nullopt,
+        std::function<void(std::function<void()> action)> run_on_ui_thread = {}
+    )
+    {
+        return RuntimeConnection{
+            .kind = RuntimeConnectionKind::InProcess,
+            .path = std::move(cli_entrypoint),
+            .base_directory = std::move(base_directory),
+            .session_idle_timeout_seconds = session_idle_timeout_seconds,
+            .ffi_library_path = std::move(library_path),
+            .run_on_ui_thread = std::move(run_on_ui_thread),
+        };
+    }
+
+    static RuntimeConnection for_parent_process()
+    {
+        return RuntimeConnection{.kind = RuntimeConnectionKind::ParentProcess};
+    }
+
+    /// Selected by $COPILOT_SDK_DEFAULT_CONNECTION: "stdio" spawns over stdio; unset or
+    /// "inprocess" loads in-process. Any other value throws std::invalid_argument.
+    static RuntimeConnection for_default(
+        std::optional<std::string> base_directory = std::nullopt,
+        std::optional<int> session_idle_timeout_seconds = std::nullopt
+    )
+    {
+        std::string value = detail::env_value("COPILOT_SDK_DEFAULT_CONNECTION").value_or("");
+        std::string lowered;
+        for (char ch : value)
+            lowered.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(ch))));
+        if (lowered == "stdio")
+            return for_spawned_stdio(
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                std::nullopt,
+                std::move(base_directory),
+                session_idle_timeout_seconds
+            );
+        if (lowered.empty() || lowered == "inprocess")
+            return for_in_process(std::move(base_directory), session_idle_timeout_seconds);
+        throw std::invalid_argument(
+            "Invalid COPILOT_SDK_DEFAULT_CONNECTION value '" + value +
+            "'. Expected 'inprocess', 'stdio', or unset."
+        );
+    }
+};
+
+struct TelemetryConfig
+{
+    std::optional<std::string> otlp_endpoint;
+    std::optional<std::string> otlp_protocol;
+    std::optional<std::string> file_path;
+    std::optional<std::string> exporter_type;
+    std::optional<std::string> source_name;
+    std::optional<bool> capture_content;
+};
+
+using TraceContextProvider = std::function<std::map<std::string, std::string>()>;
+using GitHubTelemetryHandler = std::function<void(const json& notification)>;
+/// Optional features declared by the session filesystem provider. Every provider
+/// returned by SessionStateOptions::create_session_fs_provider must implement each
+/// declared feature.
+// NODEJS REFERENCE: nodejs/src/types.ts SessionFsConfig.capabilities
+struct SessionFsCapabilities
+{
+    /// SQLite query/exists operations (SessionFsProvider::sqlite). When false or
+    /// omitted, the runtime offers no SQL tools or todo tracking for these sessions.
+    std::optional<bool> sqlite;
+    /// Exact binary reads and writes (read_file_bytes / write_file_bytes). Required
+    /// to view images stored only in the provider.
+    std::optional<bool> binary;
+    /// Bounded byte-range reads (read_file_range), independently of binary support.
+    std::optional<bool> read_file_range;
+};
+
+inline void to_json(json& j, const SessionFsCapabilities& c)
+{
+    j = json::object();
+    if (c.sqlite)
+        j["sqlite"] = *c.sqlite;
+    if (c.binary)
+        j["binary"] = *c.binary;
+    if (c.read_file_range)
+        j["readFileRange"] = *c.read_file_range;
+}
+
+/// Route session storage through client-provided filesystems. Each session supplies
+/// its provider via SessionStateOptions::create_session_fs_provider.
+// NODEJS REFERENCE: nodejs/src/types.ts SessionFsConfig
+struct SessionFsConfig
+{
+    /// Initial working directory for sessions (the user's project directory).
+    std::string initial_cwd;
+    /// Path within each session's SessionFs where the runtime stores session-scoped
+    /// files (events, workspace, checkpoints, etc.).
+    std::string session_state_path;
+    /// "windows" | "posix"
+    std::string conventions;
+    std::optional<SessionFsCapabilities> capabilities;
+};
+
+/// Identity of the integrating application, sent on the `connect` handshake.
+///
+/// All fields are optional; empty ones are dropped and an entirely empty struct
+/// is omitted from the handshake so the runtime keeps its default attribution.
+///
+/// The public field names deliberately differ from the wire names:
+///
+///   application_name    -> editorName
+///   application_version -> editorVersion
+///   integration_name    -> extensionName
+///   integration_version -> extensionVersion
+struct CopilotClientInfo
+{
+    std::optional<std::string> application_name;
+    std::optional<std::string> application_version;
+    std::optional<std::string> integration_name;
+    std::optional<std::string> integration_version;
+
+    /// Wire form, or nullopt when nothing usable was supplied.
+    std::optional<json> to_wire_json() const
+    {
+        json out = json::object();
+        const auto put = [&out](const char* key, const std::optional<std::string>& value)
+        {
+            if (value && !value->empty())
+                out[key] = *value;
+        };
+        put("editorName", application_name);
+        put("editorVersion", application_version);
+        put("extensionName", integration_name);
+        put("extensionVersion", integration_version);
+        if (out.empty())
+            return std::nullopt;
+        return out;
+    }
+};
+
+enum class InstallationDecision
+{
+    Confirm,
+    Decline,
+    Cancel
+};
+using InstallationConfirmationHandler =
+    std::function<InstallationDecision(const json&, const CancellationToken&)>;
+using ExtensionLaunchProvider = std::function<json(const json&, const CancellationToken&)>;
+
+/// Overrides Client::list_models() (BYOK).
+using ListModelsHandler = std::function<std::vector<ModelInfo>()>;
+
+struct ClientPluginOptions
+{
+    /// Absolute directories of built-in plugins.
+    std::optional<std::vector<std::string>> builtin_directories;
+};
+
+struct ClientExtensionOptions
+{
+    std::optional<ExtensionLaunchProvider> launch_provider;
+};
+
+struct ClientInstallationOptions
+{
+    std::optional<InstallationConfirmationHandler> confirmation_handler;
+};
+
+struct ClientObservabilityOptions
+{
+    /// Forwarded as --log-level when set.
+    std::optional<LogLevel> log_level;
+    std::optional<TelemetryConfig> telemetry;
+    std::optional<TraceContextProvider> on_get_trace_context;
+};
+
+struct ClientGitHubOptions
+{
+    /// Forwarded via COPILOT_SDK_AUTH_TOKEN + --auth-token-env.
+    std::optional<std::string> token;
+    /// Defaults to true unless token is set.
+    std::optional<bool> use_logged_in_user;
+    std::optional<GitHubTelemetryHandler> on_telemetry;
+};
+
+/// Which traffic the host's network callbacks serve.
+enum class NetworkScope
+{
+    /// Only requests made for sessions this client creates or resumes (the default).
+    Connection,
+    /// Also the runtime's shared background traffic. Only one connection at a time can
+    /// hold this scope, so startup fails if another client holds it.
+    Runtime,
+};
+
+/// Credentials for a proxy's Basic authentication challenge.
+struct NetworkBasicCredentials
+{
+    /// Must be non-empty and contain no colon or control characters.
+    std::string username;
+    /// An omitted password means an empty one.
+    std::optional<std::string> password;
+};
+
+/// Network callbacks through which the SDK host takes over parts of the runtime's
+/// networking, e.g. when the runtime runs in WSL or a container and should use the
+/// host's proxy settings and credentials. Each registered callback replaces the
+/// runtime's own handling for the traffic in `scope`.
+///
+/// Each callback receives the JSON request (`url`; `spn`; `proxy`, `realm`,
+/// `previousRejected`) and a CancellationToken that fires when the runtime stops
+/// waiting. Return std::nullopt to defer to the runtime (resolve_proxy) or to report
+/// "unavailable" (the authenticate callbacks). Never log or persist credentials.
+/// NODEJS REFERENCE: nodejs/src/types.ts NetworkConfig
+/// @experimental
+struct NetworkConfig
+{
+    std::optional<NetworkScope> scope;
+    /// Returns a PAC-style proxy list such as `PROXY proxy.example:8080; DIRECT`.
+    std::function<std::optional<std::string>(const json&, const CancellationToken&)> resolve_proxy;
+    /// Returns a fresh, single-use base64 SPNEGO token without the `Negotiate ` prefix.
+    std::function<std::optional<std::string>(const json&, const CancellationToken&)>
+        authenticate_negotiate;
+    /// Returns credentials for a proxy's Basic challenge.
+    std::function<std::optional<NetworkBasicCredentials>(const json&, const CancellationToken&)>
+        authenticate_basic;
+};
+
+/// Host-owned Entra token acquisition: receives the `EntraTokenAcquireRequest`
+/// JSON and returns the matching `EntraTokenAcquireResult` JSON. Renewal must be
+/// silent and account-pinned. The token fires when the request or connection ends.
+/// @experimental
+using EntraTokenProvider = std::function<json(const json& request, const CancellationToken&)>;
+
+/// The host application's Microsoft Entra registration, shared by its sessions.
+/// NODEJS REFERENCE: nodejs/src/types.ts EntraAuthOptions
+/// @experimental
+struct EntraAuthOptions
+{
+    /// Application (client) ID of the host's Entra registration. Must be nonblank.
+    std::string client_id;
+    /// Native OneAuth application descriptor ID; blank uses client_id.
+    std::optional<std::string> one_auth_application_id;
+    /// Application name reported to MATS telemetry; blank disables MATS telemetry.
+    std::optional<std::string> mats_app_name;
+    /// Host-owned acquisition; omission keeps the runtime's built-in authentication.
+    EntraTokenProvider token_provider;
+};
+
+struct ClientModelOptions
+{
+    ListModelsHandler on_list_models;
+    std::shared_ptr<CopilotRequestHandler> request_handler;
+};
+
+/// Options for creating a Client.
+// NODEJS REFERENCE: nodejs/src/types.ts CopilotClientOptions
+struct ClientOptions
+{
+    /// Defaults to RuntimeConnection::for_default() (in-process unless
+    /// $COPILOT_SDK_DEFAULT_CONNECTION=stdio).
+    std::optional<RuntimeConnection> runtime;
+    ClientMode mode = ClientMode::CodingAgent;
+    ClientPluginOptions plugins;
+    std::optional<SessionFsConfig> session_fs;
+    ClientExtensionOptions extensions;
+    ClientInstallationOptions installations;
+    ClientObservabilityOptions observability;
+    ClientGitHubOptions github;
+    ClientModelOptions models;
+    /// Identity declared on the `connect` handshake; see CopilotClientInfo.
+    std::optional<CopilotClientInfo> client_info;
+    /// Host-owned proxy resolution and proxy authentication. @experimental
+    std::optional<NetworkConfig> network;
+    /// Microsoft Entra registration, sent on the `connect` handshake. @experimental
+    std::optional<EntraAuthOptions> entra;
+    /// Deadline for each JSON-RPC request the client sends (default 30 s; 0 = none).
+    /// A request the runtime does not answer in time fails with JsonRpcError
+    /// (JsonRpcErrorCode::Timeout) and is removed from the pending table, so start(),
+    /// create_session(), send() etc. never block a thread indefinitely.
+    std::optional<std::chrono::milliseconds> request_timeout;
+};
 
 // =============================================================================
 // Selection Attachment Type

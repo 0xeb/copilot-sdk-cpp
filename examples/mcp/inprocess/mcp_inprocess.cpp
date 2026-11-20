@@ -195,7 +195,7 @@ int main()
         std::cout << "Creating Copilot SDK client...\n";
 
         copilot::ClientOptions client_opts;
-        client_opts.log_level = copilot::LogLevel::Info;
+        client_opts.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(client_opts);
         client.start().get();
@@ -208,11 +208,11 @@ int main()
                          std::to_string(MCP_SERVER_PORT) + "/sse";
         mcp_config.tools = {"*"}; // Expose all tools from this server
 
-        std::map<std::string, copilot::json> mcp_servers;
+        std::map<std::string, copilot::MCPServerConfig> mcp_servers;
         mcp_servers["fastmcpp-tools"] = mcp_config;
 
-        copilot::SessionConfig session_config;
-        session_config.mcp_servers = mcp_servers;
+        copilot::CreateSessionOptions session_config;
+        session_config.mcp.servers = mcp_servers;
 
         auto session = client.create_session(session_config).get();
         std::cout << "Session created: " << session->session_id() << "\n";

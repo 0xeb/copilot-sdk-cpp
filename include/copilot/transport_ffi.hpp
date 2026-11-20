@@ -37,6 +37,13 @@ class FfiTransport : public ITransport
 
     const std::string& library_path() const noexcept { return library_path_; }
 
+    /// Enable or disable routing native UI actions through `uiThread.run`.
+    // NODEJS REFERENCE: nodejs/src/ffiRuntimeHost.ts configureUiThread
+    void configure_ui_thread(bool enabled);
+    /// Execute a native UI action. Must run on the process main (UI) thread.
+    // NODEJS REFERENCE: nodejs/src/ffiRuntimeHost.ts runUiAction
+    void run_ui_action(std::uint32_t action_id);
+
     /// True once the runtime confirmed the connection closed and the library was
     /// unloaded. False after a close() where the runtime never quiesced -- the
     /// handle is then held for the life of the process on purpose, see close().
@@ -71,6 +78,8 @@ class FfiTransport : public ITransport
         std::size_t);
     using ConnectionWrite = bool (*)(std::uint32_t, const std::uint8_t*, std::size_t);
     using ConnectionClose = bool (*)(std::uint32_t);
+    using ConnectionSetUiThreadHandler = bool (*)(std::uint32_t, bool);
+    using ConnectionRunUiAction = bool (*)(std::uint32_t, std::uint32_t);
 
     static void outbound(void* user_data, const std::uint8_t* bytes, std::size_t length);
     void receive(const std::uint8_t* bytes, std::size_t length);
@@ -89,6 +98,8 @@ class FfiTransport : public ITransport
     ConnectionOpen connection_open_ = nullptr;
     ConnectionWrite connection_write_ = nullptr;
     ConnectionClose connection_close_ = nullptr;
+    ConnectionSetUiThreadHandler connection_set_ui_thread_handler_ = nullptr;
+    ConnectionRunUiAction connection_run_ui_action_ = nullptr;
     std::uint32_t server_id_ = 0;
     std::uint32_t connection_id_ = 0;
 

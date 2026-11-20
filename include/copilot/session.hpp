@@ -23,10 +23,37 @@ namespace copilot
 
 // Forward declaration
 class Client;
+class Session;
 class SessionWorkflowApi;
 
+/// UI helpers backed by `session.ui.elicitation`. Every method throws when the
+/// host has not advertised `capabilities.ui.elicitation`.
+// NODEJS REFERENCE: nodejs/src/session.ts SessionUiApi
+// C# REFERENCE: dotnet/src/Types.cs ISessionUiApi
+class SessionUiApi
+{
+  public:
+    explicit SessionUiApi(Session& session) : session_(session) {}
+
+    /// Show a dialog for an arbitrary form schema.
+    std::future<ElicitationResult> elicitation(ElicitationParams params);
+    /// Yes/no confirmation. True only when the user accepted and confirmed.
+    std::future<bool> confirm(std::string message);
+    /// Pick one of `options`; nullopt when declined or cancelled.
+    std::future<std::optional<std::string>>
+    select(std::string message, std::vector<std::string> options);
+    /// Free-text input; nullopt when declined or cancelled.
+    std::future<std::optional<std::string>>
+    input(std::string message, UiInputOptions options = {});
+
+  private:
+    Session& session_;
+};
+
+/// Runs an MCP auth handler and maps its result to the mcp.oauth.handlePendingRequest payload.
+// NODEJS REFERENCE: nodejs/src/session.ts _executeMcpAuthAndRespond
 json build_mcp_auth_response(
-    const McpAuthHandler& handler, const json& request, const std::string& session_id
+    const McpAuthHandler& handler, const McpAuthRequest& request, const std::string& session_id
 );
 
 // =============================================================================
@@ -146,9 +173,15 @@ class Session : public std::enable_shared_from_this<Session>
         return workspace_path_;
     }
 
-    const SessionCapabilities& capabilities() const noexcept
+    SessionCapabilities capabilities() const
     {
+        std::lock_guard<std::mutex> lock(capabilities_mutex_);
         return capabilities_;
+    }
+    void set_capabilities(SessionCapabilities capabilities)
+    {
+        std::lock_guard<std::mutex> lock(capabilities_mutex_);
+        capabilities_ = std::move(capabilities);
     }
     void
     set_initial_state(std::optional<std::string> workspace_path, SessionCapabilities capabilities);
@@ -170,9 +203,16 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future that completes when aborted
     std::future<void> abort();
 
-    /// Get all messages in the session
+    /// Get every event in the session history (`session.getMessages`).
     /// @return Future that resolves to list of session events
-    std::future<std::vector<SessionEvent>> get_messages();
+    // NODEJS REFERENCE: nodejs/src/session.ts getEvents
+    std::future<std::vector<SessionEvent>> get_events();
+
+    /// Get the session history as raw JSON, exactly as the runtime sent it.
+    /// Unknown fields, explicit nulls and large integers survive untouched, so the
+    /// result can be forwarded to RPCs such as taskAnalytics.classifyTrajectory.
+    /// NODEJS REFERENCE: nodejs/src/session.ts getRawEvents
+    std::future<std::vector<json>> get_raw_events();
 
     /// Send a message and wait until the session becomes idle.
     /// @param options Message options including prompt and attachments
@@ -231,11 +271,47 @@ class Session : public std::enable_shared_from_this<Session>
     void register_permission_handler(PermissionHandler handler);
     void register_permission_handler(PermissionHandlerWithContext handler);
     void register_mcp_auth_handler(McpAuthHandler handler);
-    void register_mcp_auth_handler(McpAuthResultHandler handler);
     void register_skill_provider(std::shared_ptr<SkillProvider> provider);
     json handle_skill_provider_request(
         const std::string& method, const json& params, const CancellationToken& cancellation = {}
     );
+
+    /// Slash commands dispatched from `command.execute` broadcasts.
+    void register_commands(const std::vector<CommandDefinition>& commands);
+    /// Bearer-token callbacks keyed by provider name (`providerToken.getToken`).
+    void register_bearer_token_providers(std::map<std::string, BearerTokenProvider> providers);
+    json handle_provider_token_request(const std::string& provider_name);
+    void register_shell_authentication_handler(ShellAuthenticationHandler handler);
+    /// Answer a `shellAuthentication.request`. Never throws; failures become `{action:"cancel"}`.
+    json handle_shell_authentication_request(
+        const ShellAuthenticationRequest& request, const CancellationToken& cancellation
+    );
+    void register_memory_store(MemoryStoreHandler handler);
+    /// Answer a `sessionManagement.create` request with the registered creation handler.
+    // NODEJS REFERENCE: nodejs/src/session.ts _handleSessionManagementCreate
+    json handle_session_management_create(const json& request, const CancellationToken& cancellation);
+
+    /// Section transform callbacks keyed by section id (`systemMessage.transform`).
+    void register_transform_callbacks(std::map<std::string, SectionTransformFn> callbacks);
+    /// Answer a `systemMessage.transform` request. Sections without a callback, or
+    /// whose callback throws, are returned unchanged.
+    // NODEJS REFERENCE: nodejs/src/session.ts _handleSystemMessageTransform
+    json handle_system_message_transform(const json& sections);
+
+    /// Install the `sessionFs.*` request handler (built from the session's provider).
+    void register_session_fs_handler(SessionFsHandler handler);
+    /// The installed `sessionFs.*` handler, or an empty function when none is set.
+    SessionFsHandler session_fs_handler() const;
+    void handle_memory_store_request(const json& params, const CancellationToken& cancellation);
+
+    /// Runs once when the session is retired.
+    void set_on_disconnected(std::function<void()> callback);
+    bool is_disconnected() const noexcept
+    {
+        return dispatch_stopped_.load();
+    }
+
+    /// Mark the session disconnected: stop dispatch, cancel pending work, drop callbacks.
     void retire();
     std::optional<TranscriptRecoveryReport> transcript_recovery() const
     {
@@ -245,13 +321,45 @@ class Session : public std::enable_shared_from_this<Session>
     {
         transcript_recovery_ = std::move(value);
     }
+
+    /// Permission mode the runtime applied from the create/resume `permissionMode`
+    /// option, or nullopt when none was requested or the runtime did not report it.
+    // NODEJS REFERENCE: nodejs/src/session.ts permissionModeResult
+    std::optional<generated::api::PermissionsSetModeResult> permission_mode_result() const
+    {
+        std::lock_guard<std::mutex> lock(resume_state_mutex_);
+        return permission_mode_result_;
+    }
+    void set_permission_mode_result(std::optional<generated::api::PermissionsSetModeResult> value)
+    {
+        std::lock_guard<std::mutex> lock(resume_state_mutex_);
+        permission_mode_result_ = std::move(value);
+    }
+
+    /// Canvas instances currently open in this session. Seeded from the resume
+    /// response and kept current by `session.canvas.opened`/`closed` events.
+    /// Returns a copy.
+    // NODEJS REFERENCE: nodejs/src/session.ts openCanvases
+    std::vector<generated::api::OpenCanvasInstance> open_canvases() const
+    {
+        std::lock_guard<std::mutex> lock(resume_state_mutex_);
+        return open_canvases_;
+    }
+    void set_open_canvases(std::vector<generated::api::OpenCanvasInstance> instances)
+    {
+        std::lock_guard<std::mutex> lock(resume_state_mutex_);
+        open_canvases_ = std::move(instances);
+    }
     std::future<json> send_and_wait_structured(
         MessageOptions options, std::chrono::seconds timeout = std::chrono::seconds(60)
     );
 
     /// Handle a permission request (called by Client)
     PermissionRequestResult handle_permission_request(
-        const PermissionRequest& request, std::optional<json> prompt_request = std::nullopt
+        const PermissionRequest& request,
+        std::optional<json> prompt_request = std::nullopt,
+        std::optional<json> assisted_approval_assessment = std::nullopt,
+        std::optional<std::string> program_tool_call_id = std::nullopt
     );
 
     // =========================================================================
@@ -269,11 +377,8 @@ class Session : public std::enable_shared_from_this<Session>
     // Elicitation Handling
     // =========================================================================
 
-    /// Register a handler for elicitation requests
+    /// Register a handler for elicitation requests (`elicitation.requested` broadcasts)
     void register_elicitation_handler(ElicitationHandler handler);
-
-    /// Handle an elicitation request (called by Client)
-    ElicitationResult handle_elicitation_request(const ElicitationContext& context);
 
     // =========================================================================
     // Exit Plan Mode Handling
@@ -388,15 +493,29 @@ class Session : public std::enable_shared_from_this<Session>
     std::future<void> disable_remote();
     SessionWorkflowApi workflow();
 
+    /// Elicitation-backed UI helpers (confirm/select/input).
+    SessionUiApi ui();
+
+    /// Register (or clear, with an empty function) the host's session-creation callback
+    /// and report it with `session.management.configure{hasCreateHandler}`. This does not
+    /// enable the management tool group; enable it separately via
+    /// `session.management.configure{enabled:true}`. The previous handler is restored
+    /// when the RPC fails.
+    // NODEJS REFERENCE: nodejs/src/session.ts setSessionCreationHandler
+    std::future<generated::api::SessionManagementPolicy>
+    set_session_creation_handler(SessionCreationHandler handler);
+
+    /// Write a message to the session timeline (`session.log`).
+    // NODEJS REFERENCE: nodejs/src/session.ts log
+    std::future<void> log(std::string message, LogOptions options = {});
+
     // =========================================================================
     // Model & Mode (v0.1.49 additions)
     // =========================================================================
 
     /// Options for set_model() mirroring upstream session.model.switchTo params.
-    struct SetModelOptions
-    {
-        std::optional<ReasoningEffort> reasoning_effort;
-    };
+    // C# REFERENCE: dotnet/src/Types.cs SetModelOptions
+    struct SetModelOptions;
 
     /// Switch the session to a different model mid-conversation.
     /// Calls the v3 session.model.switchTo RPC.
@@ -446,6 +565,39 @@ class Session : public std::enable_shared_from_this<Session>
     ///                  provider-default Auto routing (upstream's ResetAutoTier).
     std::future<AutoTierResult> set_auto_tier(std::optional<AutoTier> auto_tier);
 
+    /// Copilot Fusion tier, as named by the CLI's `--fusion-tier`.
+    enum class FusionTier
+    {
+        Standard,
+        High,
+        Max,
+    };
+
+    /// Change the Copilot Fusion tier without changing the selected model.
+    ///
+    /// Calls session.model.switchFusionTier. Like set_auto_tier(), the change takes
+    /// effect on a later user turn that uses the `fusion` or `auto` model; call
+    /// set_auto_tier(std::nullopt) to return to provider-default routing.
+    /// NODEJS REFERENCE: nodejs/src/session.ts setFusionTier
+    std::future<AutoTierResult> set_fusion_tier(FusionTier fusion_tier);
+
+    struct SetModelOptions
+    {
+        std::optional<ReasoningEffort> reasoning_effort;
+        /// "auto" | "concise" | "detailed" | "none"
+        std::optional<std::string> reasoning_summary;
+        /// "default" | "long_context"
+        std::optional<std::string> context_tier;
+        std::optional<ModelCapabilitiesOverride> model_capabilities;
+        /// Routing preference staged with selecting `auto`. Mutually exclusive with
+        /// reset_auto_tier and fusion_tier.
+        std::optional<AutoTier> auto_tier;
+        /// Return to provider-default Auto routing as part of the switch.
+        bool reset_auto_tier = false;
+        /// Fusion tier staged with selecting `fusion` or `auto`.
+        std::optional<FusionTier> fusion_tier;
+    };
+
     /// Agent interaction mode. Matches upstream nodejs SessionMode union.
     enum class Mode
     {
@@ -467,6 +619,11 @@ class Session : public std::enable_shared_from_this<Session>
 
   private:
     void enqueue_background(std::function<void()> task);
+    void execute_external_tool(
+        ExternalToolRequestedData request, std::optional<std::string> agent_id, Tool tool
+    );
+    bool claim_external_tool(const std::string& request_id);
+    void merge_capabilities(const json& changed);
 
     std::string session_id_;
     Client* client_;
@@ -475,13 +632,30 @@ class Session : public std::enable_shared_from_this<Session>
     std::atomic<bool> dispatch_stopped_{false};
     std::map<int, std::function<void()>> retirement_handlers_;
     std::optional<TranscriptRecoveryReport> transcript_recovery_;
+    mutable std::mutex resume_state_mutex_;
+    std::vector<generated::api::OpenCanvasInstance> open_canvases_;
+    std::optional<generated::api::PermissionsSetModeResult> permission_mode_result_;
     std::mutex set_tools_mutex_;
     mutable std::mutex callbacks_mutex_;
     std::shared_ptr<SkillProvider> skill_provider_;
-    McpAuthResultHandler mcp_auth_result_handler_;
     std::optional<std::string> workspace_path_;
+    mutable std::mutex capabilities_mutex_;
     SessionCapabilities capabilities_;
     bool managed_settings_enabled_ = false;
+    std::map<std::string, CommandHandler> commands_;
+    std::map<std::string, BearerTokenProvider> bearer_token_providers_;
+    ShellAuthenticationHandler shell_authentication_handler_;
+    MemoryStoreHandler memory_store_;
+    SessionCreationHandler session_creation_handler_;
+    std::map<uint64_t, CancellationSource> pending_session_creations_;
+    uint64_t next_session_creation_id_ = 1;
+    uint64_t session_creation_generation_ = 0;
+    std::map<std::string, SectionTransformFn> transform_callbacks_;
+    SessionFsHandler session_fs_handler_;
+    std::function<void()> on_disconnected_;
+
+    std::mutex pending_external_tools_mutex_;
+    std::map<std::string, CancellationSource> pending_external_tools_;
 
     // Event handlers
     mutable std::mutex handlers_mutex_;

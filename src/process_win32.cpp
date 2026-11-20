@@ -9,6 +9,7 @@
 
 #include <atomic>
 #include <copilot/process.hpp>
+#include <copilot/types.hpp>
 #include <thread>
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -47,7 +48,7 @@ struct ProcessHandle
     HANDLE job_handle = nullptr;
     HANDLE thread_handle = INVALID_HANDLE_VALUE;
     DWORD process_id = 0;
-    bool running = false;
+    std::atomic<bool> running{false};
     int exit_code = -1;
 
     ~ProcessHandle()
@@ -734,27 +735,37 @@ int Process::pid() const
 // Utility functions
 // =============================================================================
 
+// Non-throwing existence check. App execution aliases (e.g. WindowsApps\*.exe) are
+// reparse points that std::filesystem cannot stat, yet CreateProcessW launches them.
+static bool executable_path_exists(const std::filesystem::path& candidate)
+{
+    std::error_code ec;
+    if (std::filesystem::exists(candidate, ec))
+        return true;
+    return GetFileAttributesW(candidate.c_str()) != INVALID_FILE_ATTRIBUTES;
+}
+
 std::optional<std::string> find_executable(const std::string& name)
 {
     // Check if it's an absolute path
     if (std::filesystem::path(name).is_absolute())
     {
-        if (std::filesystem::exists(name))
+        if (executable_path_exists(name))
             return name;
         return std::nullopt;
     }
 
     // Get PATH
-    const char* path_env = std::getenv("PATH");
+    const auto path_env = detail::env_value("PATH");
     if (!path_env)
         return std::nullopt;
 
     // Get PATHEXT for Windows executable extensions
-    const char* pathext_env = std::getenv("PATHEXT");
+    const auto pathext_env = detail::env_value("PATHEXT");
     std::vector<std::string> extensions;
     if (pathext_env)
     {
-        std::string pathext(pathext_env);
+        std::string pathext(*pathext_env);
         size_t start = 0;
         size_t end;
         while ((end = pathext.find(';', start)) != std::string::npos)
@@ -770,7 +781,7 @@ std::optional<std::string> find_executable(const std::string& name)
     }
 
     // Search PATH
-    std::string path(path_env);
+    std::string path(*path_env);
     size_t start = 0;
     size_t end;
     while ((end = path.find(';', start)) != std::string::npos)
@@ -782,13 +793,13 @@ std::optional<std::string> find_executable(const std::string& name)
         for (const auto& ext : extensions)
         {
             std::filesystem::path candidate = std::filesystem::path(dir) / (name + ext);
-            if (std::filesystem::exists(candidate))
+            if (executable_path_exists(candidate))
                 return candidate.string();
         }
 
         // Try without extension (in case name already has one)
         std::filesystem::path candidate = std::filesystem::path(dir) / name;
-        if (std::filesystem::exists(candidate))
+        if (executable_path_exists(candidate))
             return candidate.string();
     }
 
@@ -797,12 +808,12 @@ std::optional<std::string> find_executable(const std::string& name)
     for (const auto& ext : extensions)
     {
         std::filesystem::path candidate = std::filesystem::path(dir) / (name + ext);
-        if (std::filesystem::exists(candidate))
+        if (executable_path_exists(candidate))
             return candidate.string();
     }
 
     std::filesystem::path candidate = std::filesystem::path(dir) / name;
-    if (std::filesystem::exists(candidate))
+    if (executable_path_exists(candidate))
         return candidate.string();
 
     return std::nullopt;

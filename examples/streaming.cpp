@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     {
         // Create client with streaming enabled
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -31,8 +31,8 @@ int main(int argc, char* argv[])
         client.start().get();
 
         // Create a streaming session
-        copilot::SessionConfig session_config;
-        session_config.streaming = true; // Enable streaming
+        copilot::CreateSessionOptions session_config;
+        session_config.events.streaming = true; // Enable streaming
 
         auto session = client.create_session(session_config).get();
         std::cout << "Session created with streaming enabled\n\n";

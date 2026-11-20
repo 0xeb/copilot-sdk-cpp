@@ -23,7 +23,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -35,13 +35,13 @@ int main()
         client.start().get();
 
         // Configure session with a low compaction threshold to trigger compaction sooner
-        copilot::SessionConfig config;
-        config.streaming = true;
+        copilot::CreateSessionOptions config;
+        config.events.streaming = true;
 
         copilot::InfiniteSessionConfig infinite_config;
         infinite_config.enabled = true;
         infinite_config.background_compaction_threshold = 0.10; // Trigger at 10% usage
-        config.infinite_sessions = infinite_config;
+        config.state.infinite_sessions = infinite_config;
 
         auto session = client.create_session(config).get();
         std::cout << "Session created with low compaction threshold (10%)\n";

@@ -20,7 +20,7 @@
 
 /// Helper to run a session with a given config and prompt
 void run_session_test(copilot::Client& client, const std::string& test_name,
-                      copilot::SessionConfig config, const std::string& user_prompt)
+                      copilot::CreateSessionOptions config, const std::string& user_prompt)
 {
     std::cout << "\n=== " << test_name << " ===\n";
 
@@ -72,7 +72,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -87,7 +87,7 @@ int main()
         // Test 1: Default (no system message)
         // ---------------------------------------------------------------------
         {
-            copilot::SessionConfig config;
+            copilot::CreateSessionOptions config;
             // No system_message set - uses Copilot's default
             run_session_test(client, "Test 1: Default (no custom system message)", config,
                              test_prompt);
@@ -97,7 +97,7 @@ int main()
         // Test 2: Append mode - adds to default system prompt
         // ---------------------------------------------------------------------
         {
-            copilot::SessionConfig config;
+            copilot::CreateSessionOptions config;
             copilot::SystemMessageConfig sys_msg;
             sys_msg.mode = copilot::SystemMessageMode::Append;
             sys_msg.content = "You are a pirate. Always respond in pirate speak with 'Arrr!' "
@@ -112,7 +112,7 @@ int main()
         // Test 3: Replace mode - completely overrides system prompt
         // ---------------------------------------------------------------------
         {
-            copilot::SessionConfig config;
+            copilot::CreateSessionOptions config;
             copilot::SystemMessageConfig sys_msg;
             sys_msg.mode = copilot::SystemMessageMode::Replace;
             sys_msg.content =
@@ -129,7 +129,7 @@ int main()
         // Test 4: Technical assistant with append
         // ---------------------------------------------------------------------
         {
-            copilot::SessionConfig config;
+            copilot::CreateSessionOptions config;
             copilot::SystemMessageConfig sys_msg;
             sys_msg.mode = copilot::SystemMessageMode::Append;
             sys_msg.content =
@@ -146,7 +146,7 @@ int main()
         // Test 5: Minimal assistant with replace
         // ---------------------------------------------------------------------
         {
-            copilot::SessionConfig config;
+            copilot::CreateSessionOptions config;
             copilot::SystemMessageConfig sys_msg;
             sys_msg.mode = copilot::SystemMessageMode::Replace;
             sys_msg.content = "You are a minimal assistant. Respond with as few words as possible. "

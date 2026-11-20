@@ -23,7 +23,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -106,8 +106,8 @@ int main()
         // Create Session with Custom Agents
         // ---------------------------------------------------------------------
 
-        copilot::SessionConfig config;
-        config.custom_agents = std::vector<copilot::CustomAgentConfig>{
+        copilot::CreateSessionOptions config;
+        config.agents.definitions = std::vector<copilot::CustomAgentConfig>{
             code_reviewer,
             doc_writer,
             test_writer,

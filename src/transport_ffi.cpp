@@ -75,6 +75,34 @@ void FfiTransport::load()
         reinterpret_cast<ConnectionWrite>(symbol("copilot_runtime_connection_write"));
     connection_close_ =
         reinterpret_cast<ConnectionClose>(symbol("copilot_runtime_connection_close"));
+    connection_set_ui_thread_handler_ = reinterpret_cast<ConnectionSetUiThreadHandler>(
+        symbol("copilot_runtime_connection_set_ui_thread_handler"));
+    connection_run_ui_action_ = reinterpret_cast<ConnectionRunUiAction>(
+        symbol("copilot_runtime_connection_run_ui_action"));
+}
+
+void FfiTransport::configure_ui_thread(bool enabled)
+{
+    std::uint32_t connection_id;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        connection_id = open_ ? connection_id_ : 0;
+    }
+    if (!connection_id || !connection_set_ui_thread_handler_(connection_id, enabled))
+        throw TransportError("Failed to configure the in-process UI dispatcher.");
+}
+
+void FfiTransport::run_ui_action(std::uint32_t action_id)
+{
+    std::uint32_t connection_id;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        connection_id = open_ ? connection_id_ : 0;
+    }
+    if (!connection_id || !connection_run_ui_action_(connection_id, action_id))
+        throw TransportError(
+            "Native UI action is retired, already executed, or not running on the process main "
+            "thread.");
 }
 
 void* FfiTransport::symbol(const char* name)

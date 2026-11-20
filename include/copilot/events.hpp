@@ -41,7 +41,6 @@ struct AssistantUsageData;
 struct AbortData;
 struct ToolUserRequestedData;
 struct ToolExecutionStartData;
-struct ToolExecutionPartialResultData;
 struct ToolExecutionCompleteData;
 struct SessionCompactionStartData;
 struct SessionCompactionCompleteData;
@@ -607,7 +606,6 @@ struct AssistantMessageData
     std::optional<std::string> chunk_content;
     std::optional<double> total_response_size_bytes;
     std::optional<std::vector<ToolRequestItem>> tool_requests;
-    std::optional<std::string> parent_tool_call_id;
     std::optional<std::string> reasoning_opaque;
     std::optional<std::string> reasoning_text;
     std::optional<std::string> encrypted_content;
@@ -625,8 +623,6 @@ inline void from_json(const json& j, AssistantMessageData& d)
         d.total_response_size_bytes = j.at("totalResponseSizeBytes").get<double>();
     if (j.contains("toolRequests"))
         d.tool_requests = j.at("toolRequests").get<std::vector<ToolRequestItem>>();
-    if (j.contains("parentToolCallId"))
-        d.parent_tool_call_id = j.at("parentToolCallId").get<std::string>();
     if (j.contains("reasoningOpaque") && !j["reasoningOpaque"].is_null())
         d.reasoning_opaque = j.at("reasoningOpaque").get<std::string>();
     if (j.contains("reasoningText") && !j["reasoningText"].is_null())
@@ -642,7 +638,6 @@ struct AssistantMessageDeltaData
     std::string message_id;
     std::string delta_content;
     std::optional<double> total_response_size_bytes;
-    std::optional<std::string> parent_tool_call_id;
 };
 
 inline void from_json(const json& j, AssistantMessageDeltaData& d)
@@ -651,8 +646,6 @@ inline void from_json(const json& j, AssistantMessageDeltaData& d)
     j.at("deltaContent").get_to(d.delta_content);
     if (j.contains("totalResponseSizeBytes"))
         d.total_response_size_bytes = j.at("totalResponseSizeBytes").get<double>();
-    if (j.contains("parentToolCallId"))
-        d.parent_tool_call_id = j.at("parentToolCallId").get<std::string>();
 }
 
 struct AssistantTurnEndData
@@ -678,7 +671,6 @@ struct AssistantUsageData
     std::optional<std::string> api_call_id;
     std::optional<std::string> provider_call_id;
     std::optional<std::map<std::string, json>> quota_snapshots;
-    std::optional<std::string> parent_tool_call_id;
 };
 
 inline void from_json(const json& j, AssistantUsageData& d)
@@ -705,8 +697,6 @@ inline void from_json(const json& j, AssistantUsageData& d)
         d.provider_call_id = j.at("providerCallId").get<std::string>();
     if (j.contains("quotaSnapshots"))
         d.quota_snapshots = j.at("quotaSnapshots").get<std::map<std::string, json>>();
-    if (j.contains("parentToolCallId") && !j["parentToolCallId"].is_null())
-        d.parent_tool_call_id = j.at("parentToolCallId").get<std::string>();
 }
 
 struct AbortData
@@ -739,7 +729,6 @@ struct ToolExecutionStartData
     std::string tool_call_id;
     std::string tool_name;
     std::optional<json> arguments;
-    std::optional<std::string> parent_tool_call_id;
     std::optional<std::string> mcp_server_name;
     std::optional<std::string> mcp_tool_name;
 };
@@ -750,24 +739,10 @@ inline void from_json(const json& j, ToolExecutionStartData& d)
     j.at("toolName").get_to(d.tool_name);
     if (j.contains("arguments"))
         d.arguments = j.at("arguments");
-    if (j.contains("parentToolCallId"))
-        d.parent_tool_call_id = j.at("parentToolCallId").get<std::string>();
     if (j.contains("mcpServerName") && !j["mcpServerName"].is_null())
         d.mcp_server_name = j.at("mcpServerName").get<std::string>();
     if (j.contains("mcpToolName") && !j["mcpToolName"].is_null())
         d.mcp_tool_name = j.at("mcpToolName").get<std::string>();
-}
-
-struct ToolExecutionPartialResultData
-{
-    std::string tool_call_id;
-    std::string partial_output;
-};
-
-inline void from_json(const json& j, ToolExecutionPartialResultData& d)
-{
-    j.at("toolCallId").get_to(d.tool_call_id);
-    j.at("partialOutput").get_to(d.partial_output);
 }
 
 struct ToolExecutionCompleteData
@@ -778,7 +753,6 @@ struct ToolExecutionCompleteData
     std::optional<ToolResultContent> result;
     std::optional<ToolExecutionError> error;
     std::optional<std::map<std::string, json>> tool_telemetry;
-    std::optional<std::string> parent_tool_call_id;
 };
 
 inline void from_json(const json& j, ToolExecutionCompleteData& d)
@@ -793,8 +767,6 @@ inline void from_json(const json& j, ToolExecutionCompleteData& d)
         d.error = j.at("error").get<ToolExecutionError>();
     if (j.contains("toolTelemetry"))
         d.tool_telemetry = j.at("toolTelemetry").get<std::map<std::string, json>>();
-    if (j.contains("parentToolCallId"))
-        d.parent_tool_call_id = j.at("parentToolCallId").get<std::string>();
 }
 
 struct ToolExecutionProgressData
@@ -1532,6 +1504,8 @@ struct PermissionRequestedData
     std::string request_id;
     json permission_request;
     std::optional<json> prompt_request;
+    std::optional<json> assisted_approval_assessment;
+    std::optional<std::string> program_tool_call_id;
     std::optional<bool> resolved_by_hook;
 };
 
@@ -1541,6 +1515,10 @@ inline void from_json(const json& j, PermissionRequestedData& d)
     d.permission_request = j.at("permissionRequest");
     if (j.contains("promptRequest"))
         d.prompt_request = j.at("promptRequest");
+    if (j.contains("assistedApprovalAssessment") && !j["assistedApprovalAssessment"].is_null())
+        d.assisted_approval_assessment = j.at("assistedApprovalAssessment");
+    if (j.contains("programToolCallId") && j["programToolCallId"].is_string())
+        d.program_tool_call_id = j.at("programToolCallId").get<std::string>();
     if (j.contains("resolvedByHook") && !j["resolvedByHook"].is_null())
         d.resolved_by_hook = j.at("resolvedByHook").get<bool>();
 }
@@ -1681,6 +1659,7 @@ struct McpOauthRequiredStaticClientConfig
     std::optional<std::string> client_secret;
     std::optional<std::string> grant_type;
     std::optional<bool> public_client;
+    std::optional<std::string> scope;
 };
 
 inline void from_json(const json& j, McpOauthRequiredStaticClientConfig& d)
@@ -1692,6 +1671,8 @@ inline void from_json(const json& j, McpOauthRequiredStaticClientConfig& d)
         d.grant_type = j.at("grantType").get<std::string>();
     if (j.contains("publicClient") && !j["publicClient"].is_null())
         d.public_client = j.at("publicClient").get<bool>();
+    if (j.contains("scope") && j["scope"].is_string())
+        d.scope = j.at("scope").get<std::string>();
 }
 
 /// Data for mcp.oauth_required event
@@ -1747,6 +1728,8 @@ struct ExternalToolRequestedData
     std::optional<json> arguments;
     std::optional<std::string> traceparent;
     std::optional<std::string> tracestate;
+    /// Whether the tool definition had an SDK handler when the request was dispatched.
+    std::optional<bool> has_handler;
 };
 
 inline void from_json(const json& j, ExternalToolRequestedData& d)
@@ -1757,6 +1740,8 @@ inline void from_json(const json& j, ExternalToolRequestedData& d)
     j.at("toolName").get_to(d.tool_name);
     if (j.contains("arguments"))
         d.arguments = j.at("arguments");
+    if (j.contains("hasHandler") && j["hasHandler"].is_boolean())
+        d.has_handler = j.at("hasHandler").get<bool>();
     if (j.contains("traceparent") && !j["traceparent"].is_null())
         d.traceparent = j.at("traceparent").get<std::string>();
     if (j.contains("tracestate") && !j["tracestate"].is_null())
@@ -1874,22 +1859,35 @@ inline void from_json(const json& j, CommandsChangedData& d)
 struct CapabilitiesChangedUI
 {
     std::optional<bool> elicitation;
+    std::optional<bool> auto_mode_recovery;
+    std::optional<bool> canvases;
+    std::optional<bool> mcp_apps;
 };
 
 inline void from_json(const json& j, CapabilitiesChangedUI& d)
 {
     if (j.contains("elicitation") && !j["elicitation"].is_null())
         d.elicitation = j.at("elicitation").get<bool>();
+    if (j.contains("autoModeRecovery") && !j["autoModeRecovery"].is_null())
+        d.auto_mode_recovery = j.at("autoModeRecovery").get<bool>();
+    if (j.contains("canvases") && !j["canvases"].is_null())
+        d.canvases = j.at("canvases").get<bool>();
+    if (j.contains("mcpApps") && !j["mcpApps"].is_null())
+        d.mcp_apps = j.at("mcpApps").get<bool>();
 }
 
 /// Data for capabilities.changed event
 struct CapabilitiesChangedData
 {
     std::optional<CapabilitiesChangedUI> ui;
+    /// Full payload, so capability keys not modelled above still merge into the session.
+    json raw = json::object();
 };
 
 inline void from_json(const json& j, CapabilitiesChangedData& d)
 {
+    if (j.is_object())
+        d.raw = j;
     if (j.contains("ui") && !j["ui"].is_null())
         d.ui = j.at("ui").get<CapabilitiesChangedUI>();
 }
@@ -3042,7 +3040,6 @@ enum class SessionEventType
     Abort,
     ToolUserRequested,
     ToolExecutionStart,
-    ToolExecutionPartialResult,
     ToolExecutionComplete,
     ToolExecutionProgress,
     SessionCompactionStart,
@@ -3188,6 +3185,23 @@ enum class SessionEventType
     SessionRequestBodyCompressionDisabled,
     SessionUsageRecord,
     ToolShellOutput,
+    // Added with the @github/copilot 1.0.115-0 re-pin (upstream b2cbce97).
+    IdeConnectionChanged,
+    IdeSelectionChanged,
+    IdeAddFileReference,
+    IdeElicitationComplete,
+    SessionJournalLink,
+    SessionCompactionSummarized,
+    SessionToolOutcomesRecorded,
+    ProgramToolExecutionStart,
+    ProgramExecution,
+    ProgramToolExecutionComplete,
+    ProgramPermissionRequested,
+    InstructionUpdate,
+    InstructionUpdateDelivery,
+    AutoModeRecoveryConsentRequested,
+    AutoModeRecoveryConsentCompleted,
+    AutoModeRecoveryOutcome,
     Unknown
 };
 
@@ -3214,7 +3228,6 @@ using SessionEventData = std::variant<
     AbortData,
     ToolUserRequestedData,
     ToolExecutionStartData,
-    ToolExecutionPartialResultData,
     ToolExecutionCompleteData,
     ToolExecutionProgressData,
     SessionCompactionStartData,
@@ -3405,7 +3418,6 @@ inline SessionEvent parse_session_event(const json& j)
         {"abort", SessionEventType::Abort},
         {"tool.user_requested", SessionEventType::ToolUserRequested},
         {"tool.execution_start", SessionEventType::ToolExecutionStart},
-        {"tool.execution_partial_result", SessionEventType::ToolExecutionPartialResult},
         {"tool.execution_complete", SessionEventType::ToolExecutionComplete},
         {"tool.execution_progress", SessionEventType::ToolExecutionProgress},
         {"session.compaction_start", SessionEventType::SessionCompactionStart},
@@ -3561,6 +3573,25 @@ inline SessionEvent parse_session_event(const json& j)
          SessionEventType::SessionRequestBodyCompressionDisabled},
         {"session.usage_record", SessionEventType::SessionUsageRecord},
         {"tool.shell_output", SessionEventType::ToolShellOutput},
+        // @github/copilot 1.0.115-0 (upstream b2cbce97). Payloads stay raw json.
+        {"ide.connection_changed", SessionEventType::IdeConnectionChanged},
+        {"ide.selection_changed", SessionEventType::IdeSelectionChanged},
+        {"ide.add_file_reference", SessionEventType::IdeAddFileReference},
+        {"ide.elicitation_complete", SessionEventType::IdeElicitationComplete},
+        {"session.journal_link", SessionEventType::SessionJournalLink},
+        {"session.compaction_summarized", SessionEventType::SessionCompactionSummarized},
+        {"session.tool_outcomes_recorded", SessionEventType::SessionToolOutcomesRecorded},
+        {"program.tool_execution_start", SessionEventType::ProgramToolExecutionStart},
+        {"program.execution", SessionEventType::ProgramExecution},
+        {"program.tool_execution_complete", SessionEventType::ProgramToolExecutionComplete},
+        {"program.permission_requested", SessionEventType::ProgramPermissionRequested},
+        {"instruction.update", SessionEventType::InstructionUpdate},
+        {"instruction.update_delivery", SessionEventType::InstructionUpdateDelivery},
+        {"auto_mode_recovery_consent.requested",
+         SessionEventType::AutoModeRecoveryConsentRequested},
+        {"auto_mode_recovery_consent.completed",
+         SessionEventType::AutoModeRecoveryConsentCompleted},
+        {"auto_mode_recovery.outcome", SessionEventType::AutoModeRecoveryOutcome},
     };
 
     auto it = type_map.find(event.type_string);
@@ -3635,9 +3666,6 @@ inline SessionEvent parse_session_event(const json& j)
                 break;
             case SessionEventType::ToolExecutionStart:
                 event.data = data_json.get<ToolExecutionStartData>();
-                break;
-            case SessionEventType::ToolExecutionPartialResult:
-                event.data = data_json.get<ToolExecutionPartialResultData>();
                 break;
             case SessionEventType::ToolExecutionComplete:
                 event.data = data_json.get<ToolExecutionCompleteData>();

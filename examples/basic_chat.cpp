@@ -12,9 +12,9 @@ int main()
 {
     try
     {
-        // Create client with default options (uses stdio transport)
+        // Default runtime: in-process (set COPILOT_SDK_DEFAULT_CONNECTION=stdio to spawn the CLI)
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -23,7 +23,7 @@ int main()
         std::cout << "Connected!\n";
 
         // Create a session
-        copilot::SessionConfig session_config;
+        copilot::CreateSessionOptions session_config;
         session_config.model = "gpt-4"; // Optional: specify model
 
         auto session = client.create_session(session_config).get();

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <copilot/cancellation.hpp>
 #include <copilot/canvas.hpp>
 #include <copilot/client.hpp>
 #include <copilot/request_handler.hpp>
@@ -12,17 +13,16 @@
 #include <copilot/transport_ffi.hpp>
 #include <copilot/workflow.hpp>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <random>
 #include <regex>
+#include <set>
 #include <thread>
 
 namespace copilot
 {
-
-// =============================================================================
-// Request Builder Helpers (exposed for unit testing)
-// =============================================================================
 
 namespace
 {
@@ -59,529 +59,354 @@ struct ScopeExit
     }
 };
 
-json serialize_tool(const Tool& tool)
+constexpr auto kCleanupTimeout = std::chrono::seconds(10);
+
+bool is_ipv6_literal(const std::string& host)
 {
-    json result{{"name", tool.name}, {"description", tool.description}};
-    if (!tool.parameters_schema.is_null())
-        result["parameters"] = tool.parameters_schema;
-    if (tool.overrides_built_in_tool)
-        result["overridesBuiltInTool"] = true;
-    if (tool.skip_permission)
-        result["skipPermission"] = true;
-    if (tool.defer)
-        result["defer"] = *tool.defer;
-    if (tool.metadata)
-        result["metadata"] = *tool.metadata;
-    if (tool.is_terminal)
-        result["isTerminal"] = true;
-    if (tool.tool_namespace)
-        result["namespace"] = *tool.tool_namespace;
-    return result;
+    if (host.find(':') == std::string::npos)
+        return false;
+    return std::all_of(
+        host.begin(),
+        host.end(),
+        [](unsigned char ch) { return std::isxdigit(ch) || ch == ':' || ch == '.'; }
+    );
 }
 
-void validate_tool_filters(const std::string& name, const std::vector<std::string>& filters)
+// NODEJS REFERENCE: client.ts constructor (tcp host validation)
+bool is_valid_tcp_host(const std::string& host)
 {
-    for (const auto& filter : filters)
-        if (filter == "*")
-            throw std::invalid_argument(
-                name + " does not accept bare '*'; use builtin:*, mcp:*, or custom:*"
-            );
+    if (host.empty())
+        return false;
+    for (unsigned char ch : host)
+    {
+        if (std::isspace(ch) || std::strchr("/\\?#@[]", static_cast<char>(ch)))
+            return false;
+    }
+    return host.find(':') == std::string::npos || is_ipv6_literal(host);
 }
 
-template <typename Config>
-void append_session_config(json& request, const Config& config, ClientMode mode)
+bool starts_with_icase(const std::string& value, const std::string& prefix)
 {
-    auto copy = [&](const char* key, const auto& value)
+    if (value.size() < prefix.size())
+        return false;
+    for (std::size_t i = 0; i < prefix.size(); ++i)
     {
-        if (value)
-            request[key] = *value;
-    };
-
-    if (config.model)
-        request["model"] = *config.model;
-    else if (config.auto_byok_from_env)
-        if (auto value = ProviderConfig::model_from_env())
-            request["model"] = *value;
-
-    // C# REFERENCE: dotnet/src/Client.cs CreateSessionAsync / ResumeSessionAsync.
-    copy("diagnostics", config.diagnostics);
-    copy("agentDirectories", config.agent_directories);
-    copy("hookDirectories", config.hook_directories);
-    copy("enforceManagedModelDefaults", config.enforce_managed_model_defaults);
-    copy("interactiveUser", config.interactive_user);
-    copy("imageGeneration", config.image_generation);
-    copy("sandboxConfig", config.sandbox_config);
-    copy("autopilot", config.autopilot);
-    if (config.skill_provider)
-        request["hasSkillProvider"] = true;
-    copy("clientName", config.client_name);
-    copy("reasoningEffort", config.reasoning_effort);
-    copy("reasoningSummary", config.reasoning_summary);
-    copy("contextTier", config.context_tier);
-    copy("modelCapabilities", config.model_capabilities);
-    copy("largeOutput", config.large_output);
-    copy("systemMessage", config.system_message);
-    copy("toolSearch", config.tool_search);
-    copy("canvases", config.canvases);
-    if (!config.canvas_objects.empty())
-    {
-        if (!request.contains("canvases"))
-            request["canvases"] = json::array();
-        for (const auto& canvas : config.canvas_objects)
-            if (canvas)
-                request["canvases"].push_back(canvas->declaration());
+        if (std::tolower(static_cast<unsigned char>(value[i])) !=
+            std::tolower(static_cast<unsigned char>(prefix[i])))
+            return false;
     }
-    copy("requestCanvasRenderer", config.request_canvas_renderer);
-    copy("requestExtensions", config.request_extensions);
-    copy("extensionSdkPath", config.extension_sdk_path);
-    copy("extensionInfo", config.extension_info);
-    copy("canvasProvider", config.canvas_provider);
-    copy("commands", config.commands);
+    return true;
+}
 
-    if (!config.tools.empty())
-    {
-        json tool_defs = json::array();
-        for (const auto& tool : config.tools)
-            tool_defs.push_back(serialize_tool(tool));
-        request["tools"] = tool_defs;
-    }
+bool is_abbreviated_uuid_prefix(const std::string& session_id)
+{
+    static const std::regex pattern("^[0-9a-f]{7}[0-9a-f-]{0,28}$", std::regex::icase);
+    return std::regex_match(session_id, pattern);
+}
 
-    std::optional<std::vector<std::string>> available = config.available_tools;
-    std::optional<std::vector<std::string>> excluded = config.excluded_tools;
-    if (config.available_tool_set)
-        available = config.available_tool_set->to_vector();
-    if (config.excluded_tool_set)
-        excluded = config.excluded_tool_set->to_vector();
-    if (available)
+bool is_uuid_session_id(const std::string& session_id)
+{
+    static const std::regex pattern(
+        "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", std::regex::icase
+    );
+    return is_abbreviated_uuid_prefix(session_id) || std::regex_match(session_id, pattern);
+}
+
+// NODEJS REFERENCE: client.ts sessionIdsOverlap
+bool session_ids_overlap(const std::string& left, const std::string& right)
+{
+    if (left == right)
+        return true;
+    if (!is_uuid_session_id(left) || !is_uuid_session_id(right))
+        return false;
+    return starts_with_icase(left, right) || starts_with_icase(right, left);
+}
+
+std::optional<std::string> string_field(const json& object, const char* key)
+{
+    if (object.is_object() && object.contains(key) && object[key].is_string())
+        return object[key].get<std::string>();
+    return std::nullopt;
+}
+
+SessionCapabilities capabilities_of(const json& response)
+{
+    if (response.contains("capabilities") && !response["capabilities"].is_null())
+        return response["capabilities"].get<SessionCapabilities>();
+    return SessionCapabilities{};
+}
+
+// Handler registration shared by create and resume, in the upstream order.
+// NODEJS REFERENCE: client.ts createSession / resumeSession handler registration
+template <typename Options>
+void register_initial_handlers(Session& session, const Options& options)
+{
+    session.register_tools(options.tools.definitions);
+    session.register_canvases(options.canvases.definitions);
+    session.register_commands(options.interaction.commands);
+    if (options.inference.providers)
     {
-        validate_tool_filters("available_tools", *available);
-        request["availableTools"] = *available;
+        std::map<std::string, BearerTokenProvider> providers;
+        for (const auto& provider : *options.inference.providers)
+            if (provider.bearer_token_provider)
+                providers[provider.name] = provider.bearer_token_provider;
+        if (!providers.empty())
+            session.register_bearer_token_providers(std::move(providers));
     }
-    else if (mode == ClientMode::Empty)
-    {
-        throw std::invalid_argument(
-            "ClientMode::Empty requires an explicit available_tools or available_tool_set"
+    if (options.permissions.on_request_with_context)
+        session.register_permission_handler(options.permissions.on_request_with_context);
+    else if (options.permissions.on_request)
+        session.register_permission_handler(options.permissions.on_request);
+    if (options.interaction.on_user_input_request)
+        session.register_user_input_handler(options.interaction.on_user_input_request);
+    if (options.interaction.on_shell_authentication_request)
+        session.register_shell_authentication_handler(
+            options.interaction.on_shell_authentication_request
         );
-    }
-    if (excluded)
+    if (options.interaction.on_elicitation_request)
+        session.register_elicitation_handler(options.interaction.on_elicitation_request);
+    if (options.interaction.on_exit_plan_mode_request)
+        session.register_exit_plan_mode_handler(options.interaction.on_exit_plan_mode_request);
+    if (options.interaction.on_auto_mode_switch_request)
+        session.register_auto_mode_switch_handler(options.interaction.on_auto_mode_switch_request);
+    if (options.hooks.handlers)
+        session.register_hooks(*options.hooks.handlers);
+    if (options.skills.provider)
+        session.register_skill_provider(options.skills.provider);
+    if (options.mcp.on_auth_request)
+        session.register_mcp_auth_handler(options.mcp.on_auth_request);
+    if (options.state.memory && options.state.memory->store_memory)
+        session.register_memory_store(options.state.memory->store_memory);
+    // NODEJS REFERENCE: client.ts extractTransformCallbacks
+    if (options.system_message && options.system_message->sections)
     {
-        validate_tool_filters("excluded_tools", *excluded);
-        request["excludedTools"] = *excluded;
+        std::map<std::string, SectionTransformFn> transforms;
+        for (const auto& [section_id, section] : *options.system_message->sections)
+            if (section.transform)
+                transforms[section_id] = section.transform;
+        if (!transforms.empty())
+            session.register_transform_callbacks(std::move(transforms));
     }
-    request["toolFilterPrecedence"] = "excluded";
+    if (options.events.on_event)
+        session.register_persistent_event_handler(options.events.on_event);
+}
 
-    if (config.streaming)
-        request["streaming"] = true;
-    request["includeSubAgentStreamingEvents"] =
-        config.include_sub_agent_streaming_events.value_or(true);
+template <typename Options>
+bool has_mcp_auth_handler(const Options& options)
+{
+    return static_cast<bool>(options.mcp.on_auth_request);
+}
 
-    if (config.provider)
-        request["provider"] = *config.provider;
-    else if (config.auto_byok_from_env)
-        if (auto value = ProviderConfig::from_env())
-            request["provider"] = *value;
+template <typename Options>
+bool managed_settings_enabled(const Options& options)
+{
+    return options.github.fetch_managed_settings.value_or(false) ||
+           options.policy.managed_settings.has_value();
+}
 
-    copy("capi", config.capi);
-    copy("providers", config.providers);
-    copy("models", config.models);
-    copy("featureFlags", config.feature_flags);
-    copy("authClientIdMetadataUrl", config.auth_client_id_metadata_url);
-    copy("enableSessionTelemetry", config.enable_session_telemetry);
-    copy("enableCitations", config.enable_citations);
-    copy("enableFileChangeTracking", config.enable_file_change_tracking);
-    copy("sessionLimits", config.session_limits);
-    copy("excludedBuiltinAgents", config.excluded_builtin_agents);
-    copy("workingDirectory", config.working_directory);
-    copy("additionalDirectories", config.additional_directories);
-    copy("mcpServers", config.mcp_servers);
-    copy("mcpOAuthTokenStorage", config.mcp_oauth_token_storage);
-    copy("customAgents", config.custom_agents);
-    copy("customAgentsLocalOnly", config.custom_agents_local_only);
-    copy("defaultAgent", config.default_agent);
-    copy("agent", config.agent);
-    copy("configDir", config.config_dir);
-    copy("enableConfigDiscovery", config.enable_config_discovery);
-    copy("skipEmbeddingRetrieval", config.skip_embedding_retrieval);
-    copy("embeddingCacheStorage", config.embedding_cache_storage);
-    copy("organizationCustomInstructions", config.organization_custom_instructions);
-    copy("enableOnDemandInstructionDiscovery", config.enable_on_demand_instruction_discovery);
-    copy("enableFileHooks", config.enable_file_hooks);
-    copy("enableHostGitOperations", config.enable_host_git_operations);
-    copy("enableSessionStore", config.enable_session_store);
-    copy("enableSkills", config.enable_skills);
-    copy("skillDirectories", config.skill_directories);
-    copy("pluginDirectories", config.plugin_directories);
-    copy("instructionDirectories", config.instruction_directories);
-    copy("disabledSkills", config.disabled_skills);
-    copy("disabledMcpServers", config.disabled_mcp_servers);
-    copy("infiniteSessions", config.infinite_sessions);
-    copy("memory", config.memory);
-    copy("gitHubToken", config.github_token);
-    copy("remoteSession", config.remote_session);
-    copy("expAssignments", config.exp_assignments);
-    copy("enableManagedSettings", config.enable_managed_settings);
-    copy("managedSettings", config.managed_settings);
-    copy("skipCustomInstructions", config.skip_custom_instructions);
-    copy("coauthorEnabled", config.coauthor_enabled);
-    copy("manageScheduleEnabled", config.manage_schedule_enabled);
+void register_mcp_oauth_interest(
+    const std::shared_ptr<JsonRpcClient>& connection, const std::string& session_id
+)
+{
+    connection
+        ->invoke(
+            "session.eventLog.registerInterest",
+            json{{"sessionId", session_id}, {"eventType", "mcp.oauth_required"}}
+        )
+        .get();
+}
 
-    if (config.enable_mcp_apps.value_or(false))
-        request["requestMcpApps"] = true;
-    copy("githubMcpToolConfig", config.github_mcp_tool_config);
-
-    request["requestPermission"] = config.on_permission_request.has_value() ||
-                                   config.on_permission_request_with_context.has_value();
-    request["requestUserInput"] = config.on_user_input_request.has_value();
-    request["requestElicitation"] = config.on_elicitation_request.has_value();
-    request["requestExitPlanMode"] = config.on_exit_plan_mode.has_value();
-    request["requestAutoModeSwitch"] = config.on_auto_mode_switch.has_value();
-    request["hooks"] = config.hooks.has_value() && config.hooks->has_any();
-    request["envValueMode"] = "direct";
-
-    if (config.enable_experimental_mode)
-        request["isExperimentalMode"] = *config.enable_experimental_mode;
-    else if (mode == ClientMode::Empty)
-        request["isExperimentalMode"] = false;
-
-    if (mode == ClientMode::Empty)
+// Best-effort session.options.update after create/resume; disconnects the session on failure.
+// NODEJS REFERENCE: client.ts updateSessionOptionsForMode
+template <typename Options>
+void apply_options_update(Session& session, const Options& options, ClientMode mode)
+{
+    auto patch = build_session_options_update(options, mode);
+    if (!patch)
+        return;
+    try
     {
-        if (!config.enable_session_telemetry)
-            request["enableSessionTelemetry"] = false;
-        if (!config.mcp_oauth_token_storage)
-            request["mcpOAuthTokenStorage"] = "in-memory";
-        if (!config.skip_embedding_retrieval)
-            request["skipEmbeddingRetrieval"] = true;
-        if (!config.embedding_cache_storage)
-            request["embeddingCacheStorage"] = "in-memory";
-        if (!config.enable_on_demand_instruction_discovery)
-            request["enableOnDemandInstructionDiscovery"] = false;
-        if (!config.enable_file_hooks)
-            request["enableFileHooks"] = false;
-        if (!config.enable_host_git_operations)
-            request["enableHostGitOperations"] = false;
-        if (!config.enable_session_store)
-            request["enableSessionStore"] = false;
-        if (!config.enable_skills)
-            request["enableSkills"] = false;
-        if (!config.memory)
-            request["memory"] = json{{"enabled", false}};
-        if (!config.custom_agents_local_only)
-            request["customAgentsLocalOnly"] = true;
-        if (!config.skip_custom_instructions)
-            request["skipCustomInstructions"] = true;
-        if (!config.coauthor_enabled)
-            request["coauthorEnabled"] = false;
-        if (!config.manage_schedule_enabled)
-            request["manageScheduleEnabled"] = false;
+        session.invoke("session.options.update", std::move(*patch)).get();
+    }
+    catch (...)
+    {
+        try
+        {
+            session.disconnect().get();
+        }
+        catch (...)
+        {
+        }
+        throw;
+    }
+}
+
+void detach_quietly(const std::shared_ptr<JsonRpcClient>& connection, const std::string& session_id)
+{
+    try
+    {
+        connection->invoke(
+            copilot::rpc::methods::kSessionDetach, json{{"sessionId", session_id}}, kCleanupTimeout
+        )
+            .get();
+    }
+    catch (...)
+    {
+    }
+}
+
+void apply_granted_environment(
+    const json& response, const std::optional<std::vector<std::string>>& requested
+)
+{
+    if (!requested || !response.contains("grantedEnvironmentVariables") ||
+        !response["grantedEnvironmentVariables"].is_object())
+        return;
+    const auto& granted = response["grantedEnvironmentVariables"];
+    for (const auto& name : *requested)
+    {
+        if (!granted.contains(name) || !granted[name].is_string())
+            continue;
+        const auto value = granted[name].get<std::string>();
+#ifdef _WIN32
+        _putenv_s(name.c_str(), value.c_str());
+#else
+        setenv(name.c_str(), value.c_str(), 1);
+#endif
     }
 }
 
 } // namespace
 
-json build_tool_definition(const Tool& tool)
-{
-    return serialize_tool(tool);
-}
-
-json build_session_create_request(const SessionConfig& config, ClientMode mode)
-{
-    json request = json::object();
-    append_session_config(request, config, mode);
-    if (config.refresh_custom_instructions)
-        request["refreshCustomInstructions"] = *config.refresh_custom_instructions;
-    if (config.name)
-        request["name"] = *config.name;
-    if (config.trust_working_directory)
-        request["trustWorkingDirectory"] = *config.trust_working_directory;
-    if (config.skill_provider && config.cloud.value_or(false))
-        throw std::invalid_argument("Skill providers are not supported for cloud sessions");
-    if (config.session_id)
-        request["sessionId"] = *config.session_id;
-    if (config.cloud)
-        request["cloud"] = *config.cloud;
-    return request;
-}
-
-json build_session_resume_request(
-    const std::string& session_id, const ResumeSessionConfig& config, ClientMode mode
-)
-{
-    json request{{"sessionId", session_id}};
-    append_session_config(request, config, mode);
-    if (config.allow_transcript_recovery)
-        request["allowTranscriptRecovery"] = *config.allow_transcript_recovery;
-    if (config.disable_resume)
-        request["disableResume"] = true;
-    if (config.continue_pending_work)
-        request["continuePendingWork"] = true;
-    if (config.open_canvases)
-        request["openCanvases"] = *config.open_canvases;
-    if (!config.workflow_objects.empty())
-    {
-        request["workflows"] = json::array();
-        for (const auto& workflow : config.workflow_objects)
-            if (workflow)
-                request["workflows"].push_back(workflow->meta);
-    }
-    else if (config.workflows)
-    {
-        request["workflows"] = *config.workflows;
-    }
-    if (config.requested_environment_variables)
-        request["requestedEnvironmentVariables"] = *config.requested_environment_variables;
-    return request;
-}
-
 // =============================================================================
-// CLI Process Launch Helpers (exposed for unit testing)
+// Client Implementation
 // =============================================================================
 
-std::vector<std::string> build_cli_command_args(const ClientOptions& options)
-{
-    std::vector<std::string> args;
-    const auto connection_args = options.connection && options.connection->args
-                                     ? options.connection->args
-                                     : options.cli_args;
-    if (connection_args)
-        args.insert(args.end(), connection_args->begin(), connection_args->end());
-    args.push_back("--server");
-    args.push_back("--log-level");
-    args.push_back(json(options.log_level).get<std::string>());
-
-    const auto kind = options.connection ? options.connection->kind
-                                         : (options.use_stdio ? RuntimeConnectionKind::Stdio
-                                                              : RuntimeConnectionKind::Tcp);
-    if (kind == RuntimeConnectionKind::Stdio)
-    {
-        args.push_back("--stdio");
-    }
-    else if (kind == RuntimeConnectionKind::Tcp)
-    {
-        const int port = options.connection && options.connection->port ? *options.connection->port
-                                                                        : options.port;
-        if (port > 0)
-        {
-            args.push_back("--port");
-            args.push_back(std::to_string(port));
-        }
-    }
-
-    // Session idle timeout (forwarded as CLI flag; ignored by server when 0/absent).
-    if (options.session_idle_timeout_seconds.has_value() &&
-        *options.session_idle_timeout_seconds > 0)
-    {
-        args.push_back("--session-idle-timeout");
-        args.push_back(std::to_string(*options.session_idle_timeout_seconds));
-    }
-
-    // Remote session support (Mission Control integration).
-    if (options.remote)
-        args.push_back("--remote");
-
-    return args;
-}
-
-std::map<std::string, std::string> build_cli_environment(const ClientOptions& options)
-{
-    std::map<std::string, std::string> env;
-    if (options.connection && options.connection->environment)
-        env = *options.connection->environment;
-    else if (options.environment.has_value())
-        env = *options.environment;
-
-    // C# REFERENCE: dotnet/src/Client.cs BuildCliEnvironment.
-    if (options.mode == ClientMode::Empty)
-        env["COPILOT_DISABLE_KEYTAR"] = "1";
-    else
-        env["COPILOT_RUNTIME_PROCESS_FILE_LOGGING"] = "1";
-
-    // Remove NODE_DEBUG to avoid debug output interfering with JSON-RPC.
-    env.erase("NODE_DEBUG");
-
-    if (options.github_token.has_value())
-        env["COPILOT_SDK_AUTH_TOKEN"] = *options.github_token;
-
-    const auto connection_token = options.connection && options.connection->connection_token
-                                      ? options.connection->connection_token
-                                      : options.tcp_connection_token;
-    if (connection_token)
-        env["COPILOT_CONNECTION_TOKEN"] = *connection_token;
-
-    const auto home = options.base_directory ? options.base_directory : options.copilot_home;
-    if (home)
-        env["COPILOT_HOME"] = *home;
-
-    if (options.telemetry)
-    {
-        const auto& telemetry = *options.telemetry;
-        if (telemetry.otlp_endpoint)
-            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = *telemetry.otlp_endpoint;
-        if (telemetry.otlp_protocol)
-            env["OTEL_EXPORTER_OTLP_PROTOCOL"] = *telemetry.otlp_protocol;
-        if (telemetry.file_path)
-            env["COPILOT_OTEL_FILE_EXPORTER_PATH"] = *telemetry.file_path;
-        if (telemetry.exporter_type)
-            env["COPILOT_OTEL_EXPORTER_TYPE"] = *telemetry.exporter_type;
-        if (telemetry.source_name)
-            env["COPILOT_OTEL_SOURCE_NAME"] = *telemetry.source_name;
-        if (telemetry.capture_content)
-        {
-            env["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] =
-                *telemetry.capture_content ? "true" : "false";
-        }
-    }
-
-    return env;
-}
-
-// =============================================================================
-// Constructor / Destructor
-// =============================================================================
-
+// NODEJS REFERENCE: client.ts constructor
 Client::Client(ClientOptions options) : options_(std::move(options))
 {
-    if (options_.working_directory && !options_.cwd)
-        options_.cwd = options_.working_directory;
-    if (options_.base_directory && !options_.copilot_home)
-        options_.copilot_home = options_.base_directory;
-    if (options_.enable_remote_sessions)
-        options_.remote = *options_.enable_remote_sessions;
+    runtime_ = options_.runtime ? *options_.runtime : RuntimeConnection::for_default();
+    const auto kind = runtime_.kind;
+    const bool attached =
+        kind == RuntimeConnectionKind::Tcp || kind == RuntimeConnectionKind::ParentProcess;
 
-    // A token provider is addressed by an opaque registration id that the caller installs
-    // with the runtime as a `token-provider` AuthInfo; mint it once per client.
-    if (options_.github_token_provider)
-        github_token_registration_id_ = generate_uuid_v4();
-
-    if (options_.builtin_plugin_directories)
+    if (attached)
     {
-        for (const auto& path : *options_.builtin_plugin_directories)
+        std::vector<std::string> unsupported;
+        if (runtime_.base_directory)
+            unsupported.push_back("runtime.baseDirectory");
+        if (options_.github.token)
+            unsupported.push_back("github.token");
+        if (options_.github.use_logged_in_user)
+            unsupported.push_back("github.useLoggedInUser");
+        if (options_.observability.telemetry)
+            unsupported.push_back("observability.telemetry");
+        if (runtime_.session_idle_timeout_seconds)
+            unsupported.push_back("runtime.sessionIdleTimeoutSeconds");
+        if (!unsupported.empty())
+        {
+            std::string names;
+            for (const auto& name : unsupported)
+                names += (names.empty() ? "" : ", ") + name;
+            throw std::invalid_argument(
+                "Cannot configure runtime startup options for an attached runtime: " + names
+            );
+        }
+    }
+    if (kind == RuntimeConnectionKind::InProcess && runtime_.environment)
+    {
+        throw std::invalid_argument(
+            "env is not supported with RuntimeConnection.forInProcess(): environment variables "
+            "belong to the shared host process. Use typed client/session options or a "
+            "child-process transport."
+        );
+    }
+    if (kind == RuntimeConnectionKind::InProcess && runtime_.working_directory)
+    {
+        throw std::invalid_argument(
+            "workingDirectory is not supported with RuntimeConnection.forInProcess(): the "
+            "in-process transport hosts the runtime in this process, so honoring it would require "
+            "mutating the shared process-global cwd. Set CreateSessionOptions.workingDirectory "
+            "instead."
+        );
+    }
+    if (kind == RuntimeConnectionKind::SpawnedTcp && runtime_.connection_token &&
+        runtime_.connection_token->empty())
+        throw std::invalid_argument("connectionToken must be a non-empty string");
+
+    // NODEJS REFERENCE: client.ts validateSessionFsConfig
+    if (options_.session_fs)
+    {
+        const auto& fs = *options_.session_fs;
+        if (fs.initial_cwd.empty())
+            throw std::invalid_argument("sessionFs.initialCwd is required");
+        if (fs.session_state_path.empty())
+            throw std::invalid_argument("sessionFs.sessionStatePath is required");
+        if (fs.conventions != "windows" && fs.conventions != "posix")
+            throw std::invalid_argument("sessionFs.conventions must be either 'windows' or 'posix'");
+    }
+    if (options_.plugins.builtin_directories)
+    {
+        for (const auto& path : *options_.plugins.builtin_directories)
+        {
             if (!std::filesystem::path(path).is_absolute())
                 throw std::invalid_argument(
-                    "builtin_plugin_directories must contain only absolute paths"
+                    "builtinPluginDirectories must contain only absolute paths: " + path
                 );
-    }
-
-    if (options_.mode == ClientMode::Empty && !options_.base_directory && !options_.copilot_home &&
-        !options_.session_fs)
-    {
-        throw std::invalid_argument("ClientMode::Empty requires base_directory or session_fs");
-    }
-
-    if (options_.session_fs && options_.session_fs->conventions != "windows" &&
-        options_.session_fs->conventions != "posix")
-    {
-        throw std::invalid_argument("session_fs.conventions must be 'windows' or 'posix'");
-    }
-
-    if (options_.connection)
-    {
-        const auto& connection = *options_.connection;
-        if (connection.environment && options_.environment)
-            throw std::invalid_argument(
-                "connection.environment cannot be combined with ClientOptions::environment"
-            );
-        switch (connection.kind)
-        {
-        case RuntimeConnectionKind::Stdio:
-            options_.use_stdio = true;
-            options_.cli_path = connection.path;
-            options_.cli_args = connection.args;
-            if (connection.environment)
-                options_.environment = connection.environment;
-            break;
-        case RuntimeConnectionKind::Tcp:
-            options_.use_stdio = false;
-            options_.port = connection.port.value_or(0);
-            options_.tcp_connection_token = connection.connection_token;
-            options_.cli_path = connection.path;
-            options_.cli_args = connection.args;
-            if (connection.environment)
-                options_.environment = connection.environment;
-            break;
-        case RuntimeConnectionKind::Uri:
-            options_.use_stdio = false;
-            options_.cli_url = connection.url;
-            options_.tcp_connection_token = connection.connection_token;
-            break;
-        case RuntimeConnectionKind::InProcess:
-            options_.use_stdio = false;
-            options_.cli_path = connection.path;
-            if (options_.working_directory || options_.environment || options_.telemetry)
-                throw std::invalid_argument(
-                    "in-process runtime does not support working_directory, environment, "
-                    "or telemetry options"
-                );
-            break;
-        case RuntimeConnectionKind::ParentProcess:
-            options_.use_stdio = true;
-            break;
         }
     }
 
-    // Validate mutually exclusive options
-    if (options_.cli_url.has_value() && (options_.use_stdio || options_.cli_path.has_value()))
-        throw std::invalid_argument("cli_url is mutually exclusive with use_stdio and cli_path");
-
-    // Validate auth options with external server
-    if (options_.cli_url.has_value())
+    if (kind == RuntimeConnectionKind::Tcp)
     {
-        if (options_.github_token.has_value())
-            throw std::invalid_argument("github_token cannot be used with cli_url "
-                                        "(external server manages its own auth)");
-        if (options_.use_logged_in_user.has_value())
-            throw std::invalid_argument("use_logged_in_user cannot be used with cli_url "
-                                        "(external server manages its own auth)");
-    }
-
-    // Validate tcp_connection_token usage (matches upstream nodejs SDK v0.1.49):
-    // token requires TCP transport (stdio is pre-authenticated by pipes).
-    if (options_.tcp_connection_token.has_value())
-    {
-        if (options_.tcp_connection_token->empty())
-            throw std::invalid_argument("tcp_connection_token must be a non-empty string");
-        if (options_.use_stdio)
-            throw std::invalid_argument("tcp_connection_token cannot be used with use_stdio = true"
+        const auto host = runtime_.host.value_or("");
+        if (!is_valid_tcp_host(host))
+            throw std::invalid_argument(
+                "host must be a hostname or IP address without a scheme, port, or path"
             );
+        if (runtime_.port < 1 || runtime_.port > 65535)
+            throw std::invalid_argument("port must be an integer from 1 through 65535");
+        tcp_host_ = host;
+        tcp_port_ = runtime_.port;
+        effective_token_ = runtime_.connection_token;
     }
-
-    // Smart default for use_logged_in_user (only when managing our own server)
-    if (!options_.cli_url.has_value() && !options_.use_logged_in_user.has_value())
-        options_.use_logged_in_user = !options_.github_token.has_value();
-
-    // Auto-generate a UUID for the TCP connection token when the SDK spawns its
-    // own CLI in TCP mode and no token was provided. Mirrors nodejs effective-
-    // ConnectionToken logic (so loopback listeners are safe by default).
-    const bool is_in_process =
-        options_.connection && options_.connection->kind == RuntimeConnectionKind::InProcess;
-    if (!options_.cli_url.has_value() && !options_.use_stdio && !is_in_process &&
-        !options_.tcp_connection_token.has_value())
+    else if (kind == RuntimeConnectionKind::SpawnedTcp)
     {
-        // Simple UUID v4 generator (RFC 4122, 122 random bits).
-        std::random_device rd;
-        std::mt19937_64 gen(rd());
-        std::uniform_int_distribution<uint64_t> dist;
-        uint64_t lo = dist(gen);
-        uint64_t hi = dist(gen);
-        // Set version (4) and variant (10xx) bits per RFC 4122.
-        hi = (hi & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
-        lo = (lo & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
-        char buf[37];
-        std::snprintf(
-            buf,
-            sizeof(buf),
-            "%08x-%04x-%04x-%04x-%012llx",
-            static_cast<unsigned>((hi >> 32) & 0xFFFFFFFFULL),
-            static_cast<unsigned>((hi >> 16) & 0xFFFFULL),
-            static_cast<unsigned>(hi & 0xFFFFULL),
-            static_cast<unsigned>((lo >> 48) & 0xFFFFULL),
-            static_cast<unsigned long long>(lo & 0xFFFFFFFFFFFFULL)
-        );
-        options_.tcp_connection_token = std::string(buf);
+        effective_token_ = runtime_.connection_token ? *runtime_.connection_token
+                                                     : generate_uuid_v4();
     }
 
-    // Parse CLI URL if provided
-    if (options_.cli_url.has_value())
-        parse_cli_url(*options_.cli_url);
+    if (kind == RuntimeConnectionKind::SpawnedStdio || kind == RuntimeConnectionKind::SpawnedTcp)
+    {
+        if (runtime_.path)
+        {
+            cli_path_ = *runtime_.path;
+        }
+        else
+        {
+            std::optional<std::string> from_env;
+            if (runtime_.environment)
+            {
+                const auto it = runtime_.environment->find("COPILOT_CLI_PATH");
+                if (it != runtime_.environment->end())
+                    from_env = it->second;
+            }
+            else if (auto value = detail::env_value("COPILOT_CLI_PATH"))
+            {
+                from_env = std::move(value);
+            }
+            cli_path_ = from_env && !from_env->empty() ? *from_env : std::string("copilot");
+        }
+    }
+
+    if (options_.mode == ClientMode::Empty && !runtime_.base_directory && !options_.session_fs &&
+        !attached)
+    {
+        throw std::invalid_argument(
+            "CopilotClient was created with mode: 'empty' but neither 'baseDirectory' nor "
+            "'sessionFs' was set. Empty mode requires an explicit per-session persistence "
+            "location; pick one."
+        );
+    }
 }
 
 Client::~Client()
@@ -590,66 +415,92 @@ Client::~Client()
 }
 
 // =============================================================================
-// URL Parsing
+// Connection helpers and GitHub token registry
 // =============================================================================
 
-void Client::parse_cli_url(const std::string& url)
+std::shared_ptr<JsonRpcClient> Client::ensure_connected()
 {
-    // If it's just a port number. The whole string must be digits: std::stoi stops at the
-    // first non-digit, so "127.0.0.1:54321" would otherwise parse as port 127 on localhost.
-    const bool all_digits =
-        !url.empty() &&
-        std::all_of(url.begin(), url.end(), [](unsigned char c) { return std::isdigit(c) != 0; });
+    if (state_ != ConnectionState::Connected)
+        start().get();
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!rpc_)
+        throw std::runtime_error("Client not connected");
+    return rpc_;
+}
 
-    if (all_digits)
+// NODEJS REFERENCE: client.ts registerGitHubTokenProvider
+std::string Client::register_github_token_provider(GitHubTokenProvider provider)
+{
+    auto id = generate_uuid_v4();
+    std::lock_guard<std::mutex> lock(registry_mutex_);
+    github_token_registrations_[id] = GitHubTokenRegistration{std::move(provider), {}, false};
+    return id;
+}
+
+void Client::assign_github_token_registration(const std::string& id, const std::string& session_id)
+{
+    std::lock_guard<std::mutex> lock(registry_mutex_);
+    const auto it = github_token_registrations_.find(id);
+    if (it != github_token_registrations_.end())
+        it->second.session_id = session_id;
+}
+
+// A committed registration replaces any earlier committed one for the same session.
+void Client::commit_github_token_registration(const std::string& id)
+{
+    std::lock_guard<std::mutex> lock(registry_mutex_);
+    const auto it = github_token_registrations_.find(id);
+    if (it == github_token_registrations_.end())
+        return;
+    const auto session_id = it->second.session_id;
+    for (auto other = github_token_registrations_.begin();
+         other != github_token_registrations_.end();)
     {
-        try
-        {
-            int port = std::stoi(url);
-            if (port > 0 && port <= 65535)
-            {
-                parsed_host_ = "localhost";
-                parsed_port_ = port;
-                return;
-            }
-        }
-        catch (...)
-        {
-        }
-    }
-
-    // Check for scheme
-    std::string url_to_parse = url;
-    if (url.find("://") == std::string::npos)
-        url_to_parse = "https://" + url;
-
-    // Parse host:port. The bracketed alternative comes first so an IPv6 literal
-    // ("[::1]:4000") matches as a whole -- [^:/]+ stops at the address's own
-    // colons and would otherwise reject it or take only the first group.
-    std::regex url_regex(R"((?:https?://)?(\[[^\]]+\]|[^:/]+)(?::(\d+))?)");
-    std::smatch match;
-    if (std::regex_match(url_to_parse, match, url_regex))
-    {
-        std::string host = match[1].str();
-        // Store the bare address: brackets are URL syntax for disambiguating the
-        // port, and the socket layer wants the address without them.
-        if (host.size() >= 2 && host.front() == '[' && host.back() == ']')
-            host = host.substr(1, host.size() - 2);
-        parsed_host_ = host;
-        if (match[2].matched)
-        {
-            parsed_port_ = std::stoi(match[2].str());
-        }
+        if (other->first != id && other->second.committed && session_id &&
+            other->second.session_id == session_id)
+            other = github_token_registrations_.erase(other);
         else
-        {
-            // Default to 443 for https, 80 for http
-            parsed_port_ = (url_to_parse.find("https://") == 0) ? 443 : 80;
-        }
+            ++other;
     }
-    else
+    it->second.committed = true;
+}
+
+void Client::remove_github_token_registration(const std::string& id)
+{
+    std::lock_guard<std::mutex> lock(registry_mutex_);
+    github_token_registrations_.erase(id);
+}
+
+// NODEJS REFERENCE: client.ts markDisconnected
+void Client::handle_disconnect()
+{
+    clear_owned_runtime_port();
+    std::map<std::string, std::shared_ptr<Session>> sessions;
     {
-        throw std::invalid_argument("Invalid CLI URL: " + url);
+        std::lock_guard<std::mutex> lock(mutex_);
+        sessions.swap(sessions_);
+        session_admission_closed_ = true;
+        if (rpc_)
+            state_ = ConnectionState::Disconnected;
     }
+    for (const auto& [_, session] : sessions)
+        if (session)
+            session->retire();
+
+    std::map<std::string, std::map<std::string, CancellationSource>> shell_auth;
+    std::map<uint64_t, CancellationSource> memory_stores;
+    {
+        std::lock_guard<std::mutex> lock(registry_mutex_);
+        shell_auth.swap(pending_shell_auth_);
+        memory_stores.swap(pending_memory_stores_);
+        github_token_registrations_.clear();
+    }
+    for (auto& [_, pending] : shell_auth)
+        for (auto& [__, source] : pending)
+            source.cancel();
+    for (auto& [_, source] : memory_stores)
+        source.cancel();
+    disconnect_hosts();
 }
 
 // =============================================================================
@@ -671,44 +522,58 @@ std::future<void> Client::start()
 
             try
             {
-                if (options_.connection &&
-                    options_.connection->kind == RuntimeConnectionKind::InProcess)
+                switch (runtime_.kind)
                 {
+                case RuntimeConnectionKind::InProcess:
                     start_in_process_runtime();
                     connect_to_server();
-                }
-                else if (options_.connection &&
-                         options_.connection->kind == RuntimeConnectionKind::ParentProcess)
-                {
+                    break;
+                case RuntimeConnectionKind::Tcp:
+                    // C# REFERENCE: Client.cs StartAsync (an external runtime keeps its port)
+                    runtime_port_.store(tcp_port_);
                     connect_to_server();
-                }
-                else if (parsed_host_.has_value() && parsed_port_.has_value())
-                {
-                    // Connect to external server
+                    break;
+                case RuntimeConnectionKind::ParentProcess:
                     connect_to_server();
-                }
-                else
-                {
-                    // Spawn CLI process
+                    break;
+                case RuntimeConnectionKind::SpawnedStdio:
+                case RuntimeConnectionKind::SpawnedTcp:
                     start_cli_server();
+                    if (runtime_.kind == RuntimeConnectionKind::SpawnedTcp)
+                        runtime_port_.store(tcp_port_);
                     connect_to_server();
+                    break;
                 }
 
-                // Verify protocol version
                 verify_protocol_version();
                 session_admission_closed_ = false;
-                if (options_.extension_launch_provider)
+                // NODEJS REFERENCE: client.ts start (network.setProvider)
+                if (options_.network &&
+                    (options_.network->resolve_proxy || options_.network->authenticate_negotiate ||
+                     options_.network->authenticate_basic))
+                {
+                    json params = json::object();
+                    if (options_.network->scope)
+                        params["scope"] = *options_.network->scope == NetworkScope::Runtime
+                                              ? "runtime"
+                                              : "connection";
+                    if (options_.network->resolve_proxy)
+                        params["resolveProxy"] = json::object();
+                    if (options_.network->authenticate_negotiate)
+                        params["authenticateNegotiate"] = json::object();
+                    if (options_.network->authenticate_basic)
+                        params["authenticateBasic"] = json::object();
+                    rpc_->invoke(copilot::rpc::methods::kNetworkSetProvider, params).get();
+                }
+                if (options_.extensions.launch_provider)
                     rpc_->invoke("registerExtensionLaunchProvider", json::object()).get();
 
-                if (request_handler_bridge_)
-                    rpc_->invoke("llmInference.setProvider", json::object()).get();
-
-                if (options_.builtin_plugin_directories &&
-                    !options_.builtin_plugin_directories->empty())
+                if (options_.plugins.builtin_directories &&
+                    !options_.plugins.builtin_directories->empty())
                 {
                     rpc_->invoke(
                             "plugins.builtin.set",
-                            json{{"paths", *options_.builtin_plugin_directories}}
+                            json{{"paths", *options_.plugins.builtin_directories}}
                     ).get();
                 }
 
@@ -720,19 +585,36 @@ std::future<void> Client::start()
                         {"conventions", options_.session_fs->conventions},
                     };
                     if (options_.session_fs->capabilities)
-                        params["capabilities"] = *options_.session_fs->capabilities;
+                        params["capabilities"] = json(*options_.session_fs->capabilities);
                     rpc_->invoke(copilot::rpc::methods::kSessionFsSetProvider, params).get();
                 }
+
+                if (request_handler_bridge_)
+                    rpc_->invoke("llmInference.setProvider", json::object()).get();
 
                 state_ = ConnectionState::Connected;
             }
             catch (...)
             {
                 state_ = ConnectionState::Error;
+                clear_owned_runtime_port();
                 throw;
             }
         }
     );
+}
+
+std::optional<int> Client::runtime_port() const
+{
+    const int port = runtime_port_.load();
+    return port > 0 ? std::optional<int>(port) : std::nullopt;
+}
+
+void Client::clear_owned_runtime_port()
+{
+    // C# REFERENCE: Client.cs ClearRuntimePort (only a port this client started is cleared)
+    if (runtime_.kind == RuntimeConnectionKind::SpawnedTcp)
+        runtime_port_.store(0);
 }
 
 std::future<std::vector<StopError>> Client::stop()
@@ -795,18 +677,27 @@ std::future<std::vector<StopError>> Client::stop()
                         session->retire();
                 sessions_.clear();
                 process = std::move(process_);
+                stopping_process_ = process.get();
                 rpc = std::move(rpc_);
                 transport = std::move(transport_);
                 state_ = ConnectionState::Disconnected;
             }
+            struct StoppingProcessReset
+            {
+                Client* client;
+                ~StoppingProcessReset()
+                {
+                    std::lock_guard<std::mutex> lock(client->mutex_);
+                    client->stopping_process_ = nullptr;
+                }
+            } stopping_reset{this};
 
             // C# REFERENCE: dotnet/src/Client.cs CleanupConnectionAsync / CleanupCliProcessAsync.
-            if (rpc && (process || (options_.connection &&
-                                    options_.connection->kind == RuntimeConnectionKind::InProcess)))
+            if (rpc && (process || runtime_.kind == RuntimeConnectionKind::InProcess))
             {
                 try
                 {
-                    rpc->invoke("runtime.shutdown", json::object(), std::chrono::seconds(10)).get();
+                    rpc->invoke("runtime.shutdown", json::object(), kCleanupTimeout).get();
                 }
                 catch (...)
                 {
@@ -818,9 +709,10 @@ std::future<std::vector<StopError>> Client::stop()
                 request_handler_bridge_->cancel_all();
                 request_handler_bridge_.reset();
             }
+            const bool use_stdio = runtime_.kind == RuntimeConnectionKind::SpawnedStdio;
             if (process)
             {
-                if (options_.use_stdio)
+                if (use_stdio)
                 {
                     try
                     {
@@ -830,7 +722,7 @@ std::future<std::vector<StopError>> Client::stop()
                     {
                     }
                 }
-                if (!options_.use_stdio || !process->wait_for(std::chrono::seconds(10)))
+                if (!use_stdio || !process->wait_for(std::chrono::seconds(10)))
                 {
                     process->kill();
                     if (!process->wait_for(std::chrono::seconds(10)))
@@ -847,6 +739,7 @@ std::future<std::vector<StopError>> Client::stop()
             // Close transport
             if (transport)
                 transport->close();
+            handle_disconnect();
             return errors;
         }
     );
@@ -881,6 +774,10 @@ void Client::force_stop()
         rpc = std::move(rpc_);
         transport = std::move(transport_);
         state_ = ConnectionState::Disconnected;
+        // TS REFERENCE: nodejs/src/client.ts doForceStop kills this.cliProcess, which a
+        // concurrent stop() still holds while it waits for the runtime to exit.
+        if (stopping_process_)
+            stopping_process_->kill();
     }
 
     // Kill process FIRST - this closes the pipe ends and unblocks reads
@@ -902,6 +799,17 @@ void Client::force_stop()
 
     if (transport)
         transport->close();
+    handle_disconnect();
+}
+
+std::optional<int> Client::cli_process_id() const
+{
+    std::lock_guard<std::mutex> lock(mutex_);
+    const Process* process = process_ ? process_.get() : stopping_process_;
+    if (!process || !process->is_running())
+        return std::nullopt;
+    const int pid = process->pid();
+    return pid > 0 ? std::optional<int>(pid) : std::nullopt;
 }
 
 ConnectionState Client::state() const
@@ -942,128 +850,84 @@ Client::resolve_cli_command(const std::string& cli_path, const std::vector<std::
     return {cli_path, args};
 }
 
+// NODEJS REFERENCE: client.ts startInProcessRuntime
 void Client::start_in_process_runtime()
 {
-    const auto& connection = *options_.connection;
-    std::optional<std::string> entrypoint = connection.path;
+    std::optional<std::string> entrypoint = runtime_.path;
     if (!entrypoint)
-        entrypoint = options_.cli_path;
-    if (!entrypoint)
-    {
-        if (const char* value = std::getenv("COPILOT_CLI_PATH"))
-            entrypoint = value;
-    }
-    if (!entrypoint)
+        entrypoint = detail::env_value("COPILOT_CLI_PATH");
+    if (!entrypoint || entrypoint->empty())
         throw std::runtime_error(
             "in-process runtime requires a CLI entrypoint path or COPILOT_CLI_PATH"
         );
 
     std::filesystem::path library;
-    if (connection.ffi_library_path)
+    if (runtime_.ffi_library_path)
     {
-        library = *connection.ffi_library_path;
+        library = *runtime_.ffi_library_path;
     }
     else
     {
-        std::string folder;
+        const auto sibling = std::filesystem::path(*entrypoint).parent_path() / "runtime.node";
+        std::error_code ec;
+        if (std::filesystem::exists(sibling, ec))
+        {
+            library = sibling;
+        }
+        else
+        {
+            std::string folder;
 #if defined(_WIN32) && defined(_M_X64)
-        folder = "win32-x64";
+            folder = "win32-x64";
 #elif defined(_WIN32) && defined(_M_ARM64)
-        folder = "win32-arm64";
+            folder = "win32-arm64";
 #elif defined(__APPLE__) && defined(__aarch64__)
-        folder = "darwin-arm64";
+            folder = "darwin-arm64";
 #elif defined(__APPLE__)
-        folder = "darwin-x64";
+            folder = "darwin-x64";
 #elif defined(__aarch64__)
-        folder =
-            entrypoint->find("linuxmusl-") != std::string::npos ? "linuxmusl-arm64" : "linux-arm64";
+            folder = entrypoint->find("linuxmusl-") != std::string::npos ? "linuxmusl-arm64"
+                                                                          : "linux-arm64";
 #elif defined(__linux__) && defined(__x86_64__)
-        folder =
-            entrypoint->find("linuxmusl-") != std::string::npos ? "linuxmusl-x64" : "linux-x64";
+            folder = entrypoint->find("linuxmusl-") != std::string::npos ? "linuxmusl-x64"
+                                                                          : "linux-x64";
 #else
-        throw std::runtime_error("unsupported architecture for in-process FFI runtime");
+            throw std::runtime_error("unsupported architecture for in-process FFI runtime");
 #endif
-        library = std::filesystem::path(*entrypoint).parent_path() / "prebuilds" / folder /
-                  "runtime.node";
-    }
-
-    std::map<std::string, std::string> environment;
-    if (options_.github_token)
-        environment["COPILOT_SDK_AUTH_TOKEN"] = *options_.github_token;
-    if (options_.base_directory)
-        environment["COPILOT_HOME"] = *options_.base_directory;
-    if (options_.mode == ClientMode::Empty)
-        environment["COPILOT_DISABLE_KEYTAR"] = "1";
-
-    std::vector<std::string> args;
-    if (connection.args)
-        args.insert(args.end(), connection.args->begin(), connection.args->end());
-    args.push_back("--log-level");
-    args.push_back(json(options_.log_level).get<std::string>());
-    if (options_.github_token)
-    {
-        args.push_back("--auth-token-env");
-        args.push_back("COPILOT_SDK_AUTH_TOKEN");
-    }
-    if (!options_.use_logged_in_user.value_or(
-            !options_.github_token || options_.github_token->empty()
-        ))
-        args.push_back("--no-auto-login");
-    if (options_.session_idle_timeout_seconds.value_or(0) > 0)
-    {
-        args.push_back("--session-idle-timeout");
-        args.push_back(std::to_string(*options_.session_idle_timeout_seconds));
-    }
-    if (options_.remote)
-        args.push_back("--remote");
-
-    if (const char* integration = std::getenv("GITHUB_COPILOT_INTEGRATION_ID"))
-    {
-        std::string id(integration);
-        const auto first = id.find_first_not_of(" \t\r\n");
-        if (first != std::string::npos)
-            args.push_back(
-                "--cli-login-sync-integration-id=" +
-                id.substr(first, id.find_last_not_of(" \t\r\n") - first + 1)
-            );
+            library = std::filesystem::path(*entrypoint).parent_path() / "prebuilds" / folder /
+                      "runtime.node";
+        }
     }
 
     transport_ = std::make_unique<FfiTransport>(
-        library.string(), *entrypoint, std::move(environment), std::move(args)
+        library.string(),
+        *entrypoint,
+        build_cli_environment(options_),
+        build_in_process_args(options_)
     );
 }
 
+// NODEJS REFERENCE: client.ts startCLIServer
 void Client::start_cli_server()
 {
-    std::string cli_path = options_.cli_path.value_or("copilot");
+    auto [executable, full_args] = resolve_cli_command(cli_path_, build_cli_command_args(options_));
 
-    // Build arguments and environment via the testable free-function helpers.
-    std::vector<std::string> args = build_cli_command_args(options_);
-
-    // Resolve command
-    auto [executable, full_args] = resolve_cli_command(cli_path, args);
-
-    // Setup process options
+    const bool use_stdio = runtime_.kind == RuntimeConnectionKind::SpawnedStdio;
     ProcessOptions proc_opts;
-    proc_opts.redirect_stdin = options_.use_stdio;
+    proc_opts.redirect_stdin = use_stdio;
     proc_opts.redirect_stdout = true;
     proc_opts.redirect_stderr = true;
     proc_opts.create_no_window = true;
+    if (runtime_.working_directory)
+        proc_opts.working_directory = *runtime_.working_directory;
+    proc_opts.inherit_environment = !runtime_.environment.has_value();
+    proc_opts.environment = build_cli_environment(options_, effective_token_);
 
-    if (options_.cwd)
-        proc_opts.working_directory = *options_.cwd;
-
-    if (options_.environment.has_value())
-        proc_opts.inherit_environment = false;
-
-    proc_opts.environment = build_cli_environment(options_);
-
-    // Spawn process
     process_ = std::make_unique<Process>();
     process_->spawn(executable, full_args, proc_opts);
+    spawned_cli_path_ = executable;
 
-    // If not using stdio, wait for port announcement
-    if (!options_.use_stdio)
+    if (!use_stdio)
     {
         std::regex port_regex(R"(listening on port (\d+))", std::regex::icase);
         auto start_time = std::chrono::steady_clock::now();
@@ -1086,8 +950,8 @@ void Client::start_cli_server()
             std::smatch match;
             if (std::regex_search(line, match, port_regex))
             {
-                parsed_host_ = "localhost";
-                parsed_port_ = std::stoi(match[1].str());
+                tcp_host_ = "localhost";
+                tcp_port_ = std::stoi(match[1].str());
                 break;
             }
         }
@@ -1096,12 +960,12 @@ void Client::start_cli_server()
 
 void Client::connect_to_server()
 {
+    const auto kind = runtime_.kind;
     if (transport_)
     {
         // Pre-created transport (in-process FFI).
     }
-    else if (options_.connection &&
-             options_.connection->kind == RuntimeConnectionKind::ParentProcess)
+    else if (kind == RuntimeConnectionKind::ParentProcess)
     {
 #ifdef _WIN32
         transport_ = std::make_unique<StdioTransport>(
@@ -1111,17 +975,15 @@ void Client::connect_to_server()
         transport_ = std::make_unique<StdioTransport>(STDIN_FILENO, STDOUT_FILENO, false);
 #endif
     }
-    else if (options_.use_stdio && process_)
+    else if (kind == RuntimeConnectionKind::SpawnedStdio && process_)
     {
-        // Create pipe transport wrapping process pipes
         transport_ =
             std::make_unique<PipeTransport>(process_->stdin_pipe(), process_->stdout_pipe());
     }
-    else if (parsed_host_.has_value() && parsed_port_.has_value())
+    else if (kind == RuntimeConnectionKind::Tcp || kind == RuntimeConnectionKind::SpawnedTcp)
     {
-        // Create TCP transport
         auto tcp_transport = std::make_unique<TcpTransport>();
-        tcp_transport->connect(*parsed_host_, *parsed_port_);
+        tcp_transport->connect(tcp_host_, tcp_port_);
         transport_ = std::move(tcp_transport);
     }
     else
@@ -1129,24 +991,27 @@ void Client::connect_to_server()
         throw std::runtime_error("No transport available - check configuration");
     }
 
-    // Create JSON-RPC client
+    // Owned by rpc_, which outlives every request it dispatches.
+    auto* ffi_host = dynamic_cast<FfiTransport*>(transport_.get());
     rpc_ = std::make_shared<JsonRpcClient>(std::move(transport_));
+    if (options_.request_timeout)
+        rpc_->set_default_timeout(*options_.request_timeout);
 
-    // Set up handlers for server-to-client calls
-    if (options_.copilot_request_handler)
+    if (options_.models.request_handler)
     {
         request_handler_bridge_ = std::make_shared<CopilotRequestHandlerBridge>(
-            options_.copilot_request_handler,
+            options_.models.request_handler,
             [rpc = rpc_](const std::string& method, const json& params)
             { rpc->invoke(method, params).get(); }
         );
     }
 
     rpc_->set_on_closed(
-        [bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)]
+        [this, bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)]
         {
             if (auto value = bridge.lock())
                 value->cancel_all();
+            handle_disconnect();
         }
     );
 
@@ -1168,27 +1033,35 @@ void Client::connect_to_server()
                 {
                 }
             }
-            else if (method == "gitHubTelemetry.event" && options_.on_github_telemetry)
+            else if (method == "gitHubTelemetry.event" && options_.github.on_telemetry)
             {
-                (*options_.on_github_telemetry)(params);
+                (*options_.github.on_telemetry)(params);
+            }
+            else if (method == "host.authenticationCancelled" || method == "host.sessionReleased" ||
+                     method == "host.exited")
+            {
+                handle_host_notification(method, params);
             }
         }
     );
 
+    // NODEJS REFERENCE: client.ts attachConnectionHandlers
     rpc_->set_request_handler(
-        [this, bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)](
+        [this,
+         ffi_host,
+         bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)](
             const std::string& method, const json& params, const CancellationToken& cancellation
         ) -> json
         {
             if (cancellation.is_cancelled())
                 throw JsonRpcError(JsonRpcErrorCode::RequestCancelled, "Request cancelled");
             // C# REFERENCE: InstallationConfirmation.cs / Client.cs ClientRpcHandler.
-            if (method == "installations.confirm" && options_.installation_confirmation_handler)
+            if (method == "installations.confirm" && options_.installations.confirmation_handler)
             {
                 const auto confirmation_id = params.at("confirmationId");
                 const auto fingerprint = params.at("reviewFingerprint");
                 const auto decision =
-                    (*options_.installation_confirmation_handler)(params, cancellation);
+                    (*options_.installations.confirmation_handler)(params, cancellation);
                 if (cancellation.is_cancelled())
                     throw JsonRpcError(static_cast<JsonRpcErrorCode>(-32800), "Request cancelled");
                 const char* value = nullptr;
@@ -1212,23 +1085,94 @@ void Client::connect_to_server()
                     {"decision", value}
                 };
             }
-            if (method == "extensionLaunchProvider.resolve" && options_.extension_launch_provider)
-                return (*options_.extension_launch_provider)(params, cancellation);
+            if (method == "extensionLaunchProvider.resolve" && options_.extensions.launch_provider)
+                return (*options_.extensions.launch_provider)(params, cancellation);
+            // NODEJS REFERENCE: entra.ts registerEntraTokenProvider. Provider failures are
+            // reported generically so host error details never reach the runtime.
+            if (method == copilot::rpc::methods::kEntraTokenGetToken && options_.entra &&
+                options_.entra->token_provider)
+            {
+                const auto cancelled = []
+                {
+                    return JsonRpcError(
+                        JsonRpcErrorCode::RequestCancelled, "Entra token acquisition cancelled"
+                    );
+                };
+                json result;
+                try
+                {
+                    result = options_.entra->token_provider(
+                        params.value("request", json::object()), cancellation
+                    );
+                }
+                catch (...)
+                {
+                    if (cancellation.is_cancelled())
+                        throw cancelled();
+                    throw JsonRpcError(JsonRpcErrorCode::InternalError, "Entra token provider failed");
+                }
+                if (cancellation.is_cancelled())
+                    throw cancelled();
+                if (result.is_null())
+                    throw JsonRpcError(JsonRpcErrorCode::InternalError, "Entra token provider failed");
+                return result;
+            }
+            // NODEJS REFERENCE: client.ts resolveClientProxy / authenticateClient*
+            if (options_.network && method.rfind("network.", 0) == 0)
+            {
+                const auto& network = *options_.network;
+                const auto run = [&](const char* label, auto&& callback)
+                {
+                    if (cancellation.is_cancelled())
+                        throw JsonRpcError(
+                            JsonRpcErrorCode::RequestCancelled,
+                            std::string(label) + " request cancelled"
+                        );
+                    auto value = callback(params, cancellation);
+                    if (cancellation.is_cancelled())
+                        throw JsonRpcError(
+                            JsonRpcErrorCode::RequestCancelled,
+                            std::string(label) + " request cancelled"
+                        );
+                    return value;
+                };
+                if (method == copilot::rpc::methods::kNetworkResolveProxy && network.resolve_proxy)
+                {
+                    json result = json::object();
+                    if (auto proxy = run("Proxy resolution", network.resolve_proxy))
+                        result["proxy"] = *proxy;
+                    return result;
+                }
+                if (method == copilot::rpc::methods::kNetworkAuthenticateNegotiate &&
+                    network.authenticate_negotiate)
+                {
+                    json result = json::object();
+                    if (auto token = run("Negotiate authentication", network.authenticate_negotiate))
+                        result["token"] = *token;
+                    return result;
+                }
+                if (method == copilot::rpc::methods::kNetworkAuthenticateBasic &&
+                    network.authenticate_basic)
+                {
+                    json result = json::object();
+                    if (auto credentials = run("Basic authentication", network.authenticate_basic))
+                    {
+                        result["username"] = credentials->username;
+                        if (credentials->password)
+                            result["password"] = *credentials->password;
+                    }
+                    return result;
+                }
+            }
             if (method == "skillProvider.list" || method == "skillProvider.read")
             {
-                const auto session = get_session(params.at("sessionId").get<std::string>());
+                const auto session = resolve_session_callback(params.at("sessionId").get<std::string>());
                 if (!session)
                     throw std::invalid_argument("Unknown skill-provider session");
                 return session->handle_skill_provider_request(method, params, cancellation);
             }
-            if (method == "tool.call")
-                return handle_tool_call(params);
-            else if (method == "permission.request")
-                return handle_permission_request(params);
-            else if (method == "userInput.request")
+            if (method == "userInput.request")
                 return handle_user_input_request(params);
-            else if (method == "elicitation.request")
-                return handle_elicitation_request(params);
             else if (method == "exitPlanMode.request")
                 return handle_exit_plan_mode_request(params);
             else if (method == "autoModeSwitch.request")
@@ -1237,17 +1181,53 @@ void Client::connect_to_server()
                 return handle_hooks_invoke(params);
             else if (method == copilot::rpc::methods::kGitHubTokenGetToken)
                 return handle_github_token_request(params);
+            else if (method == "providerToken.getToken")
+                return handle_provider_token_request(params);
+            else if (method == "shellAuthentication.request")
+                return handle_shell_authentication_request(params);
+            else if (method == "shellAuthentication.cancel")
+            {
+                cancel_shell_authentication_request(params);
+                return json::object();
+            }
+            else if (method == "memoryStore.store")
+                return handle_memory_store_request(params, cancellation);
+            // NODEJS REFERENCE: client.ts onRequest("sessionManagement.create")
+            else if (method == "sessionManagement.create")
+            {
+                const auto session = resolve_session_callback(params.value("sessionId", std::string{}));
+                if (!session)
+                    throw std::runtime_error("Session creation owner is unavailable");
+                return session->handle_session_management_create(params, cancellation);
+            }
+            // NODEJS REFERENCE: client.ts handleSystemMessageTransform
+            else if (method == "systemMessage.transform")
+            {
+                if (!params.is_object() || !params.contains("sessionId") ||
+                    !params["sessionId"].is_string() || !params.contains("sections") ||
+                    !params["sections"].is_object())
+                    throw JsonRpcError(
+                        JsonRpcErrorCode::InvalidParams, "Invalid systemMessage.transform payload"
+                    );
+                const auto session_id = params["sessionId"].get<std::string>();
+                const auto session = resolve_session_callback(session_id);
+                if (!session)
+                    throw JsonRpcError(
+                        JsonRpcErrorCode::InvalidParams, "Session not found: " + session_id
+                    );
+                return session->handle_system_message_transform(params["sections"]);
+            }
             else if (method == "canvas.open" || method == "canvas.close" ||
                      method == "canvas.action.invoke")
             {
-                const auto session = get_session(params.value("sessionId", ""));
+                const auto session = resolve_session_callback(params.value("sessionId", ""));
                 if (!session)
                     throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown canvas session");
                 return session->handle_canvas_request(method, params);
             }
             else if (method == "workflow.execute" || method == "workflow.abort")
             {
-                const auto session = get_session(params.value("sessionId", ""));
+                const auto session = resolve_session_callback(params.value("sessionId", ""));
                 if (!session)
                     throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown workflow session");
                 return session->handle_workflow_request(method, params);
@@ -1259,14 +1239,58 @@ void Client::connect_to_server()
                     return value->handle(method, params);
                 throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Request bridge closed");
             }
-            else if (options_.session_fs && method.rfind("sessionFs.", 0) == 0)
+            // NODEJS REFERENCE: client.ts setupClientGlobalHandlers uiThread.run
+            else if (method == copilot::rpc::methods::kUiThreadRun)
             {
-                const auto it = options_.session_fs->handlers.find(method);
-                if (it != options_.session_fs->handlers.end())
-                    return it->second(params);
+                if (runtime_.kind != RuntimeConnectionKind::InProcess ||
+                    !runtime_.run_on_ui_thread || !ffi_host)
+                    throw std::runtime_error("No in-process runOnUiThread handler is configured.");
+                const auto& id = params.at("actionId");
+                if (!id.is_number_integer() || id.get<std::int64_t>() < 0 ||
+                    id.get<std::int64_t>() > 0xffffffffLL)
+                    throw std::out_of_range("UI action ID must be an unsigned 32-bit integer.");
+                const auto action_id = static_cast<std::uint32_t>(id.get<std::int64_t>());
+                runtime_.run_on_ui_thread([ffi_host, action_id] { ffi_host->run_ui_action(action_id); });
+                return nullptr;
             }
-            else if (options_.request_handler)
-                return (*options_.request_handler)(method, params);
+            // NODEJS REFERENCE: generated/rpc.ts registerClientSessionApiHandlers (tasks.cancel).
+            // Upstream SDKs never install a tasks handler, so this always reports it missing.
+            else if (method == copilot::rpc::methods::kTasksCancel)
+            {
+                const auto session_id = params.value("sessionId", std::string{});
+                if (!resolve_session_callback(session_id))
+                    throw std::runtime_error("No session found for sessionId: " + session_id);
+                throw std::runtime_error("No tasks handler registered for session: " + session_id);
+            }
+            // NODEJS REFERENCE: client.ts attachConnectionHandlers host.* handlers
+            else if (method == "host.materializeSession")
+            {
+                return materialize_host_session(params);
+            }
+            else if (method == "host.validateAuthentication")
+            {
+                return validate_host_authentication(params, cancellation);
+            }
+            else if (method == "host.authenticationCancelled" || method == "host.sessionReleased" ||
+                     method == "host.exited")
+            {
+                handle_host_notification(method, params);
+                return json::object();
+            }
+            else if (detail::is_session_fs_request_method(method))
+            {
+                // NODEJS REFERENCE: generated/rpc.ts registerClientSessionApiHandlers (sessionFs)
+                const auto session_id = params.value("sessionId", std::string{});
+                auto session = resolve_session_callback(session_id);
+                if (!session)
+                    throw std::runtime_error("No session found for sessionId: " + session_id);
+                auto handler = session->session_fs_handler();
+                if (!handler)
+                    throw std::runtime_error(
+                        "No sessionFs handler registered for session: " + session_id
+                    );
+                return handler(method, params);
+            }
             throw JsonRpcError(JsonRpcErrorCode::MethodNotFound, "Unknown method: " + method);
         }
     );
@@ -1274,17 +1298,23 @@ void Client::connect_to_server()
     rpc_->start();
     if (process_)
         process_->on_exit([rpc = rpc_] { rpc->signal_connection_closed(); });
+    // NODEJS REFERENCE: client.ts connectViaFfi configureUiThread
+    if (ffi_host)
+        ffi_host->configure_ui_thread(
+            kind == RuntimeConnectionKind::InProcess && static_cast<bool>(runtime_.run_on_ui_thread)
+        );
 }
 
+// NODEJS REFERENCE: client.ts verifyProtocolVersion
 void Client::verify_protocol_version()
 {
     json response;
     try
     {
         json params = json::object();
-        if (options_.tcp_connection_token)
-            params["token"] = *options_.tcp_connection_token;
-        if (options_.on_github_telemetry)
+        if (effective_token_)
+            params["token"] = *effective_token_;
+        if (options_.github.on_telemetry)
             params["enableGitHubTelemetryForwarding"] = true;
         if (options_.client_info)
         {
@@ -1293,42 +1323,64 @@ void Client::verify_protocol_version()
             if (auto wire = options_.client_info->to_wire_json())
                 params["clientInfo"] = std::move(*wire);
         }
+        if (options_.entra)
+        {
+            json entra{{"clientId", options_.entra->client_id}};
+            if (options_.entra->mats_app_name)
+                entra["matsAppName"] = *options_.entra->mats_app_name;
+            if (options_.entra->one_auth_application_id)
+                entra["oneAuthApplicationId"] = *options_.entra->one_auth_application_id;
+            params["entra"] = std::move(entra);
+            if (options_.entra->token_provider)
+                params["entraTokenProvider"] = true;
+        }
+        params["supportedTaskKinds"] = json::array({"agent", "client", "shell"});
         response = rpc_->invoke(copilot::rpc::methods::kConnect, params).get();
+        if (options_.entra && options_.entra->token_provider &&
+            response.value("entraTokenProvider", json()) != json(true))
+            throw std::runtime_error(
+                "This runtime does not support host-owned Entra token providers."
+            );
     }
     catch (const JsonRpcError& error)
     {
         if (error.code() != JsonRpcErrorCode::MethodNotFound &&
             std::string(error.what()) != "Unhandled method connect")
             throw;
+        // A legacy runtime without `connect` cannot carry the Entra registration.
+        if (options_.entra)
+            throw std::runtime_error("This runtime does not support Entra client configuration.");
         response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
     }
 
-    if (!response.contains("protocolVersion") || response["protocolVersion"].is_null())
-        response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
-
+    std::optional<std::string> cli_version;
+    const auto read_cli_version = [&cli_version](const json& result)
+    {
+        if (!cli_version && result.contains("version") && result["version"].is_string())
+            cli_version = result["version"].get<std::string>();
+    };
+    read_cli_version(response);
     if (!response.contains("protocolVersion") || response["protocolVersion"].is_null())
     {
-        throw std::runtime_error(
-            "SDK protocol version mismatch: SDK expects version " +
-            std::to_string(kSdkProtocolVersion) + ", but server does not report a protocol version."
-        );
+        response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
+        read_cli_version(response);
     }
+
+    const auto cli_path =
+        process_ ? spawned_cli_path_ : std::optional<std::string>{};
+
+    if (!response.contains("protocolVersion") || response["protocolVersion"].is_null())
+        throw ProtocolVersionMismatch(std::nullopt, cli_version, cli_path);
 
     int server_version = response["protocolVersion"].get<int>();
     if (server_version < kMinProtocolVersion || server_version > kSdkProtocolVersion)
-    {
-        throw std::runtime_error(
-            "SDK protocol version mismatch: SDK supports versions [" +
-            std::to_string(kMinProtocolVersion) + ".." + std::to_string(kSdkProtocolVersion) +
-            "], but server reports version " + std::to_string(server_version)
-        );
-    }
+        throw ProtocolVersionMismatch(server_version, cli_version, cli_path);
 
     {
         std::lock_guard<std::mutex> lock(protocol_version_mutex_);
         negotiated_protocol_version_ = server_version;
-        if (response.contains("version") && response["version"].is_string())
-            server_version_ = response["version"].get<std::string>();
+        if (cli_version)
+            server_version_ = cli_version;
     }
 }
 
@@ -1342,330 +1394,454 @@ std::optional<int> Client::negotiated_protocol_version() const
 // Session Management
 // =============================================================================
 
-std::future<std::shared_ptr<Session>> Client::create_session(SessionConfig config)
+std::future<std::shared_ptr<Session>> Client::create_session(CreateSessionOptions options)
 {
     return std::async(
         std::launch::async,
-        [this, config = std::move(config)]() mutable
-        {
-            // Ensure connected
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
-
-            std::shared_ptr<JsonRpcClient> connection;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || !rpc_ || state_ != ConnectionState::Connected)
-                    throw std::runtime_error("Session admission is closed");
-                connection = rpc_;
-            }
-
-            if (!config.session_id && !config.cloud.value_or(false))
-                config.session_id = generate_uuid_v4();
-            std::string session_id = config.session_id.value_or("");
-            auto session = std::make_shared<Session>(
-                session_id,
-                this,
-                std::nullopt,
-                SessionCapabilities{},
-                config.enable_managed_settings.value_or(false) ||
-                    config.managed_settings.has_value()
-            );
-
-            json response;
-            ScopeExit rollback{[&]
-                               {
-                                   {
-                                       std::lock_guard<std::mutex> lock(mutex_);
-                                       const auto it = sessions_.find(session_id);
-                                       if (it != sessions_.end() && it->second == session)
-                                           sessions_.erase(it);
-                                   }
-                                   session->retire();
-                                   if (config.cloud.value_or(false) &&
-                                       response.contains("sessionId"))
-                                   {
-                                       try
-                                       {
-                                           connection
-                                               ->invoke(
-                                                   "session.delete",
-                                                   {{"sessionId", response.at("sessionId")}},
-                                                   std::chrono::seconds(10)
-                                               )
-                                               .get();
-                                       }
-                                       catch (...)
-                                       {
-                                       }
-                                   }
-                               }};
-
-            // Register tools locally for handling callbacks from the server
-            for (const auto& tool : config.tools)
-                session->register_tool(tool);
-            session->register_canvases(config.canvas_objects);
-
-            // Register permission handler locally (server will call permission.request)
-            if (config.on_permission_request.has_value())
-                session->register_permission_handler(*config.on_permission_request);
-            if (config.on_permission_request_with_context.has_value())
-                session->register_permission_handler(*config.on_permission_request_with_context);
-            if (config.on_mcp_auth_request_with_result)
-                session->register_mcp_auth_handler(*config.on_mcp_auth_request_with_result);
-            if (config.skill_provider)
-                session->register_skill_provider(config.skill_provider);
-            if (config.on_mcp_auth_request)
-                session->register_mcp_auth_handler(*config.on_mcp_auth_request);
-
-            // Register user input handler locally (server will call userInput.request)
-            if (config.on_user_input_request.has_value())
-                session->register_user_input_handler(*config.on_user_input_request);
-
-            if (config.on_elicitation_request.has_value())
-                session->register_elicitation_handler(*config.on_elicitation_request);
-            if (config.on_exit_plan_mode.has_value())
-                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
-            if (config.on_auto_mode_switch.has_value())
-                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
-            if (config.on_event.has_value())
-                session->register_persistent_event_handler(*config.on_event);
-
-            // Register hooks locally (server will call hooks.invoke)
-            if (config.hooks.has_value())
-                session->register_hooks(*config.hooks);
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || rpc_ != connection)
-                {
-                    session->retire();
-                    throw std::runtime_error("Session admission is closed");
-                }
-                if (!session_id.empty())
-                    sessions_[session_id] = session;
-            }
-
-            try
-            {
-                json request = build_session_create_request(config, options_.mode);
-                request.update(trace_context());
-                if (options_.on_github_telemetry)
-                    request["enableGitHubTelemetryForwarding"] = true;
-                response = connection->invoke(copilot::rpc::methods::kSessionCreate, request).get();
-                const auto returned_id = response.at("sessionId").get<std::string>();
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    if (session_admission_closed_ || rpc_ != connection)
-                    {
-                        session->retire();
-                        throw std::runtime_error("Session connection changed during creation");
-                    }
-                }
-                if (returned_id != session_id)
-                {
-                    std::lock_guard<std::mutex> lock(mutex_);
-                    if (session_admission_closed_ || rpc_ != connection)
-                        throw std::runtime_error("Session connection changed during creation");
-                    sessions_.erase(session_id);
-                    session_id = returned_id;
-                    session->set_session_id(returned_id);
-                    sessions_[session_id] = session;
-                }
-            }
-            catch (...)
-            {
-                throw;
-            }
-
-            std::optional<std::string> workspace_path;
-            if (response.contains("workspacePath") && response["workspacePath"].is_string())
-                workspace_path = response["workspacePath"].get<std::string>();
-            SessionCapabilities capabilities;
-            if (response.contains("capabilities") && !response["capabilities"].is_null())
-                capabilities = response["capabilities"].get<SessionCapabilities>();
-            session->set_initial_state(std::move(workspace_path), std::move(capabilities));
-
-            if (config.on_mcp_auth_request || config.on_mcp_auth_request_with_result)
-            {
-                connection
-                    ->invoke(
-                        "session.eventLog.registerInterest",
-                        json{{"sessionId", session_id}, {"eventType", "mcp.oauth_required"}}
-                    )
-                    .get();
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || rpc_ != connection)
-                {
-                    session->retire();
-                    throw std::runtime_error("Session connection changed during creation");
-                }
-            }
-            rollback.action = {};
-            return session;
-        }
+        [this, options = std::move(options)]() mutable
+        { return create_session_impl(std::move(options)); }
     );
 }
 
 std::future<std::shared_ptr<Session>>
-Client::resume_session(const std::string& session_id, ResumeSessionConfig config)
+Client::resume_session(const std::string& session_id, ResumeSessionOptions options)
 {
+    return resume_session(session_id, std::move(options), std::nullopt);
+}
 
+std::future<std::shared_ptr<Session>> Client::resume_session(
+    const std::string& session_id,
+    ResumeSessionOptions options,
+    std::optional<bool> permission_request
+)
+{
     return std::async(
         std::launch::async,
-        [this, session_id, config = std::move(config)]()
+        [this, session_id, options = std::move(options), permission_request]() mutable
+        { return resume_session_impl(session_id, std::move(options), permission_request); }
+    );
+}
+
+// NODEJS REFERENCE: client.ts setupSessionFs
+// C# REFERENCE: Client.cs ConfigureSessionFsHandlers
+void Client::setup_session_fs(Session& session, const SessionStateOptions& state) const
+{
+    if (!options_.session_fs)
+        return;
+    if (!state.create_session_fs_provider)
+        throw std::invalid_argument(
+            "createSessionFsProvider is required in session config when sessionFs is enabled in "
+            "client options."
+        );
+    auto provider = state.create_session_fs_provider(session);
+    if (!provider)
+        throw std::runtime_error("CreateSessionFsProvider returned null.");
+    const auto declares = [this](std::optional<bool> SessionFsCapabilities::* field)
+    {
+        const auto& capabilities = options_.session_fs->capabilities;
+        return capabilities && ((*capabilities).*field).value_or(false);
+    };
+    if (declares(&SessionFsCapabilities::sqlite) && !provider->sqlite())
+        throw std::invalid_argument(
+            "SessionFsConfig declares capabilities.sqlite but the provider does not implement sqlite."
+        );
+    if (declares(&SessionFsCapabilities::binary) && !provider->supports_binary())
+        throw std::invalid_argument(
+            "SessionFsConfig declares capabilities.binary but the provider does not implement "
+            "readFileBytes and writeFileBytes."
+        );
+    if (declares(&SessionFsCapabilities::read_file_range) && !provider->supports_read_file_range())
+        throw std::invalid_argument(
+            "SessionFsConfig declares capabilities.readFileRange but the provider does not "
+            "implement readFileRange."
+        );
+    session.register_session_fs_handler(create_session_fs_adapter(std::move(provider)));
+}
+
+void Client::setup_session_fs_or_retire(Session& session, const SessionStateOptions& state) const
+{
+    try
+    {
+        setup_session_fs(session, state);
+    }
+    catch (...)
+    {
+        session.retire();
+        throw;
+    }
+}
+
+// NODEJS REFERENCE: client.ts createSession
+std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions options)
+{
+    ensure_connected();
+
+    std::shared_ptr<JsonRpcClient> connection;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || !rpc_ || state_ != ConnectionState::Connected)
+            throw std::runtime_error("Session admission is closed");
+        connection = rpc_;
+    }
+
+    std::optional<std::string> registration_id;
+    if (options.github.token_provider)
+        registration_id = register_github_token_provider(options.github.token_provider);
+    ScopeExit drop_registration{[&]
+                                {
+                                    if (registration_id)
+                                        remove_github_token_registration(*registration_id);
+                                }};
+
+    json request = build_session_create_request(
+        options,
+        options_.mode,
+        static_cast<bool>(options_.github.on_telemetry),
+        registration_id
+    );
+
+    const bool cloud = options.cloud.has_value();
+    std::string session_id =
+        cloud && !options.session_id ? std::string() : options.session_id.value_or(generate_uuid_v4());
+    if (!session_id.empty())
+        request["sessionId"] = session_id;
+    // C# REFERENCE: Host.cs CaptureAhpSession (snapshot excludes trace context)
+    std::optional<json> ahp_snapshot;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        if (!ahp_handoffs_.empty())
+            ahp_snapshot = request;
+    }
+    request.update(trace_context());
+
+    auto session = std::make_shared<Session>(
+        session_id, this, std::nullopt, SessionCapabilities{}, managed_settings_enabled(options)
+    );
+    register_initial_handlers(*session, options);
+    // Session-FS setup can throw, so finish it before the session becomes routable;
+    // a failed open must not leave handlers behind.
+    setup_session_fs_or_retire(*session, options.state);
+    if (registration_id)
+        session->set_on_disconnected([this, id = *registration_id]
+                                     { remove_github_token_registration(id); });
+
+    std::shared_ptr<Session> replaced;
+    std::optional<std::string> returned_id;
+    ScopeExit rollback{[&]
+                       {
+                           session->retire();
+                           {
+                               std::lock_guard<std::mutex> lock(mutex_);
+                               const auto it = sessions_.find(session_id);
+                               if (it != sessions_.end() && it->second == session)
+                               {
+                                   if (replaced && !replaced->is_disconnected())
+                                       it->second = replaced;
+                                   else
+                                       sessions_.erase(it);
+                               }
+                           }
+                           if (cloud && returned_id)
+                           {
+                               try
+                               {
+                                   connection
+                                       ->invoke(
+                                           copilot::rpc::methods::kSessionDelete,
+                                           {{"sessionId", *returned_id}},
+                                           kCleanupTimeout
+                                       )
+                                       .get();
+                               }
+                               catch (...)
+                               {
+                               }
+                           }
+                       }};
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || rpc_ != connection)
+            throw std::runtime_error("Session admission is closed");
+        if (!session_id.empty())
         {
-            if (state_ != ConnectionState::Connected)
+            const auto it = sessions_.find(session_id);
+            if (it != sessions_.end())
+                replaced = it->second;
+            sessions_[session_id] = session;
+        }
+    }
+
+    const json response = connection->invoke(copilot::rpc::methods::kSessionCreate, request).get();
+    returned_id = string_field(response, "sessionId");
+    if (!returned_id || returned_id->empty())
+    {
+        returned_id.reset();
+        throw std::runtime_error("session.create response did not include a sessionId");
+    }
+    if (!session_id.empty() && *returned_id != session_id)
+        throw std::runtime_error(
+            "session.create returned sessionId " + *returned_id + " but the caller requested " +
+            session_id
+        );
+    if (session_id.empty())
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || rpc_ != connection)
+            throw std::runtime_error("Session connection changed during creation");
+        session_id = *returned_id;
+        session->set_session_id(session_id);
+        sessions_[session_id] = session;
+    }
+    if (registration_id)
+        assign_github_token_registration(*registration_id, session_id);
+
+    auto capabilities = capabilities_of(response);
+    // NODEJS REFERENCE: client.ts requireAutoModeRecovery
+    const bool auto_mode_unsupported = options.interaction.auto_mode_recovery.value_or(false) &&
+                                       !capabilities.has("ui.autoModeRecovery");
+    session->set_initial_state(string_field(response, "workspacePath"), std::move(capabilities));
+    // NODEJS REFERENCE: client.ts createSession (setPermissionModeResult)
+    if (response.contains("permissionModeResult") && response["permissionModeResult"].is_object())
+        session->set_permission_mode_result(
+            generated::api::PermissionsSetModeResult(response["permissionModeResult"])
+        );
+    if (auto_mode_unsupported)
+    {
+        detach_quietly(connection, session_id);
+        throw std::runtime_error("The runtime does not support autoModeRecovery");
+    }
+
+    if (has_mcp_auth_handler(options))
+        register_mcp_oauth_interest(connection, session_id);
+    apply_options_update(*session, options, options_.mode);
+
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || rpc_ != connection)
+            throw std::runtime_error("Session connection changed during creation");
+    }
+    if (registration_id)
+        commit_github_token_registration(*registration_id);
+    drop_registration.action = {};
+    rollback.action = {};
+    if (ahp_snapshot)
+        capture_host_session(
+            session, std::move(*ahp_snapshot), build_session_options_update(options, options_.mode)
+        );
+    return session;
+}
+
+// NODEJS REFERENCE: client.ts resolveSessionIdPrefix
+std::string
+Client::resolve_session_id_prefix(const std::string& session_id, const ResumeSessionOptions& options)
+{
+    if (!options.interaction.auto_mode_recovery.value_or(false) || options_.session_fs ||
+        !is_abbreviated_uuid_prefix(session_id))
+        return session_id;
+
+    json params{{"prefix", session_id}};
+    if (options.config_directory)
+        params["configDir"] = *options.config_directory;
+    const json response = rpc_client_shared()->invoke("sessions.findByPrefix", params).get();
+    const auto resolved = string_field(response, "sessionId");
+    if (!resolved || resolved->empty())
+        throw std::runtime_error("No unique session matches prefix " + session_id);
+    if (!starts_with_icase(*resolved, session_id))
+        throw std::runtime_error("Runtime returned an unrelated session ID for prefix " + session_id);
+    return *resolved;
+}
+
+// NODEJS REFERENCE: client.ts resumeSession
+std::shared_ptr<Session> Client::resume_session_impl(
+    std::string session_id, ResumeSessionOptions options, std::optional<bool> permission_request
+)
+{
+    ensure_connected();
+    session_id = resolve_session_id_prefix(session_id, options);
+
+    std::shared_ptr<JsonRpcClient> connection;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || !rpc_ || state_ != ConnectionState::Connected)
+            throw std::runtime_error("Session admission is closed");
+        connection = rpc_;
+    }
+
+    auto session = std::make_shared<Session>(
+        session_id, this, std::nullopt, SessionCapabilities{}, managed_settings_enabled(options)
+    );
+    register_initial_handlers(*session, options);
+    session->register_workflows(options.workflow_objects);
+    setup_session_fs_or_retire(*session, options.state);
+
+    std::optional<std::string> registration_id;
+    if (options.github.token_provider)
+    {
+        registration_id = register_github_token_provider(options.github.token_provider);
+        assign_github_token_registration(*registration_id, session_id);
+        session->set_on_disconnected([this, id = *registration_id]
+                                     { remove_github_token_registration(id); });
+    }
+
+    std::shared_ptr<Session> replaced;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (session_admission_closed_ || rpc_ != connection)
+        {
+            session->retire();
+            if (registration_id)
+                remove_github_token_registration(*registration_id);
+            throw std::runtime_error("Session connection changed during resume");
+        }
+        const auto it = sessions_.find(session_id);
+        if (it != sessions_.end())
+            replaced = it->second;
+        sessions_[session_id] = session;
+        pending_resumes_[session_id] = PendingResume{
+            .session = session,
+            .connection = connection,
+            .registration_id = registration_id,
+            .resolve_aliases =
+                options.interaction.auto_mode_recovery.value_or(false) && !options_.session_fs,
+        };
+    }
+    const std::string requested_id = session_id;
+    ScopeExit drop_pending{[&]
+                           {
+                               std::lock_guard<std::mutex> lock(mutex_);
+                               const auto it = pending_resumes_.find(requested_id);
+                               if (it != pending_resumes_.end() && it->second.session == session)
+                                   pending_resumes_.erase(it);
+                           }};
+
+    // A failed resume of a session this client already owns keeps the resident owner.
+    bool keep_session = false;
+    std::string active_id = session_id;
+    try
+    {
+        json request = build_session_resume_request(
+            session_id,
+            options,
+            options_.mode,
+            static_cast<bool>(options_.github.on_telemetry),
+            registration_id,
+            permission_request
+        );
+        std::optional<json> ahp_snapshot;
+        {
+            std::lock_guard<std::mutex> lock(ahp_mutex_);
+            if (!ahp_handoffs_.empty())
+                ahp_snapshot = request;
+        }
+        request.update(trace_context());
+        const json response =
+            connection->invoke(copilot::rpc::methods::kSessionResume, request).get();
+
+        const auto returned_id = string_field(response, "sessionId");
+        if (returned_id && !returned_id->empty() && *returned_id != session_id)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (session_admission_closed_ || rpc_ != connection)
+                throw std::runtime_error("Session connection changed during resume");
+            const auto it = sessions_.find(session_id);
+            if (it != sessions_.end() && it->second == session)
             {
-                if (options_.auto_start)
-                    start().get();
+                if (replaced && !replaced->is_disconnected())
+                    it->second = replaced;
                 else
-                    throw std::runtime_error("Client not connected. Call start() first.");
+                    sessions_.erase(it);
             }
+            const auto existing = sessions_.find(*returned_id);
+            replaced = existing != sessions_.end() ? existing->second : nullptr;
+            active_id = *returned_id;
+            session->set_session_id(active_id);
+            sessions_[active_id] = session;
+            if (registration_id)
+                assign_github_token_registration(*registration_id, active_id);
+        }
 
-            std::shared_ptr<JsonRpcClient> connection;
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || !rpc_ || state_ != ConnectionState::Connected)
-                    throw std::runtime_error("Session admission is closed");
-                connection = rpc_;
-            }
+        apply_granted_environment(response, options.requested_environment_variables);
 
-            // Build and send request
-            json request = build_session_resume_request(session_id, config, options_.mode);
-            request.update(trace_context());
-            if (options_.on_github_telemetry)
-                request["enableGitHubTelemetryForwarding"] = true;
-            auto response =
-                connection->invoke(copilot::rpc::methods::kSessionResume, request).get();
-            std::string returned_session_id = response["sessionId"].get<std::string>();
+        auto capabilities = capabilities_of(response);
+        const bool auto_mode_unsupported =
+            options.interaction.auto_mode_recovery.value_or(false) &&
+            !capabilities.has("ui.autoModeRecovery");
+        session->set_initial_state(string_field(response, "workspacePath"), std::move(capabilities));
+        // NODEJS REFERENCE: client.ts resumeSession (setOpenCanvases / setPermissionModeResult)
+        {
+            std::vector<generated::api::OpenCanvasInstance> open_canvases;
+            if (response.contains("openCanvases") && response["openCanvases"].is_array())
+                for (const auto& instance : response["openCanvases"])
+                    open_canvases.emplace_back(instance);
+            session->set_open_canvases(std::move(open_canvases));
+            std::optional<generated::api::PermissionsSetModeResult> permission_mode_result;
+            if (response.contains("permissionModeResult") &&
+                response["permissionModeResult"].is_object())
+                permission_mode_result =
+                    generated::api::PermissionsSetModeResult(response["permissionModeResult"]);
+            session->set_permission_mode_result(std::move(permission_mode_result));
+        }
+        if (auto_mode_unsupported)
+        {
+            // NODEJS REFERENCE: client.ts requireAutoModeRecovery(detachOnFailure = !replaced)
+            keep_session = static_cast<bool>(replaced);
+            if (!replaced)
+                detach_quietly(connection, active_id);
+            throw std::runtime_error("The runtime does not support autoModeRecovery");
+        }
 
-            if (config.requested_environment_variables &&
-                response.contains("grantedEnvironmentVariables") &&
-                response["grantedEnvironmentVariables"].is_object())
-            {
-                const auto& granted = response["grantedEnvironmentVariables"];
-                for (const auto& name : *config.requested_environment_variables)
-                {
-                    if (!granted.contains(name) || !granted[name].is_string())
-                        continue;
-                    const auto value = granted[name].get<std::string>();
-#ifdef _WIN32
-                    _putenv_s(name.c_str(), value.c_str());
-#else
-                    setenv(name.c_str(), value.c_str(), 1);
-#endif
-                }
-            }
-
-            // Capture workspace_path if present (for infinite sessions)
-            std::optional<std::string> workspace_path;
-            if (response.contains("workspacePath") && response["workspacePath"].is_string())
-                workspace_path = response["workspacePath"].get<std::string>();
-
-            SessionCapabilities capabilities;
-            if (response.contains("capabilities") && !response["capabilities"].is_null())
-                capabilities = response["capabilities"].get<SessionCapabilities>();
-
-            auto session = std::make_shared<Session>(
-                returned_session_id,
-                this,
-                workspace_path,
-                std::move(capabilities),
-                config.enable_managed_settings.value_or(false) ||
-                    config.managed_settings.has_value()
+        if (response.contains("transcriptRecovery") && !response["transcriptRecovery"].is_null())
+            session->set_transcript_recovery(
+                response["transcriptRecovery"].get<TranscriptRecoveryReport>()
             );
 
-            if (response.contains("transcriptRecovery") &&
-                !response["transcriptRecovery"].is_null())
-                session->set_transcript_recovery(
-                    response["transcriptRecovery"].get<TranscriptRecoveryReport>()
-                );
+        if (has_mcp_auth_handler(options))
+            register_mcp_oauth_interest(connection, active_id);
+        apply_options_update(*session, options, options_.mode);
 
-            // Register tools locally for handling callbacks from the server
-            for (const auto& tool : config.tools)
-                session->register_tool(tool);
-            session->register_canvases(config.canvas_objects);
-            session->register_workflows(config.workflow_objects);
-
-            // Register permission handler locally (server will call permission.request)
-            if (config.on_permission_request.has_value())
-                session->register_permission_handler(*config.on_permission_request);
-            if (config.on_permission_request_with_context.has_value())
-                session->register_permission_handler(*config.on_permission_request_with_context);
-            if (config.on_mcp_auth_request_with_result)
-                session->register_mcp_auth_handler(*config.on_mcp_auth_request_with_result);
-            if (config.skill_provider)
-                session->register_skill_provider(config.skill_provider);
-            if (config.on_mcp_auth_request)
-                session->register_mcp_auth_handler(*config.on_mcp_auth_request);
-
-            // Register user input handler locally (server will call userInput.request)
-            if (config.on_user_input_request.has_value())
-                session->register_user_input_handler(*config.on_user_input_request);
-
-            if (config.on_elicitation_request.has_value())
-                session->register_elicitation_handler(*config.on_elicitation_request);
-            if (config.on_exit_plan_mode.has_value())
-                session->register_exit_plan_mode_handler(*config.on_exit_plan_mode);
-            if (config.on_auto_mode_switch.has_value())
-                session->register_auto_mode_switch_handler(*config.on_auto_mode_switch);
-            if (config.on_event.has_value())
-                session->register_persistent_event_handler(*config.on_event);
-
-            // Register hooks locally (server will call hooks.invoke)
-            if (config.hooks.has_value())
-                session->register_hooks(*config.hooks);
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || rpc_ != connection)
-                {
-                    session->retire();
-                    throw std::runtime_error("Session connection changed during resume");
-                }
-                sessions_[returned_session_id] = session;
-            }
-            ScopeExit rollback{[&]
-                               {
-                                   {
-                                       std::lock_guard<std::mutex> lock(mutex_);
-                                       const auto found = sessions_.find(returned_session_id);
-                                       if (found != sessions_.end() && found->second == session)
-                                           sessions_.erase(found);
-                                   }
-                                   session->retire();
-                               }};
-            if (config.on_mcp_auth_request || config.on_mcp_auth_request_with_result)
-            {
-                connection
-                    ->invoke(
-                        "session.eventLog.registerInterest",
-                        json{
-                            {"sessionId", returned_session_id},
-                            {"eventType", "mcp.oauth_required"},
-                        }
-                    )
-                    .get();
-            }
-
-            {
-                std::lock_guard<std::mutex> lock(mutex_);
-                if (session_admission_closed_ || rpc_ != connection)
-                    throw std::runtime_error("Session connection changed during resume");
-            }
-            rollback.action = {};
-            return session;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (session_admission_closed_ || rpc_ != connection)
+                throw std::runtime_error("Session connection changed during resume");
         }
-    );
+        if (registration_id)
+            commit_github_token_registration(*registration_id);
+        if (ahp_snapshot)
+        {
+            // NODEJS REFERENCE: client.ts resumeSession ({ ...config, sessionId })
+            (*ahp_snapshot)["sessionId"] = active_id;
+            capture_host_session(
+                session,
+                std::move(*ahp_snapshot),
+                build_session_options_update(options, options_.mode)
+            );
+        }
+        return session;
+    }
+    catch (...)
+    {
+        session->retire();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            const auto it = sessions_.find(active_id);
+            if (it != sessions_.end() && it->second == session)
+            {
+                if (replaced && !replaced->is_disconnected())
+                    it->second = replaced;
+                else
+                    sessions_.erase(it);
+            }
+        }
+        if (registration_id)
+        {
+            if (keep_session)
+                commit_github_token_registration(*registration_id);
+            else
+                remove_github_token_registration(*registration_id);
+        }
+        throw;
+    }
 }
 
 std::future<std::vector<SessionMetadata>> Client::list_sessions()
@@ -1679,13 +1855,7 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilte
         std::launch::async,
         [this, filter = std::move(filter)]()
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
             // session.list takes an optional 'filter' param (matches nodejs SDK shape).
             json params = json::object();
@@ -1693,7 +1863,7 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilte
             if (!filter_json.empty())
                 params["filter"] = std::move(filter_json);
 
-            auto response = rpc_->invoke(copilot::rpc::methods::kSessionList, params).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kSessionList, params).get();
             std::vector<SessionMetadata> sessions;
 
             if (response.contains("sessions") && response["sessions"].is_array())
@@ -1712,16 +1882,10 @@ Client::get_session_metadata(const std::string& session_id)
         std::launch::async,
         [this, session_id]() -> std::optional<SessionMetadata>
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
             auto response =
-                rpc_->invoke(
+                rpc->invoke(
                         copilot::rpc::methods::kSessionGetMetadata, json{{"sessionId", session_id}}
                 ).get();
 
@@ -1739,20 +1903,20 @@ std::future<void> Client::delete_session(const std::string& session_id)
         std::launch::async,
         [this, session_id]()
         {
-            if (state_ != ConnectionState::Connected)
-                throw std::runtime_error("Client not connected");
+            const auto rpc = ensure_connected();
 
             auto response =
-                rpc_->invoke(
+                rpc->invoke(
                         copilot::rpc::methods::kSessionDelete, json{{"sessionId", session_id}}
                 ).get();
 
-            if (response.contains("success") && !response["success"].get<bool>())
+            if (response.is_object() && response.contains("success") &&
+                response["success"].is_boolean() && !response["success"].get<bool>())
             {
-                std::string error = response.contains("error")
+                std::string error = response.contains("error") && response["error"].is_string()
                                         ? response["error"].get<std::string>()
                                         : "Unknown error";
-                throw std::runtime_error("Failed to delete session: " + error);
+                throw std::runtime_error("Failed to delete session " + session_id + ": " + error);
             }
 
             std::lock_guard<std::mutex> lock(mutex_);
@@ -1767,10 +1931,9 @@ std::future<void> Client::clear_managed_settings_cache()
         std::launch::async,
         [this]()
         {
-            if (state_ != ConnectionState::Connected)
-                throw std::runtime_error("Client not connected");
+            const auto rpc = ensure_connected();
 
-            rpc_->invoke(copilot::rpc::methods::kManagedSettingsClearCache, json::object()).get();
+            rpc->invoke(copilot::rpc::methods::kManagedSettingsClearCache, json::object()).get();
         }
     );
 }
@@ -1781,16 +1944,10 @@ std::future<std::optional<std::string>> Client::get_last_session_id()
         std::launch::async,
         [this]() -> std::optional<std::string>
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
             auto response =
-                rpc_->invoke(copilot::rpc::methods::kSessionGetLastId, json::object()).get();
+                rpc->invoke(copilot::rpc::methods::kSessionGetLastId, json::object()).get();
 
             if (response.contains("sessionId") && !response["sessionId"].is_null())
                 return response["sessionId"].get<std::string>();
@@ -1805,13 +1962,7 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
         std::launch::async,
         [this, message]()
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
             json params;
             if (message.has_value())
@@ -1819,7 +1970,7 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
             else
                 params["message"] = nullptr;
 
-            auto response = rpc_->invoke(copilot::rpc::methods::kPing, params).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kPing, params).get();
 
             PingResponse result;
             if (response.contains("message") && !response["message"].is_null())
@@ -1844,12 +1995,20 @@ std::future<GetStatusResponse> Client::get_status()
         std::launch::async,
         [this]()
         {
-            if (state_ != ConnectionState::Connected)
+            const auto rpc = ensure_connected();
+
+            // NODEJS REFERENCE: nodejs/src/client.ts getStatus (status.get). Runtimes that
+            // do not implement status.get get the values negotiated at connect time.
+            try
             {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
+                const auto response =
+                    rpc->invoke(copilot::rpc::methods::kStatusGet, json::object()).get();
+                if (response.is_object() && response.contains("version") &&
+                    response.contains("protocolVersion"))
+                    return response.get<GetStatusResponse>();
+            }
+            catch (...)
+            {
             }
 
             GetStatusResponse result;
@@ -1870,15 +2029,9 @@ std::future<GetAuthStatusResponse> Client::get_auth_status()
         std::launch::async,
         [this]()
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
-            auto response = rpc_->invoke("account.getCurrentAuth", json::object()).get();
+            auto response = rpc->invoke("account.getCurrentAuth", json::object()).get();
             GetAuthStatusResponse result;
             if (response.contains("authInfo") && response["authInfo"].is_object())
             {
@@ -1910,11 +2063,7 @@ std::future<std::vector<ModelInfo>> Client::list_models()
             }
 
             // BYOK: if a custom handler is registered, use it instead of the CLI RPC.
-            ListModelsHandler handler_copy;
-            {
-                std::lock_guard<std::mutex> lock(on_list_models_mutex_);
-                handler_copy = on_list_models_;
-            }
+            const ListModelsHandler handler_copy = options_.models.on_list_models;
             if (handler_copy)
             {
                 auto models = handler_copy();
@@ -1924,15 +2073,9 @@ std::future<std::vector<ModelInfo>> Client::list_models()
             }
 
             // Default path: query the CLI server (requires a live connection).
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
+            const auto rpc = ensure_connected();
 
-            auto response = rpc_->invoke(copilot::rpc::methods::kModelsList, json::object()).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kModelsList, json::object()).get();
             auto models_response = response.get<GetModelsResponse>();
 
             // Store in cache
@@ -1952,14 +2095,8 @@ std::future<json> Client::invoke(const std::string& method, json params)
         std::launch::async,
         [this, method, params = std::move(params)]() mutable
         {
-            if (state_ != ConnectionState::Connected)
-            {
-                if (options_.auto_start)
-                    start().get();
-                else
-                    throw std::runtime_error("Client not connected. Call start() first.");
-            }
-            return rpc_->invoke(method, params).get();
+            const auto rpc = ensure_connected();
+            return rpc->invoke(method, params).get();
         }
     );
 }
@@ -1967,21 +2104,12 @@ std::future<json> Client::invoke(const std::string& method, json params)
 json Client::trace_context() const
 {
     json result = json::object();
-    if (!options_.on_get_trace_context)
+    if (!options_.observability.on_get_trace_context)
         return result;
-    for (const auto& [key, value] : (*options_.on_get_trace_context)())
+    for (const auto& [key, value] : (*options_.observability.on_get_trace_context)())
         if (key == "traceparent" || key == "tracestate")
             result[key] = value;
     return result;
-}
-
-void Client::set_on_list_models(ListModelsHandler handler)
-{
-    std::lock_guard<std::mutex> lock(on_list_models_mutex_);
-    on_list_models_ = std::move(handler);
-    // Invalidate the cache so the next list_models() call observes the new source.
-    std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
-    models_cache_.reset();
 }
 
 std::shared_ptr<Session> Client::get_session(const std::string& session_id)
@@ -1991,17 +2119,57 @@ std::shared_ptr<Session> Client::get_session(const std::string& session_id)
     return (it != sessions_.end()) ? it->second : nullptr;
 }
 
+// NODEJS REFERENCE: client.ts resolveSessionCallback
+std::shared_ptr<Session> Client::resolve_session_callback(const std::string& session_id)
+{
+    std::shared_ptr<Session> selected;
+    std::optional<std::string> registration_id;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        std::ptrdiff_t selected_prefix_length = -1;
+        for (const auto& [prefix, pending] : pending_resumes_)
+        {
+            if (pending.connection != rpc_ || (!pending.resolve_aliases && prefix != session_id) ||
+                static_cast<std::ptrdiff_t>(prefix.size()) <= selected_prefix_length ||
+                !(session_ids_overlap(prefix, session_id) && session_id.size() >= prefix.size()))
+                continue;
+            std::set<const Session*> known_owners;
+            for (const auto& [_, owner] : sessions_)
+            {
+                if (owner != pending.session && session_ids_overlap(prefix, owner->session_id()) &&
+                    owner->session_id().size() >= prefix.size())
+                    known_owners.insert(owner.get());
+            }
+            if (known_owners.size() > 1)
+                continue;
+            if (pending.session->session_id() != session_id)
+                pending.session->set_session_id(session_id);
+            registration_id = pending.registration_id;
+            selected = pending.session;
+            selected_prefix_length = static_cast<std::ptrdiff_t>(prefix.size());
+        }
+        if (!selected)
+        {
+            const auto it = sessions_.find(session_id);
+            return it != sessions_.end() ? it->second : nullptr;
+        }
+    }
+    if (registration_id)
+        assign_github_token_registration(*registration_id, session_id);
+    return selected;
+}
+
 // =============================================================================
 // RPC Handlers
 // =============================================================================
 
-void Client::handle_session_event(const std::string& method, const json& params)
+void Client::handle_session_event(const std::string& /*method*/, const json& params)
 {
     if (!params.contains("sessionId") || !params.contains("event"))
         return;
 
     std::string session_id = params["sessionId"].get<std::string>();
-    auto session = get_session(session_id);
+    auto session = resolve_session_callback(session_id);
     if (!session)
         return;
 
@@ -2010,140 +2178,30 @@ void Client::handle_session_event(const std::string& method, const json& params)
     session->dispatch_event(event);
 }
 
-json Client::handle_tool_call(const json& params)
-{
-    std::string session_id = params["sessionId"].get<std::string>();
-    std::string tool_call_id = params["toolCallId"].get<std::string>();
-    std::string tool_name = params["toolName"].get<std::string>();
-    json arguments = params.value("arguments", json::object());
-
-    auto session = get_session(session_id);
-    if (!session)
-    {
-        return json{
-            {"result",
-             {{"textResultForLlm", "Session not found"},
-              {"resultType", "failure"},
-              {"error", "Unknown session " + session_id}}}
-        };
-    }
-
-    const auto tool = session->copy_tool(tool_name);
-    if (!tool || !tool->handler)
-    {
-        return json{
-            {"result",
-             {{"textResultForLlm", "Tool '" + tool_name + "' is not supported."},
-              {"resultType", "failure"},
-              {"error", "tool '" + tool_name + "' not supported"}}}
-        };
-    }
-
-    try
-    {
-        ToolInvocation invocation;
-        invocation.session_id = session_id;
-        invocation.tool_call_id = tool_call_id;
-        invocation.tool_name = tool_name;
-        invocation.arguments = arguments;
-        if (params.contains("agentId") && params["agentId"].is_string() &&
-            !params["agentId"].get_ref<const std::string&>().empty())
-            invocation.agent_id = params["agentId"].get<std::string>();
-        if (params.contains("requestId") && params["requestId"].is_string())
-            invocation.request_id = params["requestId"].get<std::string>();
-        if (params.contains("availableTools") && params["availableTools"].is_array())
-            invocation.available_tools = params["availableTools"].get<std::vector<json>>();
-        if (params.contains("traceparent") && params["traceparent"].is_string())
-            invocation.traceparent = params["traceparent"].get<std::string>();
-        if (params.contains("tracestate") && params["tracestate"].is_string())
-            invocation.tracestate = params["tracestate"].get<std::string>();
-
-        json result = tool->handler(invocation);
-
-        // Wrap result in response format
-        return json{{"result", result}};
-    }
-    catch (const std::exception& e)
-    {
-        // Redact exception details from textResultForLlm to avoid leaking sensitive info
-        return json{
-            {"result",
-             {{"textResultForLlm", "Tool execution failed"},
-              {"resultType", "failure"},
-              {"error", e.what()}}}
-        };
-    }
-}
-
-json Client::handle_permission_request(const json& params)
-{
-    std::string session_id = params["sessionId"].get<std::string>();
-
-    // The permission request data is nested in "permissionRequest" field
-    const auto& perm_data =
-        params.contains("permissionRequest") ? params["permissionRequest"] : params;
-
-    auto session = get_session(session_id);
-    if (!session)
-        return json{{"result", {{"kind", "no-result"}}}};
-
-    try
-    {
-        PermissionRequest request;
-        request.kind = perm_data["kind"].get<std::string>();
-        if (perm_data.contains("toolCallId") && !perm_data["toolCallId"].is_null())
-            request.tool_call_id = perm_data["toolCallId"].get<std::string>();
-        if (perm_data.contains("managedApprovalRequired") &&
-            !perm_data["managedApprovalRequired"].is_null())
-        {
-            request.managed_approval_required = perm_data["managedApprovalRequired"].get<bool>();
-        }
-        // Collect all other fields as extension data
-        for (auto& [key, value] : perm_data.items())
-            if (key != "kind" && key != "toolCallId" && key != "managedApprovalRequired")
-                request.extension_data[key] = value;
-
-        auto result = session->handle_permission_request(
-            request,
-            params.contains("promptRequest") ? std::optional<json>(params["promptRequest"])
-                                             : std::nullopt
-        );
-
-        json response;
-        json result_json = result;
-        response["result"] = std::move(result_json);
-        if (result.decision_context)
-            response["decisionContext"] = *result.decision_context;
-        if (params.contains("requestId"))
-            response["requestId"] = params["requestId"];
-        return response;
-    }
-    catch (const std::exception&)
-    {
-        return json{{"result", {{"kind", "no-result"}}}};
-    }
-}
-
-const std::string& Client::github_token_registration_id() const
-{
-    return github_token_registration_id_;
-}
-
+// NODEJS REFERENCE: client.ts handleGitHubTokenRequest
 json Client::handle_github_token_request(const json& params)
 {
-    if (!options_.github_token_provider)
+    const auto registration_id = params.value("registrationId", "");
+    GitHubTokenProvider provider;
+    std::optional<std::string> registered_session;
     {
-        throw JsonRpcError(
-            JsonRpcErrorCode::MethodNotFound,
-            "No GitHub token provider registered (set ClientOptions::github_token_provider)"
-        );
+        std::lock_guard<std::mutex> lock(registry_mutex_);
+        const auto it = github_token_registrations_.find(registration_id);
+        if (it == github_token_registrations_.end())
+            throw JsonRpcError(
+                JsonRpcErrorCode::InvalidParams,
+                "No GitHub token provider registered for registration ID \"" + registration_id +
+                    "\""
+            );
+        provider = it->second.provider;
+        registered_session = it->second.session_id;
     }
 
     GitHubTokenRequest request;
-    request.registration_id = params.value("registrationId", "");
     request.host = params.value("host", "");
-    if (params.contains("sessionId") && !params["sessionId"].is_null())
-        request.session_id = params["sessionId"].get<std::string>();
+    request.session_id = string_field(params, "sessionId");
+    if (!request.session_id)
+        request.session_id = registered_session;
     request.reason = params.value("reason", "") == "refresh" ? GitHubTokenAcquireReason::Refresh
                                                              : GitHubTokenAcquireReason::Initial;
 
@@ -2151,7 +2209,7 @@ json Client::handle_github_token_request(const json& params)
     // union models refusal as its own variant.
     try
     {
-        if (auto token = (*options_.github_token_provider)(request))
+        if (auto token = provider ? provider(request) : std::nullopt)
         {
             // The schema requires expiresIn >= 3601 so the credential outlives the runtime's
             // one-hour preflight refresh. Emitting a smaller value would be out of contract,
@@ -2176,23 +2234,125 @@ json Client::handle_github_token_request(const json& params)
     return json{{"kind", "cancelled"}};
 }
 
+// NODEJS REFERENCE: generated/rpc.ts providerToken.getToken
+json Client::handle_provider_token_request(const json& params)
+{
+    const auto session_id = params.value("sessionId", "");
+    const auto session = resolve_session_callback(session_id);
+    if (!session)
+        throw JsonRpcError(
+            JsonRpcErrorCode::InvalidParams,
+            "No providerToken handler registered for session: " + session_id
+        );
+    return session->handle_provider_token_request(params.value("providerName", ""));
+}
+
+// NODEJS REFERENCE: client.ts handleShellAuthenticationRequest
+json Client::handle_shell_authentication_request(const json& params)
+{
+    const json cancel{{"action", "cancel"}};
+    const auto session_id = string_field(params, "sessionId");
+    const auto request_id = string_field(params, "requestId");
+    const auto program = string_field(params, "program");
+    const auto prompt = string_field(params, "prompt");
+    const auto command = string_field(params, "command");
+    const auto cwd = string_field(params, "cwd");
+    const auto input_kind = string_field(params, "inputKind");
+    if (!session_id || !request_id || !program || !prompt || !command || !cwd || !input_kind ||
+        (*input_kind != "secret" && *input_kind != "text" && *input_kind != "confirm"))
+        return cancel;
+
+    const auto session = get_session(*session_id);
+    if (!session)
+        return cancel;
+
+    CancellationSource source;
+    {
+        std::lock_guard<std::mutex> lock(registry_mutex_);
+        auto& pending = pending_shell_auth_[*session_id];
+        if (pending.contains(*request_id))
+            return cancel;
+        pending.emplace(*request_id, source);
+    }
+    ScopeExit cleanup{[&]
+                      {
+                          std::lock_guard<std::mutex> lock(registry_mutex_);
+                          const auto it = pending_shell_auth_.find(*session_id);
+                          if (it == pending_shell_auth_.end())
+                              return;
+                          it->second.erase(*request_id);
+                          if (it->second.empty())
+                              pending_shell_auth_.erase(it);
+                      }};
+
+    ShellAuthenticationRequest request{
+        .request_id = *request_id,
+        .program = *program,
+        .prompt = *prompt,
+        .input_kind = json(*input_kind).get<ShellAuthenticationInputKind>(),
+        .command = *command,
+        .cwd = *cwd,
+    };
+    return session->handle_shell_authentication_request(request, source.token());
+}
+
+void Client::cancel_shell_authentication_request(const json& params)
+{
+    const auto session_id = string_field(params, "sessionId");
+    const auto request_id = string_field(params, "requestId");
+    if (!session_id || !request_id)
+        return;
+    std::optional<CancellationSource> source;
+    {
+        std::lock_guard<std::mutex> lock(registry_mutex_);
+        const auto it = pending_shell_auth_.find(*session_id);
+        if (it == pending_shell_auth_.end())
+            return;
+        const auto found = it->second.find(*request_id);
+        if (found == it->second.end())
+            return;
+        source = found->second;
+    }
+    source->cancel();
+}
+
+// NODEJS REFERENCE: client.ts handleMemoryStoreRequest
+json Client::handle_memory_store_request(const json& params, const CancellationToken& cancellation)
+{
+    const auto session = get_session(params.value("sessionId", ""));
+    if (!session)
+        throw std::runtime_error("Memory store owner is unavailable");
+
+    CancellationSource source;
+    uint64_t id = 0;
+    {
+        std::lock_guard<std::mutex> lock(registry_mutex_);
+        id = next_memory_store_id_++;
+        pending_memory_stores_.emplace(id, source);
+    }
+    const auto registration = cancellation.on_cancel([source]() mutable { source.cancel(); });
+    ScopeExit cleanup{[&]
+                      {
+                          if (registration != 0)
+                              cancellation.unregister(registration);
+                          std::lock_guard<std::mutex> lock(registry_mutex_);
+                          pending_memory_stores_.erase(id);
+                      }};
+    session->handle_memory_store_request(params, source.token());
+    return nullptr;
+}
+
 json Client::handle_user_input_request(const json& params)
 {
     std::string session_id = params["sessionId"].get<std::string>();
-    std::string question = params["question"].get<std::string>();
 
-    auto session = get_session(session_id);
+    auto session = resolve_session_callback(session_id);
     if (!session)
         throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
 
     try
     {
-        UserInputRequest request;
-        request.question = question;
-        if (params.contains("choices") && !params["choices"].is_null())
-            request.choices = params["choices"].get<std::vector<std::string>>();
-        if (params.contains("allowFreeform") && !params["allowFreeform"].is_null())
-            request.allow_freeform = params["allowFreeform"].get<bool>();
+        auto request = params.get<UserInputRequest>();
 
         auto result = session->handle_user_input_request(request);
 
@@ -2207,30 +2367,11 @@ json Client::handle_user_input_request(const json& params)
     }
 }
 
-json Client::handle_elicitation_request(const json& params)
-{
-    std::string session_id = params["sessionId"].get<std::string>();
-
-    auto session = get_session(session_id);
-    if (!session)
-        throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
-
-    try
-    {
-        auto context = params.get<ElicitationContext>();
-        return json(session->handle_elicitation_request(context));
-    }
-    catch (const std::exception& e)
-    {
-        throw JsonRpcError(JsonRpcErrorCode::InternalError, e.what());
-    }
-}
-
 json Client::handle_exit_plan_mode_request(const json& params)
 {
     std::string session_id = params["sessionId"].get<std::string>();
 
-    auto session = get_session(session_id);
+    auto session = resolve_session_callback(session_id);
     if (!session)
         throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
 
@@ -2249,7 +2390,7 @@ json Client::handle_auto_mode_switch_request(const json& params)
 {
     std::string session_id = params["sessionId"].get<std::string>();
 
-    auto session = get_session(session_id);
+    auto session = resolve_session_callback(session_id);
     if (!session)
         throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
 
@@ -2270,7 +2411,7 @@ json Client::handle_hooks_invoke(const json& params)
     std::string hook_type = params["hookType"].get<std::string>();
     json input = params.value("input", json::object());
 
-    auto session = get_session(session_id);
+    auto session = resolve_session_callback(session_id);
     if (!session)
         throw JsonRpcError(JsonRpcErrorCode::InvalidParams, "Unknown session " + session_id);
 
@@ -2323,7 +2464,7 @@ std::future<std::optional<std::string>> Client::get_foreground_session_id()
         [this]() -> std::optional<std::string>
         {
             auto response =
-                rpc_client()
+                rpc_client_shared()
                     ->invoke(copilot::rpc::methods::kSessionGetForeground, json::object())
                     .get();
             auto parsed = response.get<GetForegroundSessionResponse>();
@@ -2338,13 +2479,501 @@ std::future<void> Client::set_foreground_session_id(const std::string& session_i
         std::launch::async,
         [this, session_id]()
         {
-            rpc_client()
-                ->invoke(
-                    copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}
-                )
-                .get();
+            // Protocol 4 runtimes reject with a JSON-RPC error; legacy runtimes report success:false.
+            const json response =
+                rpc_client_shared()
+                    ->invoke(
+                        copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}
+                    )
+                    .get();
+            if (response.is_object() && response.contains("success") &&
+                response["success"].is_boolean() && !response["success"].get<bool>())
+            {
+                std::string error = response.contains("error") && response["error"].is_string()
+                                        ? response["error"].get<std::string>()
+                                        : "Failed to set foreground session";
+                throw std::runtime_error(error);
+            }
         }
     );
+}
+
+// =============================================================================
+// AHP hosting
+// =============================================================================
+
+namespace
+{
+
+std::string ahp_mode_name(AhpAuthenticationMode mode)
+{
+    return json(mode).get<std::string>();
+}
+
+bool is_blank(const std::string& value)
+{
+    return value.find_first_not_of(" \t\r\n\f\v") == std::string::npos;
+}
+
+void run_detached(std::function<void()> action)
+{
+    std::thread(
+        [action = std::move(action)]()
+        {
+            try
+            {
+                action();
+            }
+            catch (...)
+            {
+            }
+        }
+    ).detach();
+}
+
+} // namespace
+
+// NODEJS REFERENCE: client.ts startAhpHost
+// C# REFERENCE: Host.cs StartAhpHostAsync
+std::future<AhpHost> Client::start_ahp_host(AhpHostOptions options)
+{
+    return std::async(
+        std::launch::async,
+        [this, options = std::move(options)]() -> AhpHost
+        {
+            if (!options.authentication)
+                throw std::invalid_argument("An explicit authentication mode is required");
+            const auto& authentication = *options.authentication;
+            if (authentication.mode == AhpAuthenticationMode::Custom &&
+                (is_blank(authentication.require_identity) || !authentication.authenticate))
+                throw std::invalid_argument(
+                    "Custom authentication requires a nonempty requireIdentity and authenticate "
+                    "callback"
+                );
+            if (authentication.mode != AhpAuthenticationMode::GitHub && options.github_environment)
+                throw std::invalid_argument("githubEnvironment requires github authentication");
+            if (!options.local_server && !options.github_environment)
+                throw std::invalid_argument(
+                    "At least one of localServer or githubEnvironment is required"
+                );
+
+            const auto rpc = ensure_connected();
+            const std::string host_id = generate_uuid_v4();
+            const bool custom = authentication.mode == AhpAuthenticationMode::Custom;
+            {
+                std::lock_guard<std::mutex> lock(ahp_mutex_);
+                if (custom)
+                    ahp_authenticators_[host_id] = AhpAuthenticatorEntry{
+                        authentication.require_identity,
+                        authentication.authenticate,
+                        next_ahp_authenticator_generation_++,
+                    };
+                if (options.create_session || options.resume_session)
+                    ahp_session_factories_[host_id] = AhpSessionFactories{
+                        options.create_session,
+                        options.resume_session,
+                        options.on_session_released,
+                        AhpHostPolicy{
+                            authentication.mode, custom ? authentication.require_identity : ""
+                        },
+                    };
+                if (options.on_exit)
+                    ahp_exit_callbacks_[host_id] = options.on_exit;
+            }
+
+            try
+            {
+                json auth = {{"mode", ahp_mode_name(authentication.mode)}};
+                if (custom)
+                    auth["requireIdentity"] = authentication.require_identity;
+                json params = {{"hostId", host_id}, {"authentication", std::move(auth)}};
+                if (options.compute_id)
+                    params["computeId"] = *options.compute_id;
+                if (options.workspace)
+                    params["workspace"] = *options.workspace;
+                if (options.local_server)
+                    params["localServer"] = *options.local_server;
+                if (options.github_environment)
+                    params["githubEnvironment"] = *options.github_environment;
+                if (options.create_session)
+                    params["sessionFactory"] = true;
+                if (options.resume_session)
+                    params["resumeFactory"] = true;
+                if (options.allow_creating_new_sessions)
+                    params["allowCreatingNewSessions"] = *options.allow_creating_new_sessions;
+                const json info = rpc->invoke("host.start", params).get();
+                return AhpHost(HostStartResult(info), rpc);
+            }
+            catch (...)
+            {
+                {
+                    std::lock_guard<std::mutex> lock(ahp_mutex_);
+                    ahp_exit_callbacks_.erase(host_id);
+                }
+                release_host_sessions(host_id);
+                throw;
+            }
+        }
+    );
+}
+
+// NODEJS REFERENCE: client.ts handleHostExit
+void Client::handle_host_exit(const AhpHostExit& exit)
+{
+    release_host_sessions(exit.host_id);
+    std::function<void(const AhpHostExit&)> on_exit;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        const auto it = ahp_exit_callbacks_.find(exit.host_id);
+        if (it == ahp_exit_callbacks_.end())
+            return;
+        on_exit = std::move(it->second);
+        ahp_exit_callbacks_.erase(it);
+    }
+    run_detached([on_exit = std::move(on_exit), exit]() { on_exit(exit); });
+}
+
+// NODEJS REFERENCE: client.ts attachConnectionHandlers host.exited /
+// host.authenticationCancelled / host.sessionReleased
+void Client::handle_host_notification(const std::string& method, const json& params)
+{
+    if (!params.is_object())
+        return;
+    const std::string host_id = params.value("hostId", "");
+    if (method == "host.exited")
+    {
+        AhpHostExit exit;
+        exit.host_id = host_id;
+        exit.reason = params.value("reason", "");
+        detail::get_optional(params, "exitCode", exit.exit_code);
+        detail::get_optional(params, "error", exit.error);
+        handle_host_exit(exit);
+    }
+    else if (method == "host.authenticationCancelled")
+    {
+        std::shared_ptr<AhpAuthenticationAttempt> attempt;
+        {
+            std::lock_guard<std::mutex> lock(ahp_mutex_);
+            const auto it = ahp_authentications_.find(params.value("requestId", ""));
+            if (it != ahp_authentications_.end() && it->second->host_id == host_id)
+                attempt = it->second;
+        }
+        if (attempt)
+            attempt->cancellation.cancel();
+    }
+    else if (method == "host.sessionReleased")
+    {
+        const std::string handoff_id = params.value("handoffId", "");
+        bool matches = false;
+        {
+            std::lock_guard<std::mutex> lock(ahp_mutex_);
+            const auto it = ahp_handoffs_.find(handoff_id);
+            matches = it != ahp_handoffs_.end() && it->second->host_id == host_id;
+        }
+        if (matches)
+            release_host_session(handoff_id);
+    }
+}
+
+// NODEJS REFERENCE: client.ts disconnectHosts
+void Client::disconnect_hosts()
+{
+    std::set<std::string> host_ids;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        for (const auto& [id, _] : ahp_exit_callbacks_)
+            host_ids.insert(id);
+        for (const auto& [id, _] : ahp_session_factories_)
+            host_ids.insert(id);
+        for (const auto& [id, _] : ahp_authenticators_)
+            host_ids.insert(id);
+    }
+    for (const auto& host_id : host_ids)
+    {
+        handle_host_exit(AhpHostExit{
+            host_id,
+            "ownerDisconnected",
+            std::nullopt,
+            "Owner connection closed; runtime cleanup cannot be acknowledged on this connection.",
+        });
+    }
+}
+
+// NODEJS REFERENCE: client.ts releaseHostSessions
+void Client::release_host_sessions(const std::string& host_id)
+{
+    std::vector<std::shared_ptr<AhpAuthenticationAttempt>> attempts;
+    std::vector<std::string> handoffs;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        ahp_authenticators_.erase(host_id);
+        for (auto it = ahp_authentications_.begin(); it != ahp_authentications_.end();)
+        {
+            if (it->second->host_id == host_id)
+            {
+                attempts.push_back(it->second);
+                it = ahp_authentications_.erase(it);
+            }
+            else
+                ++it;
+        }
+        ahp_session_factories_.erase(host_id);
+        for (const auto& [id, entry] : ahp_handoffs_)
+            if (entry->host_id == host_id)
+                handoffs.push_back(id);
+    }
+    for (auto& attempt : attempts)
+        attempt->cancellation.cancel();
+    for (const auto& id : handoffs)
+        release_host_session(id);
+}
+
+// NODEJS REFERENCE: client.ts releaseHostSession
+void Client::release_host_session(const std::string& handoff_id)
+{
+    std::shared_ptr<AhpHandoff> entry;
+    std::shared_ptr<Session> session;
+    std::function<void(std::shared_ptr<Session>)> on_released;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        const auto it = ahp_handoffs_.find(handoff_id);
+        if (it == ahp_handoffs_.end())
+            return;
+        entry = it->second;
+        ahp_handoffs_.erase(it);
+        entry->released = true;
+        entry->configs.clear();
+        entry->configs_closed = true;
+        session = std::move(entry->session);
+        entry->session.reset();
+        on_released = entry->on_released;
+    }
+    entry->cancellation.cancel();
+    notify_host_session_released(std::move(session), std::move(on_released));
+}
+
+// NODEJS REFERENCE: client.ts notifyHostSessionReleased
+void Client::notify_host_session_released(
+    std::shared_ptr<Session> session, std::function<void(std::shared_ptr<Session>)> on_released
+)
+{
+    if (!session || !on_released)
+        return;
+    run_detached([session = std::move(session), on_released = std::move(on_released)]()
+                 { on_released(session); });
+}
+
+// NODEJS REFERENCE: client.ts createHostSession
+// C# REFERENCE: Host.cs MaterializeAhpSessionAsync
+// The factory runs on the request worker thread; cancellation is cooperative through
+// the request's token, and a handoff that ended meanwhile is rejected afterwards.
+json Client::materialize_host_session(const json& params)
+{
+    const std::string host_id = params.value("hostId", "");
+    const std::string handoff_id = params.value("handoffId", "");
+    const bool resume = params.value("resume", false);
+    const auto auth_it = params.find("authentication");
+    if (auth_it == params.end() || !auth_it->is_object())
+        throw std::runtime_error("AHP session handoff authentication is required");
+    const json raw_config = params.contains("config") && params["config"].is_object()
+                                ? params["config"]
+                                : json::object();
+    if (!raw_config.contains("sessionId") || !raw_config["sessionId"].is_string() ||
+        raw_config["sessionId"].get<std::string>().empty())
+        throw std::runtime_error("AHP handoff requires sessionId");
+    const std::string requested_session_id = raw_config["sessionId"].get<std::string>();
+
+    AhpSessionFactories factories;
+    auto entry = std::make_shared<AhpHandoff>();
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        const auto it = ahp_session_factories_.find(host_id);
+        if (it == ahp_session_factories_.end() ||
+            !(resume ? static_cast<bool>(it->second.resume_session)
+                     : static_cast<bool>(it->second.create_session)) ||
+            ahp_handoffs_.contains(handoff_id))
+            throw std::runtime_error("AHP session factory is unavailable or handoff already exists");
+        factories = it->second;
+    }
+
+    AhpSessionAuthentication authentication;
+    {
+        const json& auth = *auth_it;
+        const std::string mode = auth.value("mode", "");
+        const bool known_mode = mode == "github" || mode == "none" || mode == "custom";
+        if (known_mode)
+            authentication.mode = json(mode).get<AhpAuthenticationMode>();
+        const bool has_identity = auth.contains("identity");
+        const bool identity_ok = has_identity && auth["identity"].is_string() &&
+                                 !is_blank(auth["identity"].get<std::string>());
+        if (identity_ok)
+            authentication.identity = auth["identity"].get<std::string>();
+        const auto& policy = factories.policy;
+        if (!known_mode || authentication.mode != policy.mode ||
+            (authentication.mode == AhpAuthenticationMode::None ? has_identity : !identity_ok) ||
+            (policy.mode == AhpAuthenticationMode::Custom &&
+             authentication.identity != policy.require_identity))
+            throw std::runtime_error("AHP trusted authentication does not match host policy");
+    }
+
+    const json expected = detail::group_ahp_host_settings(raw_config);
+    entry->host_id = host_id;
+    entry->requested_session_id = requested_session_id;
+    entry->on_released = factories.on_session_released;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        if (ahp_handoffs_.contains(handoff_id))
+            throw std::runtime_error("AHP session factory is unavailable or handoff already exists");
+        ahp_handoffs_[handoff_id] = entry;
+    }
+
+    try
+    {
+        std::shared_ptr<Session> session;
+        if (resume)
+        {
+            json resume_config = expected;
+            resume_config.erase("sessionId");
+            session = factories.resume_session(AhpSessionResumeRequest{
+                authentication,
+                requested_session_id,
+                detail::resume_session_options_from_json(resume_config),
+                entry->cancellation.token(),
+            });
+        }
+        else
+        {
+            session = factories.create_session(AhpSessionCreateRequest{
+                authentication,
+                detail::create_session_options_from_json(expected),
+                entry->cancellation.token(),
+            });
+        }
+
+        std::optional<json> actual;
+        bool released = false;
+        std::function<void(std::shared_ptr<Session>)> on_released;
+        {
+            std::lock_guard<std::mutex> lock(ahp_mutex_);
+            entry->session = session;
+            if (session)
+            {
+                const auto it = entry->configs.find(session.get());
+                if (it != entry->configs.end())
+                    actual = it->second;
+            }
+            entry->configs.clear();
+            entry->configs_closed = true;
+            released = entry->released;
+            if (released)
+            {
+                on_released = entry->on_released;
+                entry->session.reset();
+            }
+        }
+        if (released)
+        {
+            notify_host_session_released(session, std::move(on_released));
+            throw std::runtime_error("AHP session handoff ended");
+        }
+        if (!session || session->session_id() != requested_session_id ||
+            get_session(session->session_id()) != session)
+            throw std::runtime_error(
+                "AHP callback must return the requested session from this client"
+            );
+        // Retained originals have no new materialization snapshot; the runtime checks them.
+        if ((!resume || actual) && !detail::ahp_config_contains(actual.value_or(json()), expected))
+            throw std::runtime_error("AHP callback must preserve the supplied session configuration");
+        return json{{"sessionId", session->session_id()}};
+    }
+    catch (...)
+    {
+        release_host_session(handoff_id);
+        throw;
+    }
+}
+
+// NODEJS REFERENCE: client.ts attachConnectionHandlers host.validateAuthentication
+// C# REFERENCE: Host.cs ValidateAhpAuthenticationAsync
+json Client::validate_host_authentication(const json& params, const CancellationToken& cancellation)
+{
+    const std::string host_id = params.value("hostId", "");
+    const std::string request_id = params.value("requestId", "");
+    const std::string token = params.value("token", "");
+
+    AhpAuthenticatorEntry authenticator;
+    auto attempt = std::make_shared<AhpAuthenticationAttempt>();
+    attempt->host_id = host_id;
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        const auto it = ahp_authenticators_.find(host_id);
+        if (it == ahp_authenticators_.end() || ahp_authentications_.contains(request_id))
+            throw std::runtime_error("AHP authenticator is unavailable or request already exists");
+        authenticator = it->second;
+        ahp_authentications_[request_id] = attempt;
+    }
+    const uint64_t link =
+        cancellation.on_cancel([attempt]() { attempt->cancellation.cancel(); });
+    ScopeExit cleanup{[&]()
+                      {
+                          cancellation.unregister(link);
+                          {
+                              std::lock_guard<std::mutex> lock(ahp_mutex_);
+                              const auto it = ahp_authentications_.find(request_id);
+                              if (it != ahp_authentications_.end() && it->second == attempt)
+                                  ahp_authentications_.erase(it);
+                          }
+                          attempt->cancellation.cancel();
+                      }};
+
+    const auto still_current = [&]()
+    {
+        std::lock_guard<std::mutex> lock(ahp_mutex_);
+        const auto current = ahp_authentications_.find(request_id);
+        const auto host = ahp_authenticators_.find(host_id);
+        return current != ahp_authentications_.end() && current->second == attempt &&
+               host != ahp_authenticators_.end() &&
+               host->second.generation == authenticator.generation &&
+               !attempt->cancellation.is_cancelled() && !cancellation.is_cancelled();
+    };
+
+    try
+    {
+        const auto result = authenticator.authenticate(
+            AhpAuthenticationRequest{token, attempt->cancellation.token()}
+        );
+        if (!still_current())
+            throw std::runtime_error("AHP authentication ended");
+        if (!result)
+            return json(nullptr);
+        if (result->identity != authenticator.require_identity ||
+            !detail::is_future_rfc3339(result->expires_at))
+            throw std::runtime_error("Invalid AHP authentication result");
+        return json{{"identity", result->identity}, {"expiresAt", result->expires_at}};
+    }
+    catch (...)
+    {
+        throw std::runtime_error("AHP authentication rejected or ended");
+    }
+}
+
+// NODEJS REFERENCE: client.ts createSession/resumeSession hostHandoffs capture
+// C# REFERENCE: Host.cs CaptureAhpSession
+void Client::capture_host_session(
+    const std::shared_ptr<Session>& session, json config, const std::optional<json>& applied
+)
+{
+    // Mode-dependent defaults travel in the follow-up options update; fold them in so
+    // the snapshot reflects the effective session configuration.
+    if (applied && applied->is_object())
+        config.merge_patch(*applied);
+    std::lock_guard<std::mutex> lock(ahp_mutex_);
+    for (auto& [_, entry] : ahp_handoffs_)
+    {
+        if (!entry->released && !entry->configs_closed &&
+            entry->requested_session_id == session->session_id())
+            entry->configs[session.get()] = config;
+    }
 }
 
 } // namespace copilot

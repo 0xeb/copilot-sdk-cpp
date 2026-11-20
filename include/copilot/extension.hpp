@@ -9,9 +9,14 @@
 namespace copilot
 {
 
-struct JoinSessionConfig
+/// Options for join_session(). The extension SDK path, skill provider and image-generation
+/// consent belong to the session owner and are stripped before the resume.
+// NODEJS REFERENCE: nodejs/src/extension.ts JoinSessionOptions
+struct JoinSessionOptions
 {
-    ResumeSessionConfig session;
+    ResumeSessionOptions session;
+    /// Sensitive environment variables the extension needs; granted values are set in
+    /// this process before join_session() resolves.
     std::vector<std::string> requested_environment_variables;
     std::vector<std::shared_ptr<WorkflowHandle>> workflows;
 };
@@ -25,6 +30,6 @@ struct ExtensionSession
     Session& operator*() const noexcept { return *session; }
 };
 
-std::future<ExtensionSession> join_session(JoinSessionConfig config = {});
+std::future<ExtensionSession> join_session(JoinSessionOptions options = {});
 
 } // namespace copilot

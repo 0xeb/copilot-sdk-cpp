@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: MIT
 
 /// @file instruction_directories.cpp
-/// @brief Compile-only demo for the v0.1.49 `instructionDirectories` field on
-/// `SessionConfig` and `ResumeSessionConfig`.
+/// @brief Compile-only demo for `instructions.directories` on
+/// `CreateSessionOptions` and `ResumeSessionOptions` (wire: `instructions.directories`).
 ///
-/// Builds a `SessionConfig` populated with per-session instruction directories
+/// Builds a `CreateSessionOptions` populated with per-session instruction directories
 /// and dumps the resulting `session.create` request payload that the SDK would
 /// send to the Copilot CLI. No network or CLI is required: this example
 /// exercises the public `build_session_create_request` helper so the API is
@@ -24,14 +24,14 @@ int main()
 {
     using namespace copilot;
 
-    SessionConfig cfg;
+    CreateSessionOptions cfg;
     cfg.client_name = "instruction-dirs-demo";
-    cfg.instruction_directories = std::vector<std::string>{
+    cfg.instructions.directories = std::vector<std::string>{
         "/etc/copilot/instructions",
         "./workspace/.copilot/instructions",
     };
     cfg.enable_config_discovery = true;
-    cfg.streaming = false;
+    cfg.events.streaming = false;
 
     json request = build_session_create_request(cfg);
 
@@ -39,11 +39,11 @@ int main()
     std::cout << request.dump(2) << "\n";
 
     // Sanity-check the fields actually round-tripped through the builder.
-    if (!request.contains("instructionDirectories") ||
-        !request["instructionDirectories"].is_array() ||
-        request["instructionDirectories"].size() != 2)
+    const json& instructions = request["instructions"];
+    if (!instructions.contains("directories") || !instructions["directories"].is_array() ||
+        instructions["directories"].size() != 2)
     {
-        std::cerr << "instructionDirectories field missing or malformed\n";
+        std::cerr << "instructions.directories field missing or malformed\n";
         return 1;
     }
     if (request.value("clientName", std::string{}) != "instruction-dirs-demo")

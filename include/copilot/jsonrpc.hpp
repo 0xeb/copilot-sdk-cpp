@@ -382,17 +382,17 @@ class JsonRpcClient
     /// Send a request and await response
     /// @param method The method name
     /// @param params The parameters (can be object or array)
-    /// @param timeout Request timeout (0 = no timeout)
+    /// @param timeout Request timeout (0 = no timeout; nullopt = default_timeout())
     /// @return Future that resolves to the result. Once the connection has
     ///         failed the future is already failed with ConnectionClosed and
     ///         nothing is written.
     std::future<json> invoke(
         const std::string& method,
         const json& params = nullptr,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds{30000}
+        std::optional<std::chrono::milliseconds> timeout = std::nullopt
     )
     {
-        return invoke_with_id(method, params, timeout).second;
+        return invoke_with_id(method, params, timeout.value_or(default_timeout())).second;
     }
 
     /// Run completion on the read thread before subsequent inbound messages are dispatched.
@@ -400,10 +400,19 @@ class JsonRpcClient
         const std::string& method, const json& params, std::function<void(const json&)> completion
     )
     {
-        return invoke_with_id(
-                   method, params, std::chrono::milliseconds(30000), std::move(completion)
-        )
-            .second;
+        return invoke_with_id(method, params, default_timeout(), std::move(completion)).second;
+    }
+
+    /// Deadline applied to requests that do not pass their own (0 = no timeout).
+    /// A request past its deadline fails with JsonRpcErrorCode::Timeout and is removed.
+    void set_default_timeout(std::chrono::milliseconds timeout)
+    {
+        default_timeout_ms_.store(timeout.count());
+    }
+
+    std::chrono::milliseconds default_timeout() const
+    {
+        return std::chrono::milliseconds(default_timeout_ms_.load());
     }
 
     /// Send a request and wait for response synchronously
@@ -411,9 +420,10 @@ class JsonRpcClient
     T invoke_sync(
         const std::string& method,
         const json& params = nullptr,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds{30000}
+        std::optional<std::chrono::milliseconds> timeout_override = std::nullopt
     )
     {
+        const auto timeout = timeout_override.value_or(default_timeout());
         auto [id, future] = invoke_with_id(method, params, timeout);
 
         if (timeout.count() > 0)
@@ -718,13 +728,13 @@ class JsonRpcClient
                 notify_closed();
                 break;
             }
-            catch (const json::exception& e)
+            catch (const json::exception&)
             {
                 // JSON parse error - log and continue
                 // In a real implementation, would use a logger
                 continue;
             }
-            catch (const std::exception& e)
+            catch (const std::exception&)
             {
                 // Other errors - continue if still running
                 if (!running_)
@@ -1079,6 +1089,7 @@ class JsonRpcClient
     std::shared_ptr<IncomingRegistry> incoming_;
     std::atomic<int64_t> next_id_;
     std::atomic<bool> running_;
+    std::atomic<int64_t> default_timeout_ms_{30000};
 
     std::thread read_thread_;
     std::thread timeout_thread_;

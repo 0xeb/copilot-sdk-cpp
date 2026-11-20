@@ -47,14 +47,14 @@ int main()
 
         client.start().get();
 
-        copilot::SessionConfig config;
+        copilot::CreateSessionOptions config;
 
         // Set up hooks
-        config.hooks = copilot::SessionHooks{};
+        config.hooks.handlers = copilot::SessionHooks{};
 
         // ---- PreToolUse Hook ----
         // Fires BEFORE every tool call. Can inspect args, allow/deny, or modify args.
-        config.hooks->on_pre_tool_use = [](const copilot::PreToolUseHookInput& input,
+        config.hooks.handlers->on_pre_tool_use = [](const copilot::PreToolUseHookInput& input,
                                            const copilot::HookInvocation&)
             -> std::optional<copilot::PreToolUseHookOutput>
         {
@@ -76,7 +76,7 @@ int main()
 
         // ---- PostToolUse Hook ----
         // Fires AFTER every tool call. Can inspect/modify the result.
-        config.hooks->on_post_tool_use = [](const copilot::PostToolUseHookInput& input,
+        config.hooks.handlers->on_post_tool_use = [](const copilot::PostToolUseHookInput& input,
                                             const copilot::HookInvocation&)
             -> std::optional<copilot::PostToolUseHookOutput>
         {
@@ -93,7 +93,7 @@ int main()
 
         // ---- SessionStart Hook ----
         // Fires when the session starts.
-        config.hooks->on_session_start = [](const copilot::SessionStartHookInput&,
+        config.hooks.handlers->on_session_start = [](const copilot::SessionStartHookInput&,
                                             const copilot::HookInvocation&)
             -> std::optional<copilot::SessionStartHookOutput>
         {
@@ -103,7 +103,7 @@ int main()
 
         // ---- SessionEnd Hook ----
         // Fires when the session ends.
-        config.hooks->on_session_end = [](const copilot::SessionEndHookInput&,
+        config.hooks.handlers->on_session_end = [](const copilot::SessionEndHookInput&,
                                           const copilot::HookInvocation&)
             -> std::optional<copilot::SessionEndHookOutput>
         {
@@ -113,7 +113,7 @@ int main()
 
         // ---- ErrorOccurred Hook ----
         // Fires on errors during the session.
-        config.hooks->on_error_occurred = [](const copilot::ErrorOccurredHookInput& input,
+        config.hooks.handlers->on_error_occurred = [](const copilot::ErrorOccurredHookInput& input,
                                              const copilot::HookInvocation&)
             -> std::optional<copilot::ErrorOccurredHookOutput>
         {
@@ -122,7 +122,7 @@ int main()
         };
 
         // Permission handler is still needed for tool execution approval
-        config.on_permission_request = [](const copilot::PermissionRequest&)
+        config.permissions.on_request = [](const copilot::PermissionRequest&)
             -> copilot::PermissionRequestResult
         {
             copilot::PermissionRequestResult r;

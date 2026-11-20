@@ -150,20 +150,20 @@ int main()
         std::cout << "=== Starting Copilot Session ===\n\n";
 
         ClientOptions opts;
-        opts.log_level = LogLevel::Info;
-        opts.use_stdio = true;
+        opts.observability.log_level = LogLevel::Info;
+        opts.runtime = RuntimeConnection::for_spawned_stdio();
         Client client(opts);
 
         std::cout << "Connecting to Copilot CLI...\n";
         client.start().get();
         std::cout << "Connected!\n\n";
 
-        SessionConfig config;
-        config.tools = {calculator, get_time, echo, random};
+        CreateSessionOptions config;
+        config.tools.definitions = {calculator, get_time, echo, random};
 
         auto session = client.create_session(config).get();
         std::cout << "Session created: " << session->session_id() << "\n";
-        std::cout << "Registered " << config.tools.size() << " fluent tools\n\n";
+        std::cout << "Registered " << config.tools.definitions.size() << " fluent tools\n\n";
 
         // Event handling
         std::mutex mtx;

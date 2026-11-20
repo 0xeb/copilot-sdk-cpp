@@ -132,7 +132,7 @@ int main()
     {
         // Create client
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -183,8 +183,8 @@ int main()
         echo_tool.handler = echo_handler;
 
         // Create session with custom tools
-        copilot::SessionConfig session_config;
-        session_config.tools = {calc_tool, time_tool, echo_tool};
+        copilot::CreateSessionOptions session_config;
+        session_config.tools.definitions = {calc_tool, time_tool, echo_tool};
         auto session = client.create_session(session_config).get();
         std::cout << "Session created: " << session->session_id() << "\n";
         std::cout << "Registered 3 custom tools: calculate, get_current_time, echo\n\n";

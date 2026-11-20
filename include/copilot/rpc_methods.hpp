@@ -26,10 +26,12 @@ namespace copilot::rpc::methods
 // =============================================================================
 
 inline constexpr const char* kSessionFsReadFileBytes = "sessionFs.readFileBytes";
+inline constexpr const char* kSessionFsReadFileRange = "sessionFs.readFileRange";
 inline constexpr const char* kSessionFsWriteFileBytes = "sessionFs.writeFileBytes";
 inline constexpr const char* kPing = "ping";
 inline constexpr const char* kConnect = "connect";
 inline constexpr const char* kModelsList = "models.list";
+inline constexpr const char* kDecisionsAsk = "decisions.ask";
 inline constexpr const char* kToolsList = "tools.list";
 inline constexpr const char* kAccountGetQuota = "account.getQuota";
 
@@ -48,6 +50,11 @@ inline constexpr const char* kSkillsDiscover = "skills.discover";
 
 // Session filesystem provider (client-side fs registration)
 inline constexpr const char* kSessionFsSetProvider = "sessionFs.setProvider";
+inline constexpr const char* kNetworkSetProvider = "network.setProvider";
+inline constexpr const char* kNetworkResolveProxy = "network.resolveProxy";
+inline constexpr const char* kNetworkAuthenticateNegotiate = "network.authenticateNegotiate";
+inline constexpr const char* kNetworkAuthenticateBasic = "network.authenticateBasic";
+inline constexpr const char* kEntraTokenGetToken = "entraToken.getToken";
 
 // Session lifecycle (top-level)
 inline constexpr const char* kSessionsFork = "sessions.fork";
@@ -68,6 +75,11 @@ inline constexpr const char* kSessionFsReaddir = "sessionFs.readdir";
 inline constexpr const char* kSessionFsReaddirWithTypes = "sessionFs.readdirWithTypes";
 inline constexpr const char* kSessionFsRm = "sessionFs.rm";
 inline constexpr const char* kSessionFsRename = "sessionFs.rename";
+inline constexpr const char* kSessionFsSqliteQuery = "sessionFs.sqliteQuery";
+inline constexpr const char* kSessionFsSqliteTransaction = "sessionFs.sqliteTransaction";
+inline constexpr const char* kSessionFsSqliteExists = "sessionFs.sqliteExists";
+inline constexpr const char* kTasksCancel = "tasks.cancel";
+inline constexpr const char* kUiThreadRun = "uiThread.run";
 
 // =============================================================================
 // Session-scoped methods (per-session API; each carries a `sessionId`)
@@ -81,6 +93,7 @@ inline constexpr const char* kSessionAuthGetStatus = "session.auth.getStatus";
 inline constexpr const char* kSessionModelGetCurrent = "session.model.getCurrent";
 inline constexpr const char* kSessionModelSwitchTo = "session.model.switchTo";
 inline constexpr const char* kSessionModelSwitchAutoTier = "session.model.switchAutoTier";
+inline constexpr const char* kSessionModelSwitchFusionTier = "session.model.switchFusionTier";
 inline constexpr const char* kManagedSettingsClearCache = "managedSettings.clearCache";
 
 inline constexpr const char* kSessionModeGet = "session.mode.get";

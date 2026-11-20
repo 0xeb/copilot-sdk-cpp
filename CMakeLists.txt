@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(copilot_sdk_cpp VERSION 0.4.3 LANGUAGES CXX)
+project(copilot_sdk_cpp VERSION 0.4.4 LANGUAGES CXX)
 
 # Enable folder organization in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Options
 option(COPILOT_BUILD_EXAMPLES "Build examples" ON)
 option(COPILOT_WITH_FASTMCPP "Build in-process MCP examples with fastmcpp" OFF)
+option(COPILOT_STRICT_WARNINGS "Compile the library with /permissive- /W4 /WX (MSVC)" OFF)
 
 # Protocol code generation
 find_package(Python3 COMPONENTS Interpreter QUIET)
@@ -86,7 +87,10 @@ add_library(copilot_sdk_cpp
     include/copilot/process.hpp
     include/copilot/request_handler.hpp
     include/copilot/client.hpp
+    include/copilot/host.hpp
     include/copilot/canvas.hpp
+    include/copilot/decisions.hpp
+    include/copilot/session_fs.hpp
     include/copilot/session.hpp
     include/copilot/rpc_methods.hpp
     include/copilot/rpc_types.hpp
@@ -102,8 +106,12 @@ add_library(copilot_sdk_cpp
     src/process_posix.cpp
     src/request_handler.cpp
     src/client.cpp
+    src/session_request.cpp
     src/canvas.cpp
+    src/decisions.cpp
+    src/session_fs.cpp
     src/session.cpp
+    src/host.cpp
 )
 add_library(copilot::copilot_sdk_cpp ALIAS copilot_sdk_cpp)
 
@@ -133,6 +141,9 @@ if(MSVC)
     # SessionEventData is a std::variant with one alternative per event type; instantiating it
     # exceeds the default COFF section limit. PUBLIC because consumers instantiate it too.
     target_compile_options(copilot_sdk_cpp PUBLIC /bigobj)
+    if(COPILOT_STRICT_WARNINGS)
+        target_compile_options(copilot_sdk_cpp PRIVATE /permissive- /W4 /WX)
+    endif()
 endif()
 
 # Set target properties

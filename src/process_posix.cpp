@@ -49,7 +49,7 @@ struct PipeHandle
 struct ProcessHandle
 {
     pid_t pid = 0;
-    bool running = false;
+    std::atomic<bool> running{false};
     int exit_code = -1;
 
     // Pipe file descriptors (stored for cleanup)
@@ -692,12 +692,13 @@ int Process::pid() const
 std::optional<std::string> find_executable(const std::string& name)
 {
     namespace fs = std::filesystem;
+    std::error_code ec;
 
     // If it's an absolute path, check if it exists and is executable
     fs::path exe_path(name);
     if (exe_path.is_absolute())
     {
-        if (fs::exists(exe_path) && access(exe_path.c_str(), X_OK) == 0)
+        if (fs::exists(exe_path, ec) && access(exe_path.c_str(), X_OK) == 0)
             return name;
         return std::nullopt;
     }
@@ -705,7 +706,7 @@ std::optional<std::string> find_executable(const std::string& name)
     // If name contains a path separator, treat as relative path
     if (name.find('/') != std::string::npos)
     {
-        if (fs::exists(name) && access(name.c_str(), X_OK) == 0)
+        if (fs::exists(name, ec) && access(name.c_str(), X_OK) == 0)
             return fs::absolute(name).string();
         return std::nullopt;
     }
@@ -715,7 +716,7 @@ std::optional<std::string> find_executable(const std::string& name)
     if (!path_env)
     {
         // No PATH set - try current directory
-        if (fs::exists(name) && access(name.c_str(), X_OK) == 0)
+        if (fs::exists(name, ec) && access(name.c_str(), X_OK) == 0)
             return fs::absolute(name).string();
         return std::nullopt;
     }
@@ -731,7 +732,7 @@ std::optional<std::string> find_executable(const std::string& name)
         if (!dir.empty())
         {
             fs::path test_path = fs::path(dir) / name;
-            if (fs::exists(test_path) && access(test_path.c_str(), X_OK) == 0)
+            if (fs::exists(test_path, ec) && access(test_path.c_str(), X_OK) == 0)
                 return test_path.string();
         }
         start = end + 1;
@@ -744,7 +745,7 @@ std::optional<std::string> find_executable(const std::string& name)
         if (!dir.empty())
         {
             fs::path test_path = fs::path(dir) / name;
-            if (fs::exists(test_path) && access(test_path.c_str(), X_OK) == 0)
+            if (fs::exists(test_path, ec) && access(test_path.c_str(), X_OK) == 0)
                 return test_path.string();
         }
     }

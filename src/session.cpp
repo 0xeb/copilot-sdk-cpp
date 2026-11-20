@@ -12,27 +12,29 @@
 namespace copilot
 {
 
+// C# REFERENCE: dotnet/src/Session.cs HandleMcpOauthRequiredAsync
 json build_mcp_auth_response(
-    const McpAuthHandler& handler, const json& request, const std::string& session_id
+    const McpAuthHandler& handler, const McpAuthRequest& request, const std::string& session_id
 )
 {
     try
     {
-        if (handler)
+        if (!handler)
+            return json{{"kind", "cancelled"}};
+        const auto result = handler(request, McpAuthInvocation{session_id});
+        if (!result || result->cancelled)
+            return json{{"kind", "cancelled"}};
+        if (result->token && !result->token->access_token.empty())
         {
-            if (auto token = handler(request, session_id); token && !token->access_token.empty())
-            {
-                json result{
-                    {"kind", "token"},
-                    {"accessToken", token->access_token},
-                };
-                if (token->token_type)
-                    result["tokenType"] = *token->token_type;
-                if (token->expires_in)
-                    result["expiresIn"] = *token->expires_in;
-                return result;
-            }
+            json response{{"kind", "token"}, {"accessToken", result->token->access_token}};
+            if (result->token->token_type)
+                response["tokenType"] = *result->token->token_type;
+            if (result->token->expires_in)
+                response["expiresIn"] = *result->token->expires_in;
+            return response;
         }
+        if (result->runtime_refresh && request.runtime_refresh_supported)
+            return json{{"kind", "runtimeRefresh"}};
     }
     catch (...)
     {
@@ -92,6 +94,7 @@ void Session::set_initial_state(
 )
 {
     workspace_path_ = std::move(workspace_path);
+    std::lock_guard<std::mutex> lock(capabilities_mutex_);
     capabilities_ = std::move(capabilities);
 }
 
@@ -135,8 +138,9 @@ std::future<void> Session::abort()
     );
 }
 
-std::future<std::vector<SessionEvent>> Session::get_messages()
+std::future<std::vector<SessionEvent>> Session::get_events()
 {
+    // NODEJS REFERENCE: nodejs/src/session.ts getEvents
     return std::async(
         std::launch::async,
         [this]()
@@ -152,6 +156,25 @@ std::future<std::vector<SessionEvent>> Session::get_messages()
             if (response.contains("events") && response["events"].is_array())
                 for (const auto& event_json : response["events"])
                     events.push_back(parse_session_event(event_json));
+            return events;
+        }
+    );
+}
+
+std::future<std::vector<json>> Session::get_raw_events()
+{
+    return std::async(
+        std::launch::async,
+        [this]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            auto response = client_->rpc_client_shared()
+                                ->invoke(copilot::rpc::methods::kSessionGetMessages, params)
+                                .get();
+            std::vector<json> events;
+            if (response.contains("events") && response["events"].is_array())
+                events = response["events"].get<std::vector<json>>();
             return events;
         }
     );
@@ -215,47 +238,50 @@ Session::wait_for_response(MessageOptions options, std::chrono::seconds timeout,
                         state->error = "Turn completed without a final structured response";
                     state->done = true;
                 };
-                if (auto data = event.try_as<UserMessageData>();
-                    data && data->message_id == state->message_id)
+                if (auto user = event.try_as<UserMessageData>();
+                    user && user->message_id == state->message_id)
                     state->started = true;
-                else if (auto data = event.try_as<SessionWarningData>();
-                         data && data->warning_type == "policy_blocked" &&
-                         data->originating_message_id == state->message_id)
+                else if (auto warning = event.try_as<SessionWarningData>();
+                         warning && warning->warning_type == "policy_blocked" &&
+                         warning->originating_message_id == state->message_id)
                     state->started = true;
-                else if (auto data = event.try_as<AssistantMessageData>();
-                         data && (data->originating_message_id == state->message_id ||
-                                  (!structured &&
-                                   (!data->originating_message_id ||
-                                    data->originating_message_id->empty()) &&
-                                   state->started)))
+                else if (auto assistant = event.try_as<AssistantMessageData>();
+                         assistant &&
+                         (assistant->originating_message_id == state->message_id ||
+                          (!structured &&
+                           (!assistant->originating_message_id ||
+                            assistant->originating_message_id->empty()) &&
+                           state->started)))
                 {
                     state->started = true;
-                    if (structured && data->tool_requests && !data->tool_requests->empty())
+                    if (structured && assistant->tool_requests &&
+                        !assistant->tool_requests->empty())
                         state->last.reset();
                     else
                         state->last = event;
                 }
-                else if (auto data = event.try_as<SessionIdleData>();
-                         data && state->started && data->mode != "autopilot")
-                    complete(data->aborted.value_or(false));
-                else if (auto data = event.try_as<SessionAutopilotStoppedData>();
-                         data && data->request_id == state->message_id)
+                else if (auto idle = event.try_as<SessionIdleData>();
+                         idle && state->started && idle->mode != "autopilot")
+                    complete(idle->aborted.value_or(false));
+                else if (auto stopped = event.try_as<SessionAutopilotStoppedData>();
+                         stopped && stopped->request_id == state->message_id)
                 {
-                    if (data->reason == "error")
+                    if (stopped->reason == "error")
                     {
                         state->error = "Autopilot request failed";
                         state->done = true;
                     }
                     else
-                        complete(data->reason == "aborted");
+                        complete(stopped->reason == "aborted");
                 }
-                else if (auto data = event.try_as<SessionErrorData>();
-                         data &&
-                         ((!data->originating_message_id || data->originating_message_id->empty())
+                else if (auto failure = event.try_as<SessionErrorData>();
+                         failure &&
+                         ((!failure->originating_message_id ||
+                           failure->originating_message_id->empty())
                               ? (!structured || state->started)
-                              : data->originating_message_id == state->message_id))
+                              : failure->originating_message_id == state->message_id))
                 {
-                    state->error = "Session error: " + data->message;
+                    state->error = "Session error: " + failure->message;
                     state->done = true;
                 }
                 if (state->done)
@@ -386,6 +412,7 @@ void Session::register_persistent_event_handler(EventHandler handler)
     owned_event_subscriptions_.push_back(std::move(subscription));
 }
 
+// NODEJS REFERENCE: nodejs/src/session.ts _handleBroadcastEvent
 void Session::dispatch_event(const SessionEvent& event)
 {
     if (dispatch_stopped_)
@@ -393,18 +420,17 @@ void Session::dispatch_event(const SessionEvent& event)
     PermissionHandler permission_handler;
     PermissionHandlerWithContext permission_context_handler;
     McpAuthHandler mcp_handler;
-    McpAuthResultHandler mcp_result_handler;
     {
         std::lock_guard<std::mutex> lock(callbacks_mutex_);
         permission_handler = permission_handler_;
         permission_context_handler = permission_handler_with_context_;
         mcp_handler = mcp_auth_handler_;
-        mcp_result_handler = mcp_auth_result_handler_;
     }
+
     if (event.type == SessionEventType::ExternalToolRequested)
     {
         const auto* data = event.try_as<ExternalToolRequestedData>();
-        if (data)
+        if (data && data->has_handler.value_or(true))
         {
             Tool tool;
             {
@@ -414,80 +440,53 @@ void Session::dispatch_event(const SessionEvent& event)
                     tool = it->second;
             }
             if (tool.handler)
-            {
-                const auto request = *data;
-                const auto agent_id = event.agent_id;
-                pending_tool_invocations_.fetch_add(1, std::memory_order_relaxed);
-                enqueue_background(
-                    [this, tool = std::move(tool), request, agent_id]
-                    {
-                        // Answering after the connection has gone means an RPC into
-                        // a transport being torn down. The handler itself cannot be
-                        // interrupted, so the result is simply dropped.
-                        const auto answer = [this](json payload)
-                        {
-                            if (tool_invocations_cancelled_.load(std::memory_order_acquire))
-                                return;
-                            invoke("session.tools.handlePendingToolCall", std::move(payload)).get();
-                        };
-
-                        try
-                        {
-                            ToolInvocation invocation{
-                                .session_id = session_id_,
-                                .tool_call_id = request.tool_call_id,
-                                .tool_name = request.tool_name,
-                                .arguments = request.arguments,
-                                .traceparent = request.traceparent,
-                                .tracestate = request.tracestate,
-                                .agent_id =
-                                    agent_id && !agent_id->empty() ? agent_id : std::nullopt,
-                                .request_id = request.request_id,
-                            };
-                            const auto result = tool.handler(invocation);
-                            answer(json{{"requestId", request.request_id}, {"result", result}});
-                        }
-                        catch (const std::exception& error)
-                        {
-                            try
-                            {
-                                answer(json{
-                                    {"requestId", request.request_id},
-                                    {"error", error.what()},
-                                });
-                            }
-                            catch (...)
-                            {
-                            }
-                        }
-                        pending_tool_invocations_.fetch_sub(1, std::memory_order_relaxed);
-                    }
+                execute_external_tool(
+                    *data,
+                    event.agent_id && !event.agent_id->empty() ? event.agent_id : std::nullopt,
+                    std::move(tool)
                 );
-            }
         }
     }
-
-    if (event.type == SessionEventType::PermissionRequested &&
-        (permission_handler || permission_context_handler))
+    else if (event.type == SessionEventType::ExternalToolCompleted)
+    {
+        if (const auto* data = event.try_as<ExternalToolCompletedData>())
+        {
+            std::optional<CancellationSource> source;
+            {
+                std::lock_guard<std::mutex> lock(pending_external_tools_mutex_);
+                const auto it = pending_external_tools_.find(data->request_id);
+                if (it != pending_external_tools_.end())
+                {
+                    source = it->second;
+                    pending_external_tools_.erase(it);
+                }
+            }
+            if (source)
+                source->cancel();
+        }
+    }
+    else if (event.type == SessionEventType::PermissionRequested &&
+             (permission_handler || permission_context_handler))
     {
         const auto* data = event.try_as<PermissionRequestedData>();
         if (data && !data->resolved_by_hook.value_or(false))
         {
-            const auto request_id = data->request_id;
-            const auto request_json = data->permission_request;
-            const auto prompt_request = data->prompt_request;
+            const auto value = *data;
             enqueue_background(
-                [this, request_id, request_json, prompt_request]
+                [this, value]
                 {
                     try
                     {
-                        const auto request = request_json.get<PermissionRequest>();
-                        auto result = handle_permission_request(request, prompt_request);
-                        if (result.kind == "no-result")
+                        const auto request = value.permission_request.get<PermissionRequest>();
+                        auto result = handle_permission_request(
+                            request,
+                            value.prompt_request,
+                            value.assisted_approval_assessment,
+                            value.program_tool_call_id
+                        );
+                        if (result.kind == "no-result" || dispatch_stopped_)
                             return;
-                        if (result.kind == "approved")
-                            result.kind = "approve-once";
-                        json params{{"requestId", request_id}, {"result", json(result)}};
+                        json params{{"requestId", value.request_id}, {"result", json(result)}};
                         if (result.decision_context)
                             params["decisionContext"] = *result.decision_context;
                         invoke(
@@ -497,12 +496,14 @@ void Session::dispatch_event(const SessionEvent& event)
                     }
                     catch (...)
                     {
+                        if (dispatch_stopped_)
+                            return;
                         try
                         {
                             invoke(
                                 "session.permissions.handlePendingPermissionRequest",
                                 json{
-                                    {"requestId", request_id},
+                                    {"requestId", value.request_id},
                                     {"result", {{"kind", "user-not-available"}}},
                                 }
                             )
@@ -516,106 +517,39 @@ void Session::dispatch_event(const SessionEvent& event)
             );
         }
     }
-
-    bool has_user_input_handler;
+    else if (event.type == SessionEventType::McpOauthRequired && mcp_handler)
     {
-        std::lock_guard<std::mutex> lock(user_input_mutex_);
-        has_user_input_handler = static_cast<bool>(user_input_handler_);
-    }
-    if (event.type == SessionEventType::UserInputRequested && has_user_input_handler)
-    {
-        const auto* data = event.try_as<UserInputRequestedData>();
-        if (data)
-        {
-            const auto value = *data;
-            enqueue_background(
-                [this, value]
-                {
-                    UserInputRequest request{
-                        .question = value.question,
-                        .choices = value.choices,
-                        .allow_freeform = value.allow_freeform,
-                    };
-                    const auto response = handle_user_input_request(request);
-                    invoke(
-                        "session.ui.handlePendingUserInput",
-                        json{
-                            {"requestId", value.request_id},
-                            {"response", response},
-                        }
-                    )
-                        .get();
-                }
-            );
-        }
-    }
-
-    if (event.type == SessionEventType::McpOauthRequired && (mcp_handler || mcp_result_handler))
-    {
+        // NODEJS REFERENCE: nodejs/src/session.ts _handleBroadcastEvent mcp.oauth_required
         const auto* data = event.try_as<McpOauthRequiredData>();
-        if (data)
+        if (data && !data->request_id.empty())
         {
-            json request{
-                {"requestId", data->request_id},
-                {"serverName", data->server_name},
-                {"serverUrl", data->server_url},
-            };
-            if (data->reason)
-                request["reason"] = *data->reason;
-            if (data->www_authenticate_params)
-                request["wwwAuthenticateParams"] = *data->www_authenticate_params;
-            if (data->resource_metadata)
-                request["resourceMetadata"] = *data->resource_metadata;
+            McpAuthRequest request;
+            request.request_id = data->request_id;
+            request.server_name = data->server_name;
+            request.server_url = data->server_url;
+            request.reason = data->reason.value_or("");
+            request.runtime_refresh_supported = data->runtime_refresh_supported.value_or(false);
+            if (data->www_authenticate_params && data->www_authenticate_params->is_object())
+                request.www_authenticate_params =
+                    data->www_authenticate_params->get<McpAuthWwwAuthenticateParams>();
+            request.resource_metadata = data->resource_metadata;
             if (data->static_client_config)
             {
-                json config{{"clientId", data->static_client_config->client_id}};
-                if (data->static_client_config->client_secret)
-                    config["clientSecret"] = *data->static_client_config->client_secret;
-                if (data->static_client_config->grant_type)
-                    config["grantType"] = *data->static_client_config->grant_type;
-                if (data->static_client_config->public_client)
-                    config["publicClient"] = *data->static_client_config->public_client;
-                request["staticClientConfig"] = std::move(config);
+                const auto& config = *data->static_client_config;
+                request.static_client_config = McpAuthStaticClientConfig{
+                    .client_id = config.client_id,
+                    .client_secret = config.client_secret,
+                    .grant_type = config.grant_type,
+                    .public_client = config.public_client,
+                    .scope = config.scope,
+                };
             }
-
-            if (data->runtime_refresh_supported)
-                request["runtimeRefreshSupported"] = *data->runtime_refresh_supported;
-            const auto handler = mcp_handler;
             const auto request_id = data->request_id;
             enqueue_background(
-                [this,
-                 handler,
-                 result_handler = mcp_result_handler,
-                 request = std::move(request),
-                 request_id]
+                [this, handler = mcp_handler, request = std::move(request), request_id]
                 {
-                    json result;
-                    if (result_handler)
-                    {
-                        try
-                        {
-                            auto answer = result_handler(request, session_id_);
-                            if (answer.token)
-                                result = build_mcp_auth_response(
-                                    [token = answer.token](const json&, const std::string&)
-                                    { return token; },
-                                    request,
-                                    session_id_
-                                );
-                            else if (answer.runtime_refresh &&
-                                     request.value("runtimeRefreshSupported", false))
-                                result = {{"kind", "runtimeRefresh"}};
-                            else
-                                result = {{"kind", "cancelled"}};
-                        }
-                        catch (...)
-                        {
-                            result = {{"kind", "cancelled"}};
-                        }
-                    }
-                    else
-                        result = build_mcp_auth_response(handler, request, session_id_);
-                    if (!client_)
+                    const json result = build_mcp_auth_response(handler, request, session_id_);
+                    if (!client_ || dispatch_stopped_)
                         return;
                     try
                     {
@@ -628,6 +562,165 @@ void Session::dispatch_event(const SessionEvent& event)
                     {
                     }
                 }
+            );
+        }
+    }
+    else if (event.type == SessionEventType::CommandExecute)
+    {
+        // NODEJS REFERENCE: nodejs/src/session.ts _executeCommandAndRespond
+        if (const auto* data = event.try_as<CommandExecuteData>())
+        {
+            CommandHandler handler;
+            {
+                std::lock_guard<std::mutex> lock(callbacks_mutex_);
+                const auto it = commands_.find(data->command_name);
+                if (it != commands_.end())
+                    handler = it->second;
+            }
+            const auto value = *data;
+            enqueue_background(
+                [this, value, handler]
+                {
+                    json reply{{"requestId", value.request_id}};
+                    if (!handler)
+                        reply["error"] = "Unknown command: " + value.command_name;
+                    else
+                    {
+                        try
+                        {
+                            handler(CommandContext{
+                                .session_id = session_id_,
+                                .command = value.command,
+                                .command_name = value.command_name,
+                                .args = value.args,
+                            });
+                        }
+                        catch (const std::exception& error)
+                        {
+                            reply["error"] = error.what();
+                        }
+                        catch (...)
+                        {
+                            reply["error"] = "Unknown error";
+                        }
+                        if (dispatch_stopped_)
+                            return;
+                    }
+                    try
+                    {
+                        invoke(rpc::methods::kSessionCommandsHandlePendingCommand, std::move(reply))
+                            .get();
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            );
+        }
+    }
+    else if (event.type == SessionEventType::ElicitationRequested)
+    {
+        // NODEJS REFERENCE: nodejs/src/session.ts _handleElicitationRequest
+        ElicitationHandler handler;
+        {
+            std::lock_guard<std::mutex> lock(elicitation_mutex_);
+            handler = elicitation_handler_;
+        }
+        const auto* data = event.try_as<ElicitationRequestedData>();
+        if (handler && data)
+        {
+            ElicitationContext context{
+                .session_id = session_id_,
+                .message = data->message,
+                .elicitation_source = data->elicitation_source,
+                .url = data->url,
+            };
+            if (data->requested_schema && data->requested_schema->is_object())
+                context.requested_schema = data->requested_schema->get<ElicitationSchema>();
+            if (data->mode == "form")
+                context.mode = ElicitationRequestedMode::Form;
+            else if (data->mode == "url")
+                context.mode = ElicitationRequestedMode::Url;
+            const auto request_id = data->request_id;
+            enqueue_background(
+                [this, handler, context = std::move(context), request_id]
+                {
+                    json result;
+                    try
+                    {
+                        result = json(handler(context));
+                    }
+                    catch (...)
+                    {
+                        result = json{{"action", "cancel"}};
+                    }
+                    try
+                    {
+                        invoke(
+                            rpc::methods::kSessionUiHandlePendingElicitation,
+                            json{{"requestId", request_id}, {"result", std::move(result)}}
+                        )
+                            .get();
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            );
+        }
+    }
+    else if (event.type == SessionEventType::CapabilitiesChanged)
+    {
+        if (const auto* data = event.try_as<CapabilitiesChangedData>())
+            merge_capabilities(data->raw);
+    }
+    else if (event.type == SessionEventType::SessionCanvasOpened)
+    {
+        // C# REFERENCE: Session.cs UpdateOpenCanvasesFromEvent (opened -> upsert)
+        const auto* data = event.try_as<CanvasOpenedData>();
+        if (data && !data->instance_id.empty() && !data->extension_id.empty() &&
+            !data->canvas_id.empty())
+        {
+            json instance{
+                {"instanceId", data->instance_id},
+                {"extensionId", data->extension_id},
+                {"canvasId", data->canvas_id},
+            };
+            if (data->extension_name)
+                instance["extensionName"] = *data->extension_name;
+            if (data->icon)
+                instance["icon"] = *data->icon;
+            if (data->title)
+                instance["title"] = *data->title;
+            if (data->status)
+                instance["status"] = *data->status;
+            if (data->url)
+                instance["url"] = *data->url;
+            if (data->input)
+                instance["input"] = *data->input;
+            std::lock_guard<std::mutex> lock(resume_state_mutex_);
+            auto it = std::find_if(
+                open_canvases_.begin(), open_canvases_.end(),
+                [&](const OpenCanvasInstance& open)
+                { return open.raw().value("instanceId", std::string()) == data->instance_id; }
+            );
+            if (it != open_canvases_.end())
+                *it = OpenCanvasInstance(std::move(instance));
+            else
+                open_canvases_.emplace_back(std::move(instance));
+        }
+    }
+    else if (event.type == SessionEventType::SessionCanvasClosed)
+    {
+        // C# REFERENCE: Session.cs UpdateOpenCanvasesFromEvent (closed -> remove)
+        const auto* data = event.try_as<CanvasClosedData>();
+        if (data && !data->instance_id.empty())
+        {
+            std::lock_guard<std::mutex> lock(resume_state_mutex_);
+            std::erase_if(
+                open_canvases_,
+                [&](const OpenCanvasInstance& open)
+                { return open.raw().value("instanceId", std::string()) == data->instance_id; }
             );
         }
     }
@@ -653,6 +746,154 @@ void Session::dispatch_event(const SessionEvent& event)
             // breaking others
         }
     }
+}
+
+void Session::merge_capabilities(const json& changed)
+{
+    if (!changed.is_object())
+        return;
+    std::lock_guard<std::mutex> lock(capabilities_mutex_);
+    if (!capabilities_.value.is_object())
+        capabilities_.value = json::object();
+    // The event names only the capabilities that changed, so merge `ui` key by key.
+    for (const auto& [key, value] : changed.items())
+    {
+        if (key == "ui" && value.is_object())
+        {
+            auto& ui = capabilities_.value["ui"];
+            if (!ui.is_object())
+                ui = json::object();
+            for (const auto& [ui_key, ui_value] : value.items())
+                ui[ui_key] = ui_value;
+        }
+        else if (key != "ui")
+            capabilities_.value[key] = value;
+    }
+}
+
+bool Session::claim_external_tool(const std::string& request_id)
+{
+    std::lock_guard<std::mutex> lock(pending_external_tools_mutex_);
+    if (dispatch_stopped_)
+        return false;
+    return pending_external_tools_.erase(request_id) > 0;
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts _executeToolAndRespond
+void Session::execute_external_tool(
+    ExternalToolRequestedData request, std::optional<std::string> agent_id, Tool tool
+)
+{
+    CancellationSource source;
+    {
+        std::lock_guard<std::mutex> lock(pending_external_tools_mutex_);
+        if (dispatch_stopped_ || pending_external_tools_.count(request.request_id))
+            return;
+        pending_external_tools_.emplace(request.request_id, source);
+    }
+    pending_tool_invocations_.fetch_add(1, std::memory_order_relaxed);
+    enqueue_background(
+        [this,
+         tool = std::move(tool),
+         request = std::move(request),
+         agent_id = std::move(agent_id),
+         source]() mutable
+        {
+            // Answering after the connection has gone means an RPC into a transport
+            // being torn down. The handler cannot be interrupted, so its result is dropped.
+            const auto answer = [this](json payload)
+            {
+                if (tool_invocations_cancelled_.load(std::memory_order_acquire) ||
+                    dispatch_stopped_)
+                    return;
+                invoke("session.tools.handlePendingToolCall", std::move(payload)).get();
+            };
+
+            bool claimed = false;
+            std::optional<std::string> error_message;
+            try
+            {
+                std::optional<std::vector<json>> available_tools;
+                if (request.tool_name == "tool_search_tool" && !source.is_cancelled())
+                {
+                    // A failed fetch leaves the snapshot unset rather than failing the tool.
+                    try
+                    {
+                        auto metadata = invoke("session.tools.getCurrentMetadata").get();
+                        if (metadata.contains("tools") && metadata["tools"].is_array())
+                            available_tools = metadata["tools"].get<std::vector<json>>();
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+                if (!source.is_cancelled())
+                {
+                    ToolInvocation invocation{
+                        .session_id = session_id_,
+                        .tool_call_id = request.tool_call_id,
+                        .tool_name = request.tool_name,
+                        .arguments = request.arguments,
+                        .available_tools = std::move(available_tools),
+                        .traceparent = request.traceparent,
+                        .tracestate = request.tracestate,
+                        .agent_id = agent_id,
+                        .request_id = request.request_id,
+                        .cancellation = source.token(),
+                    };
+                    const auto result = tool.handler(invocation);
+                    if (claim_external_tool(request.request_id))
+                    {
+                        claimed = true;
+                        answer(json{{"requestId", request.request_id}, {"result", result}});
+                    }
+                }
+            }
+            catch (const std::exception& error)
+            {
+                error_message = error.what();
+            }
+            catch (...)
+            {
+                error_message = "";
+            }
+
+            if (error_message && (claimed || claim_external_tool(request.request_id)))
+            {
+                // An empty error reads as no error, so the call would count as a success.
+                if (error_message->empty())
+                    error_message = "Error";
+                // Handler errors are initial replies too: retry delivery once, but never
+                // retry a fallback error sent after a failed result delivery.
+                for (int attempt = 0; attempt < (claimed ? 1 : 2); ++attempt)
+                {
+                    try
+                    {
+                        answer(json{{"requestId", request.request_id}, {"error", *error_message}});
+                        break;
+                    }
+                    catch (const std::exception& rpc_error)
+                    {
+                        if (dispatch_stopped_)
+                            break;
+                        if (std::string(rpc_error.what()).size())
+                            error_message = rpc_error.what();
+                    }
+                    catch (...)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(pending_external_tools_mutex_);
+                pending_external_tools_.erase(request.request_id);
+            }
+            source.cancel();
+            pending_tool_invocations_.fetch_sub(1, std::memory_order_relaxed);
+        }
+    );
 }
 
 // =============================================================================
@@ -800,7 +1041,10 @@ void Session::register_mcp_auth_handler(McpAuthHandler handler)
 }
 
 PermissionRequestResult Session::handle_permission_request(
-    const PermissionRequest& request, std::optional<json> prompt_request
+    const PermissionRequest& request,
+    std::optional<json> prompt_request,
+    std::optional<json> assisted_approval_assessment,
+    std::optional<std::string> program_tool_call_id
 )
 {
     PermissionHandler handler;
@@ -816,6 +1060,8 @@ PermissionRequestResult Session::handle_permission_request(
         .session_id = session_id_,
         .managed_settings_enabled = managed_settings_enabled_,
         .prompt_request = std::move(prompt_request),
+        .assisted_approval_assessment = std::move(assisted_approval_assessment),
+        .program_tool_call_id = std::move(program_tool_call_id),
     };
     if (context_handler)
         return context_handler(request, invocation);
@@ -865,18 +1111,260 @@ void Session::register_elicitation_handler(ElicitationHandler handler)
     elicitation_handler_ = std::move(handler);
 }
 
-ElicitationResult Session::handle_elicitation_request(const ElicitationContext& context)
+// =============================================================================
+// Commands, bearer tokens, shell authentication, memory store
+// =============================================================================
+
+void Session::register_commands(const std::vector<CommandDefinition>& commands)
 {
-    ElicitationHandler handler;
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    commands_.clear();
+    for (const auto& command : commands)
+        if (command.handler)
+            commands_[command.name] = command.handler;
+}
+
+void Session::register_bearer_token_providers(std::map<std::string, BearerTokenProvider> providers)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    bearer_token_providers_ = std::move(providers);
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts registerBearerTokenProviders (providerToken.getToken)
+json Session::handle_provider_token_request(const std::string& provider_name)
+{
+    BearerTokenProvider provider;
     {
-        std::lock_guard<std::mutex> lock(elicitation_mutex_);
-        handler = elicitation_handler_;
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        if (dispatch_stopped_)
+            throw std::runtime_error("Session callbacks retired");
+        const auto it = bearer_token_providers_.find(provider_name);
+        if (it != bearer_token_providers_.end())
+            provider = it->second;
     }
+    if (!provider)
+        throw std::runtime_error(
+            "No bearer-token provider registered for provider \"" + provider_name + "\""
+        );
+    return json{
+        {"token",
+         provider(ProviderTokenArgs{.provider_name = provider_name, .session_id = session_id_})},
+    };
+}
 
+void Session::register_shell_authentication_handler(ShellAuthenticationHandler handler)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    shell_authentication_handler_ = std::move(handler);
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts _handleShellAuthenticationRequest
+json Session::handle_shell_authentication_request(
+    const ShellAuthenticationRequest& request, const CancellationToken& cancellation
+)
+{
+    const json cancel{{"action", "cancel"}};
+    ShellAuthenticationHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        handler = shell_authentication_handler_;
+    }
+    if (!handler || dispatch_stopped_ || cancellation.is_cancelled())
+        return cancel;
+    try
+    {
+        const auto response = handler(
+            request,
+            ShellAuthenticationInvocation{.session_id = session_id_, .cancellation = cancellation}
+        );
+        if (cancellation.is_cancelled() || !response.accepted)
+            return cancel;
+        return json{{"action", "accept"}, {"value", response.value}};
+    }
+    catch (...)
+    {
+        // The exception text could contain the answer, so it is deliberately not surfaced.
+        return cancel;
+    }
+}
+
+void Session::register_memory_store(MemoryStoreHandler handler)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    memory_store_ = std::move(handler);
+}
+
+void Session::register_transform_callbacks(std::map<std::string, SectionTransformFn> callbacks)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    transform_callbacks_ = std::move(callbacks);
+}
+
+json Session::handle_system_message_transform(const json& sections)
+{
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session closed");
+    std::map<std::string, SectionTransformFn> callbacks;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        callbacks = transform_callbacks_;
+    }
+    json result = json::object();
+    for (const auto& [section_id, section] : sections.items())
+    {
+        const auto content = section.value("content", std::string{});
+        const auto it = callbacks.find(section_id);
+        if (it == callbacks.end())
+        {
+            result[section_id] = {{"content", content}};
+            continue;
+        }
+        try
+        {
+            result[section_id] = {{"content", it->second(content)}};
+        }
+        catch (...)
+        {
+            result[section_id] = {{"content", content}};
+        }
+    }
+    return {{"sections", std::move(result)}};
+}
+
+void Session::register_session_fs_handler(SessionFsHandler handler)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    session_fs_handler_ = std::move(handler);
+}
+
+SessionFsHandler Session::session_fs_handler() const
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    return session_fs_handler_;
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts setSessionCreationHandler
+std::future<generated::api::SessionManagementPolicy>
+Session::set_session_creation_handler(SessionCreationHandler handler)
+{
+    const bool has_handler = static_cast<bool>(handler);
+    SessionCreationHandler previous;
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        if (dispatch_stopped_)
+            throw std::runtime_error("Session callbacks retired");
+        previous = std::move(session_creation_handler_);
+        session_creation_handler_ = std::move(handler);
+        generation = ++session_creation_generation_;
+    }
+    auto pending = invoke("session.management.configure", {{"hasCreateHandler", has_handler}});
+    return std::async(
+        std::launch::async,
+        [this, pending = std::move(pending), previous = std::move(previous), generation]() mutable
+        {
+            try
+            {
+                return pending.get().get<generated::api::SessionManagementPolicy>();
+            }
+            catch (...)
+            {
+                // Restore only if no newer registration replaced this one meanwhile.
+                std::lock_guard<std::mutex> lock(callbacks_mutex_);
+                if (session_creation_generation_ == generation && !dispatch_stopped_)
+                {
+                    session_creation_handler_ = std::move(previous);
+                    ++session_creation_generation_;
+                }
+                throw;
+            }
+        }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts _handleSessionManagementCreate
+json Session::handle_session_management_create(
+    const json& request, const CancellationToken& cancellation
+)
+{
+    SessionCreationHandler handler;
+    CancellationSource source;
+    uint64_t id = 0;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        if (dispatch_stopped_)
+            throw std::runtime_error("Session callbacks retired");
+        handler = session_creation_handler_;
+        if (!handler || request.value("parentSessionId", std::string{}) != session_id_ ||
+            request.value("sessionId", std::string{}) != session_id_)
+            throw std::runtime_error("Session creation handler is unavailable");
+        id = next_session_creation_id_++;
+        pending_session_creations_.emplace(id, source);
+    }
+    const auto subscription = cancellation.on_cancel([source]() mutable { source.cancel(); });
+    struct Cleanup
+    {
+        std::function<void()> run;
+        ~Cleanup()
+        {
+            run();
+        }
+    } cleanup{[&]
+              {
+                  cancellation.unregister(subscription);
+                  std::lock_guard<std::mutex> lock(callbacks_mutex_);
+                  pending_session_creations_.erase(id);
+              }};
+    try
+    {
+        return handler(request, source.token());
+    }
+    catch (...)
+    {
+        throw std::runtime_error("Session creation callback failed");
+    }
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts _handleMemoryStore
+void Session::handle_memory_store_request(const json& params, const CancellationToken& cancellation)
+{
+    MemoryStoreHandler handler;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        if (dispatch_stopped_)
+            throw std::runtime_error("Session callbacks retired");
+        handler = memory_store_;
+    }
     if (!handler)
-        return ElicitationResult{ElicitationAction::Cancel};
+        throw std::runtime_error("No memory store is registered");
+    try
+    {
+        handler(params.get<StoredMemory>(), cancellation);
+    }
+    catch (...)
+    {
+        if (cancellation.is_cancelled())
+            throw JsonRpcError(static_cast<JsonRpcErrorCode>(-32800), "Memory store call cancelled");
+        throw std::runtime_error("Memory store callback failed");
+    }
+}
 
-    return handler(context);
+void Session::set_on_disconnected(std::function<void()> callback)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    on_disconnected_ = std::move(callback);
 }
 
 // =============================================================================
@@ -962,104 +1450,55 @@ json Session::handle_hooks_invoke(const std::string& hook_type, const json& inpu
     HookInvocation invocation;
     invocation.session_id = session_id_;
 
+    // NODEJS REFERENCE: nodejs/src/session.ts _handleHooksInvoke handlerMap
     try
     {
-        if (hook_type == "preToolUse" && hooks->on_pre_tool_use)
+        const auto run = [&]<typename Input>(const auto& handler) -> json
         {
-            auto result = (*hooks->on_pre_tool_use)(input.get<PreToolUseHookInput>(), invocation);
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-        else if (hook_type == "postToolUse" && hooks->on_post_tool_use)
-        {
-            auto result = (*hooks->on_post_tool_use)(input.get<PostToolUseHookInput>(), invocation);
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-        else if (hook_type == "userPromptSubmitted" && hooks->on_user_prompt_submitted)
-        {
-            auto result = (*hooks->on_user_prompt_submitted)(
-                input.get<UserPromptSubmittedHookInput>(), invocation
+            if (!handler)
+                return nullptr;
+            const auto result = (*handler)(input.get<Input>(), invocation);
+            if (!result)
+                return nullptr;
+            json output;
+            to_json(output, *result);
+            return output;
+        };
+        if (hook_type == "preToolUse")
+            return run.template operator()<PreToolUseHookInput>(hooks->on_pre_tool_use);
+        if (hook_type == "preMcpToolCall")
+            return run.template operator()<PreMcpToolCallHookInput>(hooks->on_pre_mcp_tool_call);
+        if (hook_type == "postToolUse")
+            return run.template operator()<PostToolUseHookInput>(hooks->on_post_tool_use);
+        if (hook_type == "postToolUseFailure")
+            return run.template operator()<PostToolUseFailureHookInput>(
+                hooks->on_post_tool_use_failure
             );
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-        else if (hook_type == "sessionStart" && hooks->on_session_start)
-        {
-            auto result =
-                (*hooks->on_session_start)(input.get<SessionStartHookInput>(), invocation);
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-        else if (hook_type == "sessionEnd" && hooks->on_session_end)
-        {
-            auto result = (*hooks->on_session_end)(input.get<SessionEndHookInput>(), invocation);
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-        else if (hook_type == "errorOccurred" && hooks->on_error_occurred)
-        {
-            auto result =
-                (*hooks->on_error_occurred)(input.get<ErrorOccurredHookInput>(), invocation);
-            if (result)
-            {
-                json output;
-                to_json(output, *result);
-                return output;
-            }
-            return nullptr;
-        }
-
-        const JsonHookHandler* generic = nullptr;
-        if (hook_type == "preMcpToolCall" && hooks->on_pre_mcp_tool_call)
-            generic = &*hooks->on_pre_mcp_tool_call;
-        else if (hook_type == "postToolUseFailure" && hooks->on_post_tool_use_failure)
-            generic = &*hooks->on_post_tool_use_failure;
-        else if (hook_type == "userPromptTransformed" && hooks->on_user_prompt_transformed)
-            generic = &*hooks->on_user_prompt_transformed;
-        else if (hook_type == "agentStop" && hooks->on_agent_stop)
-            generic = &*hooks->on_agent_stop;
-        else if (hook_type == "subagentStart" && hooks->on_subagent_start)
-            generic = &*hooks->on_subagent_start;
-        else if (hook_type == "subagentStop" && hooks->on_subagent_stop)
-            generic = &*hooks->on_subagent_stop;
-        else if (hook_type == "permissionRequest" && hooks->on_permission_request)
-            generic = &*hooks->on_permission_request;
-
-        if (generic)
-        {
-            const auto result = (*generic)(input, invocation);
-            return result.value_or(json(nullptr));
-        }
+        if (hook_type == "userPromptSubmitted")
+            return run.template operator()<UserPromptSubmittedHookInput>(
+                hooks->on_user_prompt_submitted
+            );
+        if (hook_type == "userPromptTransformed")
+            return run.template operator()<UserPromptTransformedHookInput>(
+                hooks->on_user_prompt_transformed
+            );
+        if (hook_type == "sessionStart")
+            return run.template operator()<SessionStartHookInput>(hooks->on_session_start);
+        if (hook_type == "sessionEnd")
+            return run.template operator()<SessionEndHookInput>(hooks->on_session_end);
+        if (hook_type == "errorOccurred")
+            return run.template operator()<ErrorOccurredHookInput>(hooks->on_error_occurred);
+        if (hook_type == "agentStop")
+            return run.template operator()<AgentStopHookInput>(hooks->on_agent_stop);
+        if (hook_type == "subagentStart")
+            return run.template operator()<SubagentStartHookInput>(hooks->on_subagent_start);
+        if (hook_type == "subagentStop")
+            return run.template operator()<SubagentStopHookInput>(hooks->on_subagent_stop);
     }
-    catch (const json::exception&)
+    catch (const std::exception&)
     {
-        // Unknown or newly-null hook fields must not block session startup.
+        // NODEJS REFERENCE: session.ts _handleHooksInvoke - a failing hook (including
+        // unknown or newly-null payload fields) returns undefined instead of erroring.
         return nullptr;
     }
 
@@ -1076,6 +1515,13 @@ void Session::retire()
     if (dispatch_stopped_.exchange(true))
         return;
     cancel_pending_tool_invocations();
+    std::map<std::string, CancellationSource> pending_tools;
+    {
+        std::lock_guard<std::mutex> lock(pending_external_tools_mutex_);
+        pending_tools.swap(pending_external_tools_);
+    }
+    for (auto& [_, source] : pending_tools)
+        source.cancel();
     std::map<int, std::function<void()>> waiters;
     {
         std::lock_guard<std::mutex> lock(handlers_mutex_);
@@ -1084,14 +1530,27 @@ void Session::retire()
     }
     for (const auto& [id, wake] : waiters)
         wake();
+    std::function<void()> on_disconnected;
+    std::map<uint64_t, CancellationSource> pending_creations;
     {
         std::lock_guard<std::mutex> lock(callbacks_mutex_);
         permission_handler_ = {};
         permission_handler_with_context_ = {};
         mcp_auth_handler_ = {};
-        mcp_auth_result_handler_ = {};
         skill_provider_.reset();
+        commands_.clear();
+        bearer_token_providers_.clear();
+        shell_authentication_handler_ = {};
+        memory_store_ = {};
+        session_creation_handler_ = {};
+        ++session_creation_generation_;
+        pending_creations.swap(pending_session_creations_);
+        transform_callbacks_.clear();
+        session_fs_handler_ = {};
+        on_disconnected.swap(on_disconnected_);
     }
+    for (auto& [_, source] : pending_creations)
+        source.cancel();
     {
         std::lock_guard<std::mutex> lock(tools_mutex_);
         tools_.clear();
@@ -1116,14 +1575,16 @@ void Session::retire()
         std::lock_guard<std::mutex> lock(auto_mode_switch_mutex_);
         auto_mode_switch_handler_ = {};
     }
-}
-
-void Session::register_mcp_auth_handler(McpAuthResultHandler handler)
-{
-    std::lock_guard<std::mutex> lock(callbacks_mutex_);
-    if (dispatch_stopped_)
-        throw std::runtime_error("Session callbacks retired");
-    mcp_auth_result_handler_ = std::move(handler);
+    if (on_disconnected)
+    {
+        try
+        {
+            on_disconnected();
+        }
+        catch (...)
+        {
+        }
+    }
 }
 
 void Session::register_skill_provider(std::shared_ptr<SkillProvider> provider)
@@ -1311,6 +1772,151 @@ SessionWorkflowApi Session::workflow()
     return SessionWorkflowApi(*this);
 }
 
+SessionUiApi Session::ui()
+{
+    return SessionUiApi(*this);
+}
+
+std::future<void> Session::log(std::string message, LogOptions options)
+{
+    return std::async(
+        std::launch::async,
+        [this, message = std::move(message), options = std::move(options)]()
+        {
+            json params{{"sessionId", session_id_}, {"message", message}};
+            if (options.level)
+                params["level"] = *options.level;
+            if (options.ephemeral)
+                params["ephemeral"] = *options.ephemeral;
+            if (options.url)
+                params["url"] = *options.url;
+            client_->rpc_client_shared()
+                ->invoke(copilot::rpc::methods::kSessionLog, params)
+                .get();
+        }
+    );
+}
+
+// =============================================================================
+// SessionUiApi
+// =============================================================================
+// NODEJS REFERENCE: nodejs/src/session.ts _elicitation/_confirm/_select/_input
+
+namespace
+{
+void assert_elicitation(const Session& session)
+{
+    if (!session.capabilities().has("ui.elicitation"))
+        throw std::runtime_error(
+            "Elicitation is not supported by the host. "
+            "Check session capabilities ui.elicitation before calling UI methods."
+        );
+}
+
+ElicitationResult request_elicitation(Session& session, std::string message, json schema)
+{
+    json params{{"message", std::move(message)}, {"requestedSchema", std::move(schema)}};
+    return session.invoke(copilot::rpc::methods::kSessionUiElicitation, std::move(params))
+        .get()
+        .get<ElicitationResult>();
+}
+
+std::optional<std::string> accepted_string(const ElicitationResult& result, const char* key)
+{
+    if (result.action != ElicitationAction::Accept || !result.content)
+        return std::nullopt;
+    const auto it = result.content->find(key);
+    if (it == result.content->end() || it->second.is_null())
+        return std::nullopt;
+    return it->second.get<std::string>();
+}
+} // namespace
+
+std::future<ElicitationResult> SessionUiApi::elicitation(ElicitationParams params)
+{
+    assert_elicitation(session_);
+    return std::async(
+        std::launch::async,
+        [&session = session_, params = std::move(params)]()
+        { return request_elicitation(session, params.message, json(params.requested_schema)); }
+    );
+}
+
+std::future<bool> SessionUiApi::confirm(std::string message)
+{
+    assert_elicitation(session_);
+    return std::async(
+        std::launch::async,
+        [&session = session_, message = std::move(message)]()
+        {
+            json schema{
+                {"type", "object"},
+                {"properties", {{"confirmed", {{"type", "boolean"}, {"default", true}}}}},
+                {"required", json::array({"confirmed"})},
+            };
+            const auto result = request_elicitation(session, message, std::move(schema));
+            if (result.action != ElicitationAction::Accept || !result.content)
+                return false;
+            const auto it = result.content->find("confirmed");
+            return it != result.content->end() && it->second.is_boolean() &&
+                   it->second.get<bool>();
+        }
+    );
+}
+
+std::future<std::optional<std::string>>
+SessionUiApi::select(std::string message, std::vector<std::string> options)
+{
+    assert_elicitation(session_);
+    return std::async(
+        std::launch::async,
+        [&session = session_, message = std::move(message), options = std::move(options)]()
+        {
+            json schema{
+                {"type", "object"},
+                {"properties", {{"selection", {{"type", "string"}, {"enum", options}}}}},
+                {"required", json::array({"selection"})},
+            };
+            return accepted_string(
+                request_elicitation(session, message, std::move(schema)), "selection"
+            );
+        }
+    );
+}
+
+std::future<std::optional<std::string>>
+SessionUiApi::input(std::string message, UiInputOptions options)
+{
+    assert_elicitation(session_);
+    return std::async(
+        std::launch::async,
+        [&session = session_, message = std::move(message), options = std::move(options)]()
+        {
+            json field{{"type", "string"}};
+            if (options.title && !options.title->empty())
+                field["title"] = *options.title;
+            if (options.description && !options.description->empty())
+                field["description"] = *options.description;
+            if (options.min_length)
+                field["minLength"] = *options.min_length;
+            if (options.max_length)
+                field["maxLength"] = *options.max_length;
+            if (options.format && !options.format->empty())
+                field["format"] = *options.format;
+            if (options.default_value)
+                field["default"] = *options.default_value;
+            json schema{
+                {"type", "object"},
+                {"properties", {{"value", std::move(field)}}},
+                {"required", json::array({"value"})},
+            };
+            return accepted_string(
+                request_elicitation(session, message, std::move(schema)), "value"
+            );
+        }
+    );
+}
+
 std::future<generated::api::SandboxEnforcementStatus> Session::get_sandbox_enforcement_status()
 {
     return invoke_typed<generated::api::SandboxEnforcementStatus>(
@@ -1321,25 +1927,6 @@ std::future<generated::api::SandboxEnforcementStatus> Session::get_sandbox_enfor
 // =============================================================================
 // Model & Mode (v0.1.49 additions)
 // =============================================================================
-
-std::future<void> Session::set_model(const std::string& model_id, SetModelOptions options)
-{
-    return std::async(
-        std::launch::async,
-        [this, model_id, options]()
-        {
-            json params;
-            params["sessionId"] = session_id_;
-            params["modelId"] = model_id;
-            if (options.reasoning_effort.has_value())
-                params["reasoningEffort"] = *options.reasoning_effort;
-
-            client_->rpc_client_shared()
-                ->invoke(copilot::rpc::methods::kSessionModelSwitchTo, params)
-                .get();
-        }
-    );
-}
 
 namespace
 {
@@ -1380,6 +1967,82 @@ std::optional<Session::AutoTier> auto_tier_from_wire(const json& value)
 
 } // namespace
 
+namespace
+{
+Session::AutoTierResult parse_auto_tier_result(const json& response)
+{
+    Session::AutoTierResult result;
+    result.raw = response;
+    if (response.is_object())
+    {
+        if (const auto it = response.find("status"); it != response.end() && it->is_string())
+            result.status = it->get<std::string>();
+        if (const auto it = response.find("effectiveAutoTier"); it != response.end())
+            result.effective_auto_tier = auto_tier_from_wire(*it);
+        if (const auto it = response.find("pendingAutoTier"); it != response.end())
+            result.pending_auto_tier = auto_tier_from_wire(*it);
+    }
+    return result;
+}
+} // namespace
+
+namespace
+{
+const char* fusion_tier_wire(Session::FusionTier tier)
+{
+    switch (tier)
+    {
+    case Session::FusionTier::Standard:
+        return "standard";
+    case Session::FusionTier::High:
+        return "high";
+    case Session::FusionTier::Max:
+        return "max";
+    }
+    return "standard";
+}
+} // namespace
+
+// C# REFERENCE: dotnet/src/Session.cs SetModelAsync(string, SetModelOptions)
+// NODEJS REFERENCE: nodejs/src/session.ts setModel
+std::future<void> Session::set_model(const std::string& model_id, SetModelOptions options)
+{
+    if (options.auto_tier && options.reset_auto_tier)
+        throw std::invalid_argument("auto_tier and reset_auto_tier are mutually exclusive");
+    if (options.fusion_tier && (options.auto_tier || options.reset_auto_tier))
+        throw std::invalid_argument(
+            "fusion_tier cannot be combined with auto_tier or reset_auto_tier"
+        );
+
+    return std::async(
+        std::launch::async,
+        [this, model_id, options = std::move(options)]()
+        {
+            json params;
+            params["sessionId"] = session_id_;
+            params["modelId"] = model_id;
+            if (options.reasoning_effort)
+                params["reasoningEffort"] = *options.reasoning_effort;
+            if (options.reasoning_summary)
+                params["reasoningSummary"] = *options.reasoning_summary;
+            if (options.context_tier)
+                params["contextTier"] = *options.context_tier;
+            if (options.model_capabilities)
+                params["modelCapabilities"] = *options.model_capabilities;
+            if (options.fusion_tier)
+                params["fusionTier"] = fusion_tier_wire(*options.fusion_tier);
+            else if (options.reset_auto_tier)
+                params["autoTier"] = nullptr;
+            else if (options.auto_tier)
+                params["autoTier"] = auto_tier_wire(*options.auto_tier);
+
+            client_->rpc_client_shared()
+                ->invoke(copilot::rpc::methods::kSessionModelSwitchTo, params)
+                .get();
+        }
+    );
+}
+
 std::future<Session::AutoTierResult> Session::set_auto_tier(std::optional<AutoTier> auto_tier)
 {
     return std::async(
@@ -1396,23 +2059,27 @@ std::future<Session::AutoTierResult> Session::set_auto_tier(std::optional<AutoTi
                 params["autoTier"] = nullptr;
 
             const json response =
-                client_->rpc_client()
+                client_->rpc_client_shared()
                     ->invoke(copilot::rpc::methods::kSessionModelSwitchAutoTier, params)
                     .get();
 
-            AutoTierResult result;
-            result.raw = response;
-            if (response.is_object())
-            {
-                if (const auto it = response.find("status");
-                    it != response.end() && it->is_string())
-                    result.status = it->get<std::string>();
-                if (const auto it = response.find("effectiveAutoTier"); it != response.end())
-                    result.effective_auto_tier = auto_tier_from_wire(*it);
-                if (const auto it = response.find("pendingAutoTier"); it != response.end())
-                    result.pending_auto_tier = auto_tier_from_wire(*it);
-            }
-            return result;
+            return parse_auto_tier_result(response);
+        }
+    );
+}
+
+std::future<Session::AutoTierResult> Session::set_fusion_tier(FusionTier fusion_tier)
+{
+    return std::async(
+        std::launch::async,
+        [this, fusion_tier]() -> AutoTierResult
+        {
+            json params{{"sessionId", session_id_}, {"fusionTier", fusion_tier_wire(fusion_tier)}};
+            const json response =
+                client_->rpc_client_shared()
+                    ->invoke(copilot::rpc::methods::kSessionModelSwitchFusionTier, params)
+                    .get();
+            return parse_auto_tier_result(response);
         }
     );
 }

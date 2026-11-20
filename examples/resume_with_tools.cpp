@@ -64,7 +64,7 @@ int main()
     {
         // Create client
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
         copilot::Client client(options);
 
         std::cout << "=== Phase 1: Create Initial Session ===\n\n";
@@ -128,8 +128,8 @@ int main()
         // Restart client and resume session WITH the tool
         client.start().get();
 
-        copilot::ResumeSessionConfig resume_config;
-        resume_config.tools = {secret_tool};
+        copilot::ResumeSessionOptions resume_config;
+        resume_config.tools.definitions = {secret_tool};
 
         auto session2 = client.resume_session(session_id, resume_config).get();
         std::cout << "Resumed session: " << session2->session_id() << "\n";

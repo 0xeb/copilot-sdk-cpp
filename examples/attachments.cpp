@@ -38,7 +38,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -100,7 +100,7 @@ char* allocateBuffer(size_t size);
 
         client.start().get();
 
-        copilot::SessionConfig config;
+        copilot::CreateSessionOptions config;
         auto session = client.create_session(config).get();
         std::cout << "\nSession created: " << session->session_id() << "\n\n";
 

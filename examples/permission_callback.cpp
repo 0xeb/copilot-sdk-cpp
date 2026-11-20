@@ -62,7 +62,7 @@ int main()
 
         // Create client
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -74,10 +74,10 @@ int main()
         client.start().get();
 
         // Create session config with permission handler
-        copilot::SessionConfig config;
+        copilot::CreateSessionOptions config;
 
         // Register the permission callback
-        config.on_permission_request = [&](const copilot::PermissionRequest& request)
+        config.permissions.on_request = [&](const copilot::PermissionRequest& request)
             -> copilot::PermissionRequestResult
         {
             copilot::PermissionRequestResult result;

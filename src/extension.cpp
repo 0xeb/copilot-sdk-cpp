@@ -7,39 +7,53 @@
 namespace copilot
 {
 
-std::future<ExtensionSession> join_session(JoinSessionConfig config)
+// NODEJS REFERENCE: nodejs/src/extension.ts joinSession
+std::future<ExtensionSession> join_session(JoinSessionOptions options)
 {
     return std::async(
         std::launch::async,
-        [config = std::move(config)]() mutable
+        [options = std::move(options)]() mutable
         {
-            const char* session_id = std::getenv("SESSION_ID");
-            if (!session_id || !*session_id)
+            const auto session_id = detail::non_empty_env_value("SESSION_ID");
+            if (!session_id)
                 throw std::runtime_error(
-                    "join_session is only available in a Copilot extension child process");
+                    "joinSession() is intended for extensions running as child processes of the "
+                    "Copilot CLI."
+                );
 
-            config.session.disable_resume = true;
-            config.session.requested_environment_variables =
-                std::move(config.requested_environment_variables);
-            if (!config.workflows.empty())
-            {
-                config.session.workflows = std::vector<json>{};
-                for (const auto& workflow : config.workflows)
-                {
-                    if (workflow)
-                        config.session.workflows->push_back(workflow->meta);
-                }
-                config.session.workflow_objects = config.workflows;
-            }
+            auto& session_options = options.session;
+            session_options.extensions.sdk_path.reset();
+            session_options.skills.provider.reset();
+            session_options.tools.image_generation.reset();
+            if (!session_options.suppress_resume_event)
+                session_options.suppress_resume_event = true;
+            if (!options.requested_environment_variables.empty())
+                session_options.requested_environment_variables =
+                    std::move(options.requested_environment_variables);
+            if (!options.workflows.empty())
+                session_options.workflow_objects = std::move(options.workflows);
 
-            ClientOptions options;
-            options.connection = RuntimeConnection::for_parent_process();
-            auto client = std::make_shared<Client>(std::move(options));
+            // Without a caller handler upstream installs a "no-result" default and tells the
+            // runtime not to route permission requests here.
+            const bool has_permission_handler =
+                static_cast<bool>(session_options.permissions.on_request) ||
+                static_cast<bool>(session_options.permissions.on_request_with_context);
+            if (!has_permission_handler)
+                session_options.permissions.on_request = [](const PermissionRequest&)
+                { return PermissionRequestResult::no_result(); };
+
+            ClientOptions client_options;
+            client_options.runtime = RuntimeConnection::for_parent_process();
+            auto client = std::make_shared<Client>(std::move(client_options));
             client->start().get();
-            auto session =
-                client->resume_session(session_id, std::move(config.session)).get();
+            auto session = client
+                               ->resume_session(
+                                   *session_id, std::move(session_options), has_permission_handler
+                               )
+                               .get();
             return ExtensionSession{std::move(client), std::move(session)};
-        });
+        }
+    );
 }
 
 } // namespace copilot

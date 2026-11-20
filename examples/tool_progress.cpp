@@ -83,7 +83,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -117,8 +117,8 @@ int main()
         search_tool.handler = search_handler;
 
         // Create session with tools
-        copilot::SessionConfig config;
-        config.tools = {word_count_tool, search_tool};
+        copilot::CreateSessionOptions config;
+        config.tools.definitions = {word_count_tool, search_tool};
 
         auto session = client.create_session(config).get();
         std::cout << "Session created with 2 tools: word_count, search_files\n\n";

@@ -32,11 +32,11 @@ int main()
 
         client.start().get();
 
-        copilot::SessionConfig config;
+        copilot::CreateSessionOptions config;
 
         // Register the user input handler
         // This is called when the agent uses the ask_user tool
-        config.on_user_input_request = [](const copilot::UserInputRequest& request,
+        config.interaction.on_user_input_request = [](const copilot::UserInputRequest& request,
                                        const copilot::UserInputInvocation&)
             -> copilot::UserInputResponse
         {
@@ -92,7 +92,7 @@ int main()
         };
 
         // Permission handler
-        config.on_permission_request = [](const copilot::PermissionRequest&)
+        config.permissions.on_request = [](const copilot::PermissionRequest&)
             -> copilot::PermissionRequestResult
         {
             copilot::PermissionRequestResult r;

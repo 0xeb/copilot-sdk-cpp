@@ -23,7 +23,7 @@ int main()
     try
     {
         copilot::ClientOptions options;
-        options.log_level = copilot::LogLevel::Info;
+        options.observability.log_level = copilot::LogLevel::Info;
 
         copilot::Client client(options);
 
@@ -37,7 +37,7 @@ int main()
         // Configure MCP Servers
         // ---------------------------------------------------------------------
 
-        std::map<std::string, copilot::json> mcp_servers;
+        std::map<std::string, copilot::MCPServerConfig> mcp_servers;
 
         // Example 1: Local filesystem MCP server (stdio-based)
         // This server provides file system tools
@@ -60,7 +60,7 @@ int main()
             {"API_KEY", "your-api-key"},
             {"DEBUG", "true"}
         };
-        custom_server.cwd = "/path/to/server";
+        custom_server.working_directory = "/path/to/server";
 
         // Uncomment to add this server:
         // mcp_servers["custom"] = custom_server;
@@ -92,8 +92,8 @@ int main()
         // Create Session with MCP Servers
         // ---------------------------------------------------------------------
 
-        copilot::SessionConfig config;
-        config.mcp_servers = mcp_servers;
+        copilot::CreateSessionOptions config;
+        config.mcp.servers = mcp_servers;
 
         std::cout << "Configured MCP servers:\n";
         for (const auto& [name, _] : mcp_servers)
