@@ -3748,6 +3748,10 @@ struct SessionMetadata
     std::optional<std::string> summary;
     bool is_remote = false;
     std::optional<SessionContext> context;
+    /// Client that created the session (e.g. `github/cli`); nullopt when unknown.
+    std::optional<std::string> client_name;
+    /// Client that most recently ran the session (creator, or a client that resumed and ran it).
+    std::optional<std::string> last_client_name;
 };
 
 namespace detail
@@ -3900,6 +3904,223 @@ inline void from_json(const json& j, SessionMetadata& m)
         j.at("isRemote").get_to(m.is_remote);
     if (j.contains("context") && !j.at("context").is_null())
         m.context = j.at("context").get<SessionContext>();
+    if (j.contains("clientName") && j.at("clientName").is_string())
+        m.client_name = j.at("clientName").get<std::string>();
+    if (j.contains("lastClientName") && j.at("lastClientName").is_string())
+        m.last_client_name = j.at("lastClientName").get<std::string>();
+}
+
+// =============================================================================
+// Session management (peer sessions) — @experimental upstream, off by default
+// =============================================================================
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts SessionManagement* / ManagedSessionInfo
+// See docs/session-management.md upstream for the semantics.
+
+/// Who can see and message this session once management is enabled.
+enum class SessionManagementScope
+{
+    /// Opted-in live root sessions on this machine sharing the same config directory,
+    /// across processes.
+    All,
+    /// Only sessions hosted by the same runtime process.
+    InProcess
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    SessionManagementScope,
+    {
+        {SessionManagementScope::All, "all"},
+        {SessionManagementScope::InProcess, "in-process"},
+    }
+)
+
+/// Per-tool overrides; unset fields keep their current value.
+struct SessionManagementToolOverrides
+{
+    std::optional<bool> list;
+    std::optional<bool> create;
+    std::optional<bool> message;
+    std::optional<bool> close;
+};
+
+inline void to_json(json& j, const SessionManagementToolOverrides& o)
+{
+    j = json::object();
+    if (o.list)
+        j["list"] = *o.list;
+    if (o.create)
+        j["create"] = *o.create;
+    if (o.message)
+        j["message"] = *o.message;
+    if (o.close)
+        j["close"] = *o.close;
+}
+
+/// Request for `session.management.configure`. Every field is optional; an empty request
+/// just reads back the current policy. Enabling resets every tool to enabled before
+/// `tools` is applied; `scope` survives toggling `enabled`.
+struct SessionManagementConfigureOptions
+{
+    std::optional<bool> enabled;
+    std::optional<SessionManagementScope> scope;
+    std::optional<SessionManagementToolOverrides> tools;
+    std::optional<std::string> cwd;
+};
+
+inline void to_json(json& j, const SessionManagementConfigureOptions& o)
+{
+    j = json::object();
+    if (o.enabled)
+        j["enabled"] = *o.enabled;
+    if (o.scope)
+        j["scope"] = *o.scope;
+    if (o.tools)
+        j["tools"] = *o.tools;
+    if (o.cwd)
+        j["cwd"] = *o.cwd;
+}
+
+/// Effective session-management policy returned by `configure`.
+struct SessionManagementPolicy
+{
+    bool enabled = false;
+    SessionManagementScope scope = SessionManagementScope::All;
+    bool list = false;
+    bool create = false;
+    bool message = false;
+    bool close = false;
+};
+
+inline void from_json(const json& j, SessionManagementPolicy& p)
+{
+    p.enabled = j.value("enabled", false);
+    p.scope = j.contains("scope") ? j.at("scope").get<SessionManagementScope>()
+                                  : SessionManagementScope::All;
+    p.list = j.value("list", false);
+    p.create = j.value("create", false);
+    p.message = j.value("message", false);
+    p.close = j.value("close", false);
+}
+
+/// Run state of a live peer.
+enum class ManagedSessionState
+{
+    Idle,
+    Busy,
+    Unknown
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ManagedSessionState,
+    {
+        {ManagedSessionState::Unknown, nullptr},
+        {ManagedSessionState::Idle, "idle"},
+        {ManagedSessionState::Busy, "busy"},
+    }
+)
+
+/// One live, opted-in peer from `session.management.list`. The list never contains the
+/// caller, subagents, remote sessions, closed sessions, or sessions using another config
+/// directory.
+struct ManagedSessionInfo
+{
+    std::string session_id;
+    /// Exact session name (what `session->name().set()` assigned, or the auto name).
+    std::string name;
+    std::string cwd;
+    ManagedSessionState state = ManagedSessionState::Unknown;
+    std::optional<std::string> model;
+    /// Session that created this one via `management().create()` (durable lineage).
+    std::optional<std::string> parent_session_id;
+    /// On-disk session state directory, when exposed.
+    std::optional<std::string> session_state_path;
+};
+
+inline void from_json(const json& j, ManagedSessionInfo& s)
+{
+    j.at("sessionId").get_to(s.session_id);
+    s.name = j.contains("name") && j.at("name").is_string() ? j.at("name").get<std::string>() : "";
+    s.cwd = j.contains("cwd") && j.at("cwd").is_string() ? j.at("cwd").get<std::string>() : "";
+    s.state = j.contains("state") ? j.at("state").get<ManagedSessionState>()
+                                  : ManagedSessionState::Unknown;
+    if (j.contains("model") && j.at("model").is_string())
+        s.model = j.at("model").get<std::string>();
+    if (j.contains("parentSessionId") && j.at("parentSessionId").is_string())
+        s.parent_session_id = j.at("parentSessionId").get<std::string>();
+    if (j.contains("sessionStatePath") && j.at("sessionStatePath").is_string())
+        s.session_state_path = j.at("sessionStatePath").get<std::string>();
+}
+
+/// Result of `session.management.message`. `accepted` means delivered to the target's
+/// queue; it is not a reply.
+struct SessionManagementMessageResult
+{
+    bool accepted = false;
+    std::optional<std::string> target_session_name;
+};
+
+inline void from_json(const json& j, SessionManagementMessageResult& r)
+{
+    r.accepted = j.value("accepted", false);
+    if (j.contains("targetSessionName") && j.at("targetSessionName").is_string())
+        r.target_session_name = j.at("targetSessionName").get<std::string>();
+}
+
+/// Request for `session.management.create`. Requires a creation handler on this session
+/// (`Session::set_session_creation_handler`).
+struct SessionManagementCreateOptions
+{
+    /// First task for the new session.
+    std::string prompt;
+    std::optional<std::string> name;
+    std::optional<std::string> cwd;
+    std::optional<std::string> model;
+    std::optional<std::string> reasoning_effort;
+    std::optional<std::string> context_tier;
+};
+
+inline void to_json(json& j, const SessionManagementCreateOptions& o)
+{
+    j = json{{"prompt", o.prompt}};
+    if (o.name)
+        j["name"] = *o.name;
+    if (o.cwd)
+        j["cwd"] = *o.cwd;
+    if (o.model)
+        j["model"] = *o.model;
+    if (o.reasoning_effort)
+        j["reasoningEffort"] = *o.reasoning_effort;
+    if (o.context_tier)
+        j["contextTier"] = *o.context_tier;
+}
+
+/// A peer message as delivered to the receiving session. The runtime injects it as a
+/// `system.notification` whose `kind.metadata.peerMessage` carries the sender; the
+/// notification text wraps it in `<peer_message>` and marks it "not human approval".
+struct PeerMessage
+{
+    std::string sender_session_id;
+    std::string sender_name;
+    std::string content;
+};
+
+/// Extracts a peer message from a `system.notification` event's `kind`, or nullopt when
+/// the notification is something else.
+inline std::optional<PeerMessage> peer_message_from_notification_kind(const json& kind)
+{
+    if (!kind.is_object())
+        return std::nullopt;
+    const auto metadata = kind.find("metadata");
+    if (metadata == kind.end() || !metadata->is_object())
+        return std::nullopt;
+    const auto peer = metadata->find("peerMessage");
+    if (peer == metadata->end() || !peer->is_object())
+        return std::nullopt;
+    PeerMessage message;
+    message.sender_session_id = peer->value("senderSessionId", "");
+    message.sender_name = peer->value("senderName", "");
+    message.content = peer->value("content", "");
+    return message;
 }
 
 /// Error reported during client stop/cleanup

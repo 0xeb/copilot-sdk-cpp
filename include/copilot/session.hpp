@@ -50,6 +50,69 @@ class SessionUiApi
     Session& session_;
 };
 
+/// Peer-session management (`session.management.*`). @experimental — upstream marks the
+/// feature experimental and off by default; shapes may change.
+///
+/// Enable it on each session that should be discoverable, then list live peers and
+/// message them by full session id:
+/// @code
+/// session->management().configure({.enabled = true}).get();
+/// for (const auto& peer : session->management().list().get())
+///     if (peer.name == "reviewer")
+///         session->management().message(peer.session_id, "please review").get();
+/// @endcode
+/// The receiver sees the text as a `system.notification` (see `peer_message_from_event`)
+/// and an idle receiver starts a turn. `accepted` is not a reply.
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts createSessionRpc management.*
+// RUST REFERENCE: rust/tests/session_management_test.rs
+class SessionManagementApi
+{
+  public:
+    explicit SessionManagementApi(Session& session) : session_(session) {}
+
+    /// Opt in/out, choose the discovery scope, or toggle individual tools. An empty
+    /// options object reads the current policy. Never changes the creation-handler flag.
+    std::future<SessionManagementPolicy> configure(SessionManagementConfigureOptions options = {});
+    /// Live, opted-in peers visible to this session (never includes the caller).
+    /// `cwd` filters by exact working directory.
+    std::future<std::vector<ManagedSessionInfo>> list(std::optional<std::string> cwd = std::nullopt);
+    /// Send `text` (non-empty, at most 16 KiB UTF-8) to a peer by full session id. Wakes an
+    /// idle peer or queues behind a busy one. Never counts as human approval.
+    std::future<SessionManagementMessageResult>
+    message(std::string target_session_id, std::string text);
+    /// Ask the runtime to create a new root session via this session's creation handler
+    /// (`Session::set_session_creation_handler`). Returns the new session id.
+    std::future<std::string> create(SessionManagementCreateOptions options);
+    /// Close a session this session created. History is kept; returns whether it closed.
+    std::future<bool> close(std::string target_session_id);
+
+  private:
+    Session& session_;
+};
+
+/// Session naming (`session.name.*`). Peers address each other by exact name in the
+/// management model tools and `ManagedSessionInfo::name`.
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts createSessionRpc name.*
+class SessionNameApi
+{
+  public:
+    explicit SessionNameApi(Session& session) : session_(session) {}
+
+    /// Current name, or nullopt when none is set.
+    std::future<std::optional<std::string>> get();
+    /// Set an explicit name (1–100 characters).
+    std::future<void> set(std::string name);
+    /// Offer an automatic name derived from `summary`; returns whether it was applied
+    /// (an explicit name is never overwritten).
+    std::future<bool> set_auto(std::string summary);
+
+  private:
+    Session& session_;
+};
+
+/// Peer message carried by a `system.notification` event, or nullopt for any other event.
+std::optional<PeerMessage> peer_message_from_event(const SessionEvent& event);
+
 /// Runs an MCP auth handler and maps its result to the mcp.oauth.handlePendingRequest payload.
 // NODEJS REFERENCE: nodejs/src/session.ts _executeMcpAuthAndRespond
 json build_mcp_auth_response(
@@ -496,10 +559,16 @@ class Session : public std::enable_shared_from_this<Session>
     /// Elicitation-backed UI helpers (confirm/select/input).
     SessionUiApi ui();
 
+    /// Peer-session management (`session.management.*`). @experimental.
+    SessionManagementApi management();
+
+    /// Session naming (`session.name.*`).
+    SessionNameApi name();
+
     /// Register (or clear, with an empty function) the host's session-creation callback
     /// and report it with `session.management.configure{hasCreateHandler}`. This does not
     /// enable the management tool group; enable it separately via
-    /// `session.management.configure{enabled:true}`. The previous handler is restored
+    /// `management().configure({.enabled = true})`. The previous handler is restored
     /// when the RPC fails.
     // NODEJS REFERENCE: nodejs/src/session.ts setSessionCreationHandler
     std::future<generated::api::SessionManagementPolicy>

@@ -1777,6 +1777,138 @@ SessionUiApi Session::ui()
     return SessionUiApi(*this);
 }
 
+SessionManagementApi Session::management()
+{
+    return SessionManagementApi(*this);
+}
+
+SessionNameApi Session::name()
+{
+    return SessionNameApi(*this);
+}
+
+// =============================================================================
+// SessionManagementApi / SessionNameApi
+// =============================================================================
+
+namespace
+{
+template <typename Fn>
+auto then_async(std::future<json> pending, Fn fn)
+{
+    return std::async(
+        std::launch::async,
+        [pending = std::move(pending), fn = std::move(fn)]() mutable { return fn(pending.get()); }
+    );
+}
+} // namespace
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts management.configure
+std::future<SessionManagementPolicy>
+SessionManagementApi::configure(SessionManagementConfigureOptions options)
+{
+    // hasCreateHandler is owned by set_session_creation_handler and never sent from here.
+    return then_async(
+        session_.invoke(copilot::rpc::methods::kSessionManagementConfigure, json(options)),
+        [](const json& result) { return result.get<SessionManagementPolicy>(); }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts management.list
+std::future<std::vector<ManagedSessionInfo>>
+SessionManagementApi::list(std::optional<std::string> cwd)
+{
+    json params = json::object();
+    if (cwd)
+        params["cwd"] = *cwd;
+    return then_async(
+        session_.invoke(copilot::rpc::methods::kSessionManagementList, std::move(params)),
+        [](const json& result)
+        {
+            std::vector<ManagedSessionInfo> sessions;
+            if (result.contains("sessions") && result.at("sessions").is_array())
+                for (const auto& entry : result.at("sessions"))
+                    sessions.push_back(entry.get<ManagedSessionInfo>());
+            return sessions;
+        }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts management.message
+std::future<SessionManagementMessageResult>
+SessionManagementApi::message(std::string target_session_id, std::string text)
+{
+    return then_async(
+        session_.invoke(
+            copilot::rpc::methods::kSessionManagementMessage,
+            {{"targetSessionId", std::move(target_session_id)}, {"message", std::move(text)}}
+        ),
+        [](const json& result) { return result.get<SessionManagementMessageResult>(); }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts management.create
+std::future<std::string> SessionManagementApi::create(SessionManagementCreateOptions options)
+{
+    return then_async(
+        session_.invoke(copilot::rpc::methods::kSessionManagementCreate, json(options)),
+        [](const json& result) { return result.at("sessionId").get<std::string>(); }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts management.close
+std::future<bool> SessionManagementApi::close(std::string target_session_id)
+{
+    return then_async(
+        session_.invoke(
+            copilot::rpc::methods::kSessionManagementClose,
+            {{"targetSessionId", std::move(target_session_id)}}
+        ),
+        [](const json& result) { return result.value("closed", false); }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts name.get
+std::future<std::optional<std::string>> SessionNameApi::get()
+{
+    return then_async(
+        session_.invoke(copilot::rpc::methods::kSessionNameGet),
+        [](const json& result) -> std::optional<std::string>
+        {
+            if (result.contains("name") && result.at("name").is_string())
+                return result.at("name").get<std::string>();
+            return std::nullopt;
+        }
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts name.set
+std::future<void> SessionNameApi::set(std::string name)
+{
+    return then_async(
+        session_.invoke(copilot::rpc::methods::kSessionNameSet, {{"name", std::move(name)}}),
+        [](const json&) {}
+    );
+}
+
+// NODEJS REFERENCE: nodejs/src/generated/rpc.ts name.setAuto
+std::future<bool> SessionNameApi::set_auto(std::string summary)
+{
+    return then_async(
+        session_.invoke(
+            copilot::rpc::methods::kSessionNameSetAuto, {{"summary", std::move(summary)}}
+        ),
+        [](const json& result) { return result.value("applied", false); }
+    );
+}
+
+std::optional<PeerMessage> peer_message_from_event(const SessionEvent& event)
+{
+    if (const auto* notification = event.try_as<SystemNotificationData>())
+        return peer_message_from_notification_kind(notification->kind);
+    return std::nullopt;
+}
+
 std::future<void> Session::log(std::string message, LogOptions options)
 {
     return std::async(

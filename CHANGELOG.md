@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.5
+
+- Add experimental session management (peer sessions), off by default:
+  `Session::management()` with `configure`, `list`, `message`, `create`, and `close`
+  (`session.management.*`), plus typed `SessionManagementConfigureOptions`,
+  `SessionManagementPolicy`, `ManagedSessionInfo`, `SessionManagementMessageResult`, and
+  `SessionManagementCreateOptions`. Sessions in separate processes that share a config
+  directory can discover each other by name and exchange messages.
+- Add `Session::name()` (`get`, `set`, `set_auto`) for named sessions.
+- Add `peer_message_from_event()`: received peer text arrives as a `system.notification`
+  whose `kind.metadata.peerMessage` carries the sender id, sender name, and text.
+- `SessionMetadata` gains `client_name` and `last_client_name`.
+
 ## 0.4.4
 
 Breaking: targets Copilot CLI 1.0.115-1 and SDK protocol version 4 only, mirroring

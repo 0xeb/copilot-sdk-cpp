@@ -6,7 +6,13 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.4
+## Version 0.4.5
+
+Adds experimental session management (peer sessions): sessions in separate
+processes can discover each other by name and exchange messages via
+`Session::management()` and `Session::name()`. See [Session management](#session-management-peer-sessions-experimental).
+
+### 0.4.4
 
 Targets Copilot CLI 1.0.115-1 and SDK protocol version 4 only. This is a clean
 break that mirrors the upstream SDK v2 API: client options and session options are
@@ -30,6 +36,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.5           | 4                 | 1.0.115-1              | 1.0.115-1               |
 | 0.4.4           | 4                 | 1.0.115-1              | 1.0.115-1               |
 | 0.4.3           | 2–3               | 1.0.102-1              | 1.0.102-1               |
 | 0.4.2           | 2–3               | 1.0.102-1              | 1.0.102-1               |
@@ -213,6 +220,43 @@ Advanced parity includes:
 - Experimental `Client::decisions()` for yes/no and structured questions answered
   by Copilot decision models; `Client::runtime_port()` for TCP runtimes.
 - `Session::open_canvases()` and `Session::permission_mode_result()` snapshots.
+
+## Session management (peer sessions, experimental)
+
+Sessions can find and message each other, including sessions owned by other
+programs on the same machine that share the Copilot config directory. The feature
+is off by default and each session opts in. The API may change upstream.
+
+```cpp
+CreateSessionOptions options;
+options.name = "build-agent";          // peers address each other by name
+auto session = client.create_session(options).get();
+
+SessionManagementConfigureOptions enable;
+enable.enabled = true;                 // scope defaults to "all"; InProcess hides it from other processes
+session->management().configure(enable).get();
+
+// Live, opted-in peers only (the caller is excluded). Optional exact-cwd filter.
+for (const auto& peer : session->management().list().get())
+    if (peer.name == "test-agent")
+        session->management().message(peer.session_id, "Build is green.").get();
+
+// Receiving side: peer text arrives as a system.notification and wakes an idle session.
+auto sub = session->on([](const SessionEvent& event) {
+    if (auto peer = peer_message_from_event(event))
+        std::cout << peer->sender_name << ": " << peer->content << "\n";
+});
+```
+
+- `ManagedSessionInfo` carries `session_id`, `name`, `cwd`, `state` (idle/busy),
+  `model`, `parent_session_id`, and `session_state_path`. Use them to pick a peer
+  out of many live sessions.
+- `message` returns `accepted` once the text is delivered or queued. It is not a reply.
+- `create` asks the host to start a child session (register a handler with
+  `set_session_creation_handler`). `close` ends a session this session created.
+- `Session::name()` gets, sets, or auto-sets the session name.
+- `Client::list_sessions` returns persisted history, including dead sessions,
+  with `client_name`/`last_client_name`. `management().list` shows live sessions only.
 
 ## Custom Tools
 

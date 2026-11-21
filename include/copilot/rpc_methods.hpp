@@ -101,6 +101,13 @@ inline constexpr const char* kSessionModeSet = "session.mode.set";
 
 inline constexpr const char* kSessionNameGet = "session.name.get";
 inline constexpr const char* kSessionNameSet = "session.name.set";
+inline constexpr const char* kSessionNameSetAuto = "session.name.setAuto";
+
+inline constexpr const char* kSessionManagementConfigure = "session.management.configure";
+inline constexpr const char* kSessionManagementList = "session.management.list";
+inline constexpr const char* kSessionManagementMessage = "session.management.message";
+inline constexpr const char* kSessionManagementCreate = "session.management.create";
+inline constexpr const char* kSessionManagementClose = "session.management.close";
 
 inline constexpr const char* kSessionPlanRead = "session.plan.read";
 inline constexpr const char* kSessionPlanUpdate = "session.plan.update";
