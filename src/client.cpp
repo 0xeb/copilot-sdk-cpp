@@ -198,20 +198,32 @@ void register_initial_handlers(Session& session, const Options& options)
 
 // NODEJS REFERENCE: client.ts configureHostPolicyPreCheck
 void configure_host_policy_pre_check(
-    Session& session, const std::optional<HostPolicyPreCheckOptions>& options
+    Session& session,
+    const std::optional<HostPolicyPreCheckOptions>& options,
+    const std::shared_ptr<JsonRpcClient>& connection,
+    const CancellationToken& cancellation
 )
 {
     if (!options)
         return;
     const json capabilities =
-        session.invoke(copilot::rpc::methods::kSessionPermissionsGetCapabilities, json::object())
+        connection
+            ->invoke(
+                copilot::rpc::methods::kSessionPermissionsGetCapabilities,
+                json{{"sessionId", session.session_id()}},
+                cancellation
+            )
             .get();
     if (!capabilities.is_object() || capabilities.value("hostPolicyPreCheck", false) != true)
         return;
-    session
-        .invoke(
+    connection
+        ->invoke(
             copilot::rpc::methods::kSessionPermissionsConfigure,
-            json{{"hostPolicyPreCheck", {{"enabled", true}, {"policyRevision", options->policy_revision}}}}
+            json{
+                {"sessionId", session.session_id()},
+                {"hostPolicyPreCheck", {{"enabled", true}, {"policyRevision", options->policy_revision}}}
+            },
+            cancellation
         )
         .get();
 }
@@ -230,13 +242,16 @@ bool managed_settings_enabled(const Options& options)
 }
 
 void register_mcp_oauth_interest(
-    const std::shared_ptr<JsonRpcClient>& connection, const std::string& session_id
+    const std::shared_ptr<JsonRpcClient>& connection,
+    const std::string& session_id,
+    const CancellationToken& cancellation
 )
 {
     connection
         ->invoke(
             "session.eventLog.registerInterest",
-            json{{"sessionId", session_id}, {"eventType", "mcp.oauth_required"}}
+            json{{"sessionId", session_id}, {"eventType", "mcp.oauth_required"}},
+            cancellation
         )
         .get();
 }
@@ -244,14 +259,21 @@ void register_mcp_oauth_interest(
 // Best-effort session.options.update after create/resume; disconnects the session on failure.
 // NODEJS REFERENCE: client.ts updateSessionOptionsForMode
 template <typename Options>
-void apply_options_update(Session& session, const Options& options, ClientMode mode)
+void apply_options_update(
+    Session& session,
+    const Options& options,
+    ClientMode mode,
+    const std::shared_ptr<JsonRpcClient>& connection,
+    const CancellationToken& cancellation
+)
 {
     auto patch = build_session_options_update(options, mode);
     if (!patch)
         return;
     try
     {
-        session.invoke("session.options.update", std::move(*patch)).get();
+        (*patch)["sessionId"] = session.session_id();
+        connection->invoke("session.options.update", *patch, cancellation).get();
     }
     catch (...)
     {
@@ -450,20 +472,125 @@ Client::~Client()
         cancel_startup(false);
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
+    // Workers of cancelled calls end once their requests failed, which force_stop() made
+    // certain; they use this client until then.
+    {
+        std::unique_lock<std::mutex> lock(cancellable_workers_->mutex);
+        cancellable_workers_->idle.wait(lock, [this] { return cancellable_workers_->active == 0; });
+    }
+    cancel_session_cleanups();
 }
 
 // =============================================================================
 // Connection helpers and GitHub token registry
 // =============================================================================
 
-std::shared_ptr<JsonRpcClient> Client::ensure_connected()
+std::shared_ptr<JsonRpcClient> Client::ensure_connected(const CancellationToken& cancellation)
 {
+    if (cancellation.is_cancelled())
+        throw RequestCancelledError();
+    // NODEJS REFERENCE: client.ts getStartedConnection (assertNotStopping)
+    if (stops_in_progress_.load() > 0)
+        throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client is stopping");
     if (state_ != ConnectionState::Connected)
-        start().get();
+    {
+        auto started = start();
+        // C# REFERENCE: Client.cs StartConnectionAsync (a joining caller stops waiting when its
+        // token is cancelled; the shared startup keeps running)
+        if (cancellation.can_be_cancelled())
+        {
+            while (started.wait_for(std::chrono::milliseconds(10)) == std::future_status::timeout)
+                if (cancellation.is_cancelled())
+                {
+                    // The start continues; its future is waited on by a detached thread so
+                    // this caller returns now.
+                    std::thread([started = std::move(started)]() mutable
+                                {
+                                    try
+                                    {
+                                        started.get();
+                                    }
+                                    catch (...)
+                                    {
+                                    }
+                                }).detach();
+                    throw RequestCancelledError();
+                }
+        }
+        started.get();
+    }
     std::lock_guard<std::mutex> lock(lifetime_mutex_);
     if (!live_rpc_)
         throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client not connected");
     return live_rpc_;
+}
+
+void Client::cleanup_cancelled_session(
+    std::shared_ptr<JsonRpcClient> connection, std::string method, std::string session_id
+)
+{
+    std::vector<std::thread> finished;
+    {
+        std::lock_guard<std::mutex> lock(cleanup_mutex_);
+        for (auto it = cleanup_threads_.begin(); it != cleanup_threads_.end();)
+        {
+            if (it->done->load())
+            {
+                finished.push_back(std::move(it->thread));
+                it = cleanup_threads_.erase(it);
+            }
+            else
+                ++it;
+        }
+        const auto cancellation = cleanup_cancellation_.token();
+        const auto timeout = options_.request_timeout.value_or(std::chrono::milliseconds(30000));
+        auto done = std::make_shared<std::atomic<bool>>(false);
+        cleanup_threads_.push_back(CleanupThread{
+            std::thread(
+                [connection = std::move(connection),
+                 method = std::move(method),
+                 session_id = std::move(session_id),
+                 cancellation,
+                 timeout,
+                 done]
+                {
+                    try
+                    {
+                        connection
+                            ->invoke(method, json{{"sessionId", session_id}}, cancellation, timeout)
+                            .get();
+                    }
+                    catch (...)
+                    {
+                    }
+                    done->store(true);
+                }
+            ),
+            done
+        });
+    }
+    for (auto& thread : finished)
+        if (thread.joinable())
+            thread.join();
+}
+
+void Client::cancel_session_cleanups()
+{
+    std::vector<CleanupThread> threads;
+    {
+        std::lock_guard<std::mutex> lock(cleanup_mutex_);
+        cleanup_cancellation_.cancel();
+        threads.swap(cleanup_threads_);
+        cleanup_cancellation_ = CancellationSource{};
+    }
+    for (auto& cleanup : threads)
+        if (cleanup.thread.joinable())
+        {
+            if (cleanup.thread.get_id() == std::this_thread::get_id())
+                cleanup.thread.detach();
+            else
+                cleanup.thread.join();
+        }
 }
 
 namespace
@@ -927,6 +1054,7 @@ std::future<std::vector<StopError>> Client::stop(std::chrono::steady_clock::time
     try
     {
         cancel_startup(true);
+        cancel_session_cleanups();
         return std::async(
             std::launch::async,
             [this, deadline]
@@ -1200,6 +1328,7 @@ std::vector<StopError> Client::stop_impl(std::chrono::steady_clock::time_point d
 void Client::force_stop()
 {
     cancel_startup(true);
+    cancel_session_cleanups();
     {
         std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
         models_cache_.reset();
@@ -2190,6 +2319,26 @@ std::future<std::shared_ptr<Session>> Client::create_session(CreateSessionOption
 }
 
 std::future<std::shared_ptr<Session>>
+Client::create_session(CreateSessionOptions options, std::stop_token token)
+{
+    auto answered = std::make_shared<AnsweredSession>();
+    return run_cancellable<std::shared_ptr<Session>>(
+        std::move(token),
+        [this, options = std::move(options), answered](const CancellationToken& cancellation
+        ) mutable { return create_session_impl(std::move(options), cancellation, answered.get()); },
+        [answered]
+        {
+            std::lock_guard<std::mutex> lock(answered->mutex);
+            return std::make_exception_ptr(
+                RequestCancelledError("Session creation was cancelled", answered->id)
+            );
+        },
+        [this](const std::shared_ptr<Session>& session)
+        { discard_cancelled_session(session, copilot::rpc::methods::kSessionDelete); }
+    );
+}
+
+std::future<std::shared_ptr<Session>>
 Client::resume_session(const std::string& session_id, ResumeSessionOptions options)
 {
     return resume_session(session_id, std::move(options), std::nullopt);
@@ -2206,6 +2355,52 @@ std::future<std::shared_ptr<Session>> Client::resume_session(
         [this, session_id, options = std::move(options), permission_request]() mutable
         { return resume_session_impl(session_id, std::move(options), permission_request); }
     );
+}
+
+std::future<std::shared_ptr<Session>> Client::resume_session(
+    const std::string& session_id, ResumeSessionOptions options, std::stop_token token
+)
+{
+    auto answered = std::make_shared<AnsweredSession>();
+    return run_cancellable<std::shared_ptr<Session>>(
+        std::move(token),
+        [this, session_id, options = std::move(options), answered](
+            const CancellationToken& cancellation
+        ) mutable
+        {
+            return resume_session_impl(
+                session_id, std::move(options), std::nullopt, cancellation, answered.get()
+            );
+        },
+        [answered]
+        {
+            std::lock_guard<std::mutex> lock(answered->mutex);
+            return std::make_exception_ptr(
+                RequestCancelledError("Session resume was cancelled", answered->id)
+            );
+        },
+        [this](const std::shared_ptr<Session>& session)
+        { discard_cancelled_session(session, copilot::rpc::methods::kSessionDetach); }
+    );
+}
+
+// A create/resume that the runtime answered after its caller cancelled: forget the session
+// locally and end it on the runtime in the background.
+void Client::discard_cancelled_session(const std::shared_ptr<Session>& session, const char* method)
+{
+    if (!session)
+        return;
+    session->retire();
+    std::shared_ptr<JsonRpcClient> connection;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        const auto it = sessions_.find(session->session_id());
+        if (it != sessions_.end() && it->second == session)
+            sessions_.erase(it);
+        connection = rpc_;
+    }
+    if (connection)
+        cleanup_cancelled_session(connection, method, session->session_id());
 }
 
 // NODEJS REFERENCE: client.ts setupSessionFs
@@ -2258,9 +2453,11 @@ void Client::setup_session_fs_or_retire(Session& session, const SessionStateOpti
 }
 
 // NODEJS REFERENCE: client.ts createSession
-std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions options)
+std::shared_ptr<Session> Client::create_session_impl(
+    CreateSessionOptions options, const CancellationToken& cancellation, AnsweredSession* answered
+)
 {
-    ensure_connected();
+    ensure_connected(cancellation);
     const auto lifetime = session_initialization_token();
     if (lifetime.is_cancelled())
         throw std::runtime_error(kSessionInitializationCancelled);
@@ -2330,7 +2527,15 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
                                        sessions_.erase(it);
                                }
                            }
-                           if (cloud && returned_id)
+                           if (returned_id && cancellation.is_cancelled())
+                           {
+                               // Cancelled after the runtime created it: the caller has its
+                               // error already; delete the session in the background.
+                               cleanup_cancelled_session(
+                                   connection, copilot::rpc::methods::kSessionDelete, *returned_id
+                               );
+                           }
+                           else if (cloud && returned_id)
                            {
                                try
                                {
@@ -2363,13 +2568,34 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
     deliver_held_session_events();
 
     const json response = await_session_initialization(
-        connection->invoke(copilot::rpc::methods::kSessionCreate, request), lifetime
+        connection->invoke(
+            copilot::rpc::methods::kSessionCreate,
+            request,
+            cancellation,
+            std::nullopt,
+            [this, weak = std::weak_ptr<JsonRpcClient>(connection), requested = session_id](
+                const json& late
+            )
+            {
+                // The runtime created the session after the caller cancelled.
+                const auto id = string_field(late, "sessionId");
+                const auto created = id && !id->empty() ? *id : requested;
+                if (auto live = weak.lock(); live && !created.empty())
+                    cleanup_cancelled_session(live, copilot::rpc::methods::kSessionDelete, created);
+            }
+        ),
+        lifetime
     );
     returned_id = string_field(response, "sessionId");
     if (!returned_id || returned_id->empty())
     {
         returned_id.reset();
         throw std::runtime_error("session.create response did not include a sessionId");
+    }
+    if (answered)
+    {
+        std::lock_guard<std::mutex> lock(answered->mutex);
+        answered->id = *returned_id;
     }
     if (!session_id.empty() && *returned_id != session_id)
         throw std::runtime_error(
@@ -2401,7 +2627,9 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
         session->set_permission_mode_result(
             generated::api::PermissionsSetModeResult(response["permissionModeResult"])
         );
-    configure_host_policy_pre_check(*session, options.permissions.host_policy_pre_check);
+    configure_host_policy_pre_check(
+        *session, options.permissions.host_policy_pre_check, connection, cancellation
+    );
     if (auto_mode_unsupported)
     {
         detach_quietly(connection, session_id);
@@ -2409,8 +2637,8 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
     }
 
     if (has_mcp_auth_handler(options))
-        register_mcp_oauth_interest(connection, session_id);
-    apply_options_update(*session, options, options_.mode);
+        register_mcp_oauth_interest(connection, session_id, cancellation);
+    apply_options_update(*session, options, options_.mode, connection, cancellation);
 
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -2429,8 +2657,11 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
 }
 
 // NODEJS REFERENCE: client.ts resolveSessionIdPrefix
-std::string
-Client::resolve_session_id_prefix(const std::string& session_id, const ResumeSessionOptions& options)
+std::string Client::resolve_session_id_prefix(
+    const std::string& session_id,
+    const ResumeSessionOptions& options,
+    const CancellationToken& cancellation
+)
 {
     if (!options.interaction.auto_mode_recovery.value_or(false) || options_.session_fs ||
         !is_abbreviated_uuid_prefix(session_id))
@@ -2439,7 +2670,8 @@ Client::resolve_session_id_prefix(const std::string& session_id, const ResumeSes
     json params{{"prefix", session_id}};
     if (options.config_directory)
         params["configDir"] = *options.config_directory;
-    const json response = rpc_client_shared()->invoke("sessions.findByPrefix", params).get();
+    const json response =
+        rpc_client_shared()->invoke("sessions.findByPrefix", params, cancellation).get();
     const auto resolved = string_field(response, "sessionId");
     if (!resolved || resolved->empty())
         throw std::runtime_error("No unique session matches prefix " + session_id);
@@ -2450,14 +2682,18 @@ Client::resolve_session_id_prefix(const std::string& session_id, const ResumeSes
 
 // NODEJS REFERENCE: client.ts resumeSession
 std::shared_ptr<Session> Client::resume_session_impl(
-    std::string session_id, ResumeSessionOptions options, std::optional<bool> permission_request
+    std::string session_id,
+    ResumeSessionOptions options,
+    std::optional<bool> permission_request,
+    const CancellationToken& cancellation,
+    AnsweredSession* answered
 )
 {
-    ensure_connected();
+    ensure_connected(cancellation);
     const auto lifetime = session_initialization_token();
     if (lifetime.is_cancelled())
         throw std::runtime_error(kSessionInitializationCancelled);
-    session_id = resolve_session_id_prefix(session_id, options);
+    session_id = resolve_session_id_prefix(session_id, options, cancellation);
 
     std::shared_ptr<JsonRpcClient> connection;
     {
@@ -2543,9 +2779,34 @@ std::shared_ptr<Session> Client::resume_session_impl(
         }
         request.update(trace_context());
         const json response = await_session_initialization(
-            connection->invoke(copilot::rpc::methods::kSessionResume, request), lifetime
+            connection->invoke(
+                copilot::rpc::methods::kSessionResume,
+                request,
+                cancellation,
+                std::nullopt,
+                [this, weak = std::weak_ptr<JsonRpcClient>(connection), requested = session_id](
+                    const json& late
+                )
+                {
+                    // Resumed after the caller cancelled: release it again.
+                    const auto id = string_field(late, "sessionId");
+                    if (auto live = weak.lock())
+                        cleanup_cancelled_session(
+                            live,
+                            copilot::rpc::methods::kSessionDetach,
+                            id && !id->empty() ? *id : requested
+                        );
+                }
+            ),
+            lifetime
         );
         session->mark_confirmed();
+        if (answered)
+        {
+            const auto id = string_field(response, "sessionId");
+            std::lock_guard<std::mutex> lock(answered->mutex);
+            answered->id = id && !id->empty() ? *id : session_id;
+        }
 
         const auto returned_id = string_field(response, "sessionId");
         if (returned_id && !returned_id->empty() && *returned_id != session_id)
@@ -2593,7 +2854,9 @@ std::shared_ptr<Session> Client::resume_session_impl(
                     generated::api::PermissionsSetModeResult(response["permissionModeResult"]);
             session->set_permission_mode_result(std::move(permission_mode_result));
         }
-        configure_host_policy_pre_check(*session, options.permissions.host_policy_pre_check);
+        configure_host_policy_pre_check(
+            *session, options.permissions.host_policy_pre_check, connection, cancellation
+        );
         if (auto_mode_unsupported)
         {
             // NODEJS REFERENCE: client.ts requireAutoModeRecovery(detachOnFailure = !replaced)
@@ -2609,8 +2872,8 @@ std::shared_ptr<Session> Client::resume_session_impl(
             );
 
         if (has_mcp_auth_handler(options))
-            register_mcp_oauth_interest(connection, active_id);
-        apply_options_update(*session, options, options_.mode);
+            register_mcp_oauth_interest(connection, active_id, cancellation);
+        apply_options_update(*session, options, options_.mode, connection, cancellation);
 
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -2645,6 +2908,8 @@ std::shared_ptr<Session> Client::resume_session_impl(
                     sessions_.erase(it);
             }
         }
+        if (cancellation.is_cancelled() && session->is_confirmed() && !replaced)
+            cleanup_cancelled_session(connection, copilot::rpc::methods::kSessionDetach, active_id);
         if (registration_id)
         {
             if (keep_session)
@@ -2663,11 +2928,17 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions()
 
 std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilter filter)
 {
-    return std::async(
-        std::launch::async,
-        [this, filter = std::move(filter)]()
+    return list_sessions(std::move(filter), std::stop_token{});
+}
+
+std::future<std::vector<SessionMetadata>>
+Client::list_sessions(SessionListFilter filter, std::stop_token token)
+{
+    return run_cancellable<std::vector<SessionMetadata>>(
+        std::move(token),
+        [this, filter = std::move(filter)](const CancellationToken& cancellation)
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             // session.list takes an optional 'filter' param (matches nodejs SDK shape).
             json params = json::object();
@@ -2675,7 +2946,7 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilte
             if (!filter_json.empty())
                 params["filter"] = std::move(filter_json);
 
-            auto response = rpc->invoke(copilot::rpc::methods::kSessionList, params).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kSessionList, params, cancellation).get();
             std::vector<SessionMetadata> sessions;
 
             if (response.contains("sessions") && response["sessions"].is_array())
@@ -2690,15 +2961,21 @@ std::future<std::vector<SessionMetadata>> Client::list_sessions(SessionListFilte
 std::future<std::optional<SessionMetadata>>
 Client::get_session_metadata(const std::string& session_id)
 {
-    return std::async(
-        std::launch::async,
-        [this, session_id]() -> std::optional<SessionMetadata>
+    return get_session_metadata(session_id, std::stop_token{});
+}
+
+std::future<std::optional<SessionMetadata>>
+Client::get_session_metadata(const std::string& session_id, std::stop_token token)
+{
+    return run_cancellable<std::optional<SessionMetadata>>(
+        std::move(token),
+        [this, session_id](const CancellationToken& cancellation) -> std::optional<SessionMetadata>
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             auto response =
                 rpc->invoke(
-                        copilot::rpc::methods::kSessionGetMetadata, json{{"sessionId", session_id}}
+                        copilot::rpc::methods::kSessionGetMetadata, json{{"sessionId", session_id}}, cancellation
                 ).get();
 
             if (!response.contains("session") || response["session"].is_null())
@@ -2711,15 +2988,20 @@ Client::get_session_metadata(const std::string& session_id)
 
 std::future<void> Client::delete_session(const std::string& session_id)
 {
-    return std::async(
-        std::launch::async,
-        [this, session_id]()
+    return delete_session(session_id, std::stop_token{});
+}
+
+std::future<void> Client::delete_session(const std::string& session_id, std::stop_token token)
+{
+    return run_cancellable<void>(
+        std::move(token),
+        [this, session_id](const CancellationToken& cancellation)
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             auto response =
                 rpc->invoke(
-                        copilot::rpc::methods::kSessionDelete, json{{"sessionId", session_id}}
+                        copilot::rpc::methods::kSessionDelete, json{{"sessionId", session_id}}, cancellation
                 ).get();
 
             if (response.is_object() && response.contains("success") &&
@@ -2757,14 +3039,19 @@ std::future<void> Client::clear_managed_settings_cache()
 
 std::future<std::optional<std::string>> Client::get_last_session_id()
 {
-    return std::async(
-        std::launch::async,
-        [this]() -> std::optional<std::string>
+    return get_last_session_id(std::stop_token{});
+}
+
+std::future<std::optional<std::string>> Client::get_last_session_id(std::stop_token token)
+{
+    return run_cancellable<std::optional<std::string>>(
+        std::move(token),
+        [this](const CancellationToken& cancellation) -> std::optional<std::string>
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             auto response =
-                rpc->invoke(copilot::rpc::methods::kSessionGetLastId, json::object()).get();
+                rpc->invoke(copilot::rpc::methods::kSessionGetLastId, json::object(), cancellation).get();
 
             if (response.contains("sessionId") && !response["sessionId"].is_null())
                 return response["sessionId"].get<std::string>();
@@ -2775,11 +3062,17 @@ std::future<std::optional<std::string>> Client::get_last_session_id()
 
 std::future<PingResponse> Client::ping(std::optional<std::string> message)
 {
-    return std::async(
-        std::launch::async,
-        [this, message]()
+    return ping(std::move(message), std::stop_token{});
+}
+
+std::future<PingResponse>
+Client::ping(std::optional<std::string> message, std::stop_token token)
+{
+    return run_cancellable<PingResponse>(
+        std::move(token),
+        [this, message](const CancellationToken& cancellation)
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             json params;
             if (message.has_value())
@@ -2787,7 +3080,7 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
             else
                 params["message"] = nullptr;
 
-            auto response = rpc->invoke(copilot::rpc::methods::kPing, params).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kPing, params, cancellation).get();
 
             PingResponse result;
             if (response.contains("message") && !response["message"].is_null())
@@ -2808,18 +3101,23 @@ std::future<PingResponse> Client::ping(std::optional<std::string> message)
 
 std::future<GetStatusResponse> Client::get_status()
 {
-    return std::async(
-        std::launch::async,
-        [this]()
+    return get_status(std::stop_token{});
+}
+
+std::future<GetStatusResponse> Client::get_status(std::stop_token token)
+{
+    return run_cancellable<GetStatusResponse>(
+        std::move(token),
+        [this](const CancellationToken& cancellation)
         {
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
             // NODEJS REFERENCE: nodejs/src/client.ts getStatus (status.get). Runtimes that
             // do not implement status.get get the values negotiated at connect time.
             try
             {
                 const auto response =
-                    rpc->invoke(copilot::rpc::methods::kStatusGet, json::object()).get();
+                    rpc->invoke(copilot::rpc::methods::kStatusGet, json::object(), cancellation).get();
                 if (response.is_object() && response.contains("version") &&
                     response.contains("protocolVersion"))
                     return response.get<GetStatusResponse>();
@@ -2842,13 +3140,18 @@ std::future<GetStatusResponse> Client::get_status()
 
 std::future<GetAuthStatusResponse> Client::get_auth_status()
 {
-    return std::async(
-        std::launch::async,
-        [this]()
-        {
-            const auto rpc = ensure_connected();
+    return get_auth_status(std::stop_token{});
+}
 
-            auto response = rpc->invoke("account.getCurrentAuth", json::object()).get();
+std::future<GetAuthStatusResponse> Client::get_auth_status(std::stop_token token)
+{
+    return run_cancellable<GetAuthStatusResponse>(
+        std::move(token),
+        [this](const CancellationToken& cancellation)
+        {
+            const auto rpc = ensure_connected(cancellation);
+
+            auto response = rpc->invoke("account.getCurrentAuth", json::object(), cancellation).get();
             GetAuthStatusResponse result;
             if (response.contains("authInfo") && response["authInfo"].is_object())
             {
@@ -2868,9 +3171,14 @@ std::future<GetAuthStatusResponse> Client::get_auth_status()
 
 std::future<std::vector<ModelInfo>> Client::list_models()
 {
-    return std::async(
-        std::launch::async,
-        [this]()
+    return list_models(std::stop_token{});
+}
+
+std::future<std::vector<ModelInfo>> Client::list_models(std::stop_token token)
+{
+    return run_cancellable<std::vector<ModelInfo>>(
+        std::move(token),
+        [this](const CancellationToken& cancellation)
         {
             // Check cache first (applies to both BYOK and RPC paths).
             {
@@ -2890,9 +3198,9 @@ std::future<std::vector<ModelInfo>> Client::list_models()
             }
 
             // Default path: query the CLI server (requires a live connection).
-            const auto rpc = ensure_connected();
+            const auto rpc = ensure_connected(cancellation);
 
-            auto response = rpc->invoke(copilot::rpc::methods::kModelsList, json::object()).get();
+            auto response = rpc->invoke(copilot::rpc::methods::kModelsList, json::object(), cancellation).get();
             auto models_response = response.get<GetModelsResponse>();
 
             // Store in cache
@@ -2908,12 +3216,17 @@ std::future<std::vector<ModelInfo>> Client::list_models()
 
 std::future<json> Client::invoke(const std::string& method, json params)
 {
-    return std::async(
-        std::launch::async,
-        [this, method, params = std::move(params)]() mutable
+    return invoke(method, std::move(params), std::stop_token{});
+}
+
+std::future<json> Client::invoke(const std::string& method, json params, std::stop_token token)
+{
+    return run_cancellable<json>(
+        std::move(token),
+        [this, method, params = std::move(params)](const CancellationToken& cancellation) mutable
         {
-            const auto rpc = ensure_connected();
-            return rpc->invoke(method, params).get();
+            const auto rpc = ensure_connected(cancellation);
+            return rpc->invoke(method, params, cancellation).get();
         }
     );
 }
@@ -3492,13 +3805,18 @@ Subscription Client::on_lifecycle(LifecycleHandler handler)
 
 std::future<std::optional<std::string>> Client::get_foreground_session_id()
 {
-    return std::async(
-        std::launch::async,
-        [this]() -> std::optional<std::string>
+    return get_foreground_session_id(std::stop_token{});
+}
+
+std::future<std::optional<std::string>> Client::get_foreground_session_id(std::stop_token token)
+{
+    return run_cancellable<std::optional<std::string>>(
+        std::move(token),
+        [this](const CancellationToken& cancellation) -> std::optional<std::string>
         {
             auto response =
                 rpc_client_shared()
-                    ->invoke(copilot::rpc::methods::kSessionGetForeground, json::object())
+                    ->invoke(copilot::rpc::methods::kSessionGetForeground, json::object(), cancellation)
                     .get();
             auto parsed = response.get<GetForegroundSessionResponse>();
             return parsed.session_id;
@@ -3508,15 +3826,21 @@ std::future<std::optional<std::string>> Client::get_foreground_session_id()
 
 std::future<void> Client::set_foreground_session_id(const std::string& session_id)
 {
-    return std::async(
-        std::launch::async,
-        [this, session_id]()
+    return set_foreground_session_id(session_id, std::stop_token{});
+}
+
+std::future<void>
+Client::set_foreground_session_id(const std::string& session_id, std::stop_token token)
+{
+    return run_cancellable<void>(
+        std::move(token),
+        [this, session_id](const CancellationToken& cancellation)
         {
             // Protocol 4 runtimes reject with a JSON-RPC error; legacy runtimes report success:false.
             const json response =
                 rpc_client_shared()
                     ->invoke(
-                        copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}
+                        copilot::rpc::methods::kSessionSetForeground, json{{"sessionId", session_id}}, cancellation
                     )
                     .get();
             if (response.is_object() && response.contains("success") &&

@@ -6,7 +6,12 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.6.1
+## Version 0.4.7
+
+Adds per-call cancellation: `std::stop_token` overloads on the client and session calls
+(see "Client lifetime" below). See `CHANGELOG.md`.
+
+### 0.4.6.1
 
 Fixes CLI lookup on Windows: a bare CLI name is resolved in the shell's `PATH` order,
 and environment lookups see changes made with `SetEnvironmentVariable`. See `CHANGELOG.md`.
@@ -50,6 +55,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.7           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6.1         | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.5           | 4                 | 1.0.115-1              | 1.0.115-1               |
@@ -200,6 +206,28 @@ client.abort();                             // fail pending requests, do not wai
   directory with a match, then `PATHEXT` order). A native executable is spawned
   directly; a `.cmd`/`.bat` shim runs through `cmd.exe` by absolute path. Set
   `COPILOT_CLI_PATH` to the executable to skip the lookup.
+
+### Cancelling one call
+
+Most client and session calls take an optional `std::stop_token` (like the official SDKs'
+`CancellationToken`). A stop request fails only that call, at once, with
+`RequestCancelledError`, and tells the runtime to cancel it:
+
+```cpp
+std::stop_source budget;                 // e.g. request_stop() when a turn's budget ends
+auto session = client.create_session(options, budget.get_token());
+
+// A bounded health check: give the runtime 1 s, then kill it if it did not answer.
+std::stop_source probe;
+std::jthread timer([&] { std::this_thread::sleep_for(1s); probe.request_stop(); });
+try { client.ping("health", probe.get_token()).get(); }
+catch (const copilot::JsonRpcError&) { client.force_stop(); }
+```
+
+- A create/resume cancelled after the runtime already made the session reports its id
+  in `RequestCancelledError::session_id()`; the SDK removes the session in the background.
+- The token also ends the wait for a start in progress; calls made during `stop()` fail
+  with `ConnectionClosed`.
 
 ## Session options
 

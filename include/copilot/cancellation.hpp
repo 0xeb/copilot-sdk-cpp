@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stop_token>
 #include <vector>
 
 namespace copilot
@@ -58,6 +59,12 @@ class CancellationToken
     bool is_cancelled() const noexcept
     {
         return state_ && state_->cancelled.load();
+    }
+
+    /// False for a default-constructed token, which is never cancelled.
+    bool can_be_cancelled() const noexcept
+    {
+        return static_cast<bool>(state_);
     }
 
     /// Run `callback` once when the token is cancelled (immediately if it already
@@ -123,5 +130,45 @@ class CancellationSource
   private:
     std::shared_ptr<detail::CancellationState> state_;
 };
+
+namespace detail
+{
+
+/// A CancellationToken cancelled when `token` is stop-requested, for as long as this
+/// object lives. Keep it alive for the duration of the call it bounds.
+class StopTokenCancellation
+{
+  public:
+    StopTokenCancellation(const StopTokenCancellation&) = delete;
+    StopTokenCancellation& operator=(const StopTokenCancellation&) = delete;
+
+    explicit StopTokenCancellation(std::stop_token token)
+        : stop_token_(token), callback_(std::move(token), [source = source_]() mutable { source.cancel(); })
+    {
+    }
+
+    /// A token that can never be cancelled when the stop_token cannot be stopped.
+    CancellationToken token() const
+    {
+        return stop_token_.stop_possible() ? source_.token() : CancellationToken{};
+    }
+
+    bool is_cancelled() const noexcept
+    {
+        return source_.is_cancelled();
+    }
+
+    const std::stop_token& stop_token() const noexcept
+    {
+        return stop_token_;
+    }
+
+  private:
+    CancellationSource source_;
+    std::stop_token stop_token_;
+    std::stop_callback<std::function<void()>> callback_;
+};
+
+} // namespace detail
 
 } // namespace copilot

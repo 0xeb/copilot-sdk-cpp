@@ -7,6 +7,7 @@
 /// @brief CopilotClient for managing connections to the Copilot CLI server
 
 #include <atomic>
+#include <condition_variable>
 #include <copilot/cancellation.hpp>
 #include <copilot/decisions.hpp>
 #include <copilot/events.hpp>
@@ -27,6 +28,8 @@
 #include <regex>
 #include <stop_token>
 #include <string>
+#include <thread>
+#include <type_traits>
 #include <vector>
 
 namespace copilot
@@ -198,6 +201,16 @@ class Client
     /// Create a new Copilot session. Starts the client first if it is disconnected.
     std::future<std::shared_ptr<Session>> create_session(CreateSessionOptions options = {});
 
+    /// create_session() that a stop request on `token` ends early. The future then fails at
+    /// once with RequestCancelledError (JsonRpcErrorCode::RequestCancelled) and the runtime is
+    /// sent `$/cancelRequest`. If the runtime had already created the session, the error
+    /// carries its id and the session is deleted in the background (bounded by
+    /// request_timeout; stop(), force_stop() and ~Client end the cleanup).
+    /// Cancelling also ends the wait for a start in progress, but not the start itself.
+    // C# REFERENCE: Client.cs CreateSessionAsync(config, CancellationToken)
+    std::future<std::shared_ptr<Session>>
+    create_session(CreateSessionOptions options, std::stop_token token);
+
     /// Resume an existing session. With `interaction.auto_mode_recovery`, a unique id prefix
     /// (7+ hex chars) is resolved through `sessions.findByPrefix`.
     std::future<std::shared_ptr<Session>>
@@ -210,6 +223,13 @@ class Client
         std::optional<bool> permission_request
     );
 
+    /// resume_session() that a stop request on `token` ends early, as create_session(options,
+    /// token). A session the runtime already resumed is detached in the background.
+    // C# REFERENCE: Client.cs ResumeSessionAsync(sessionId, config, CancellationToken)
+    std::future<std::shared_ptr<Session>> resume_session(
+        const std::string& session_id, ResumeSessionOptions options, std::stop_token token
+    );
+
     /// List all available sessions
     /// @return Future that resolves to list of session metadata
     std::future<std::vector<SessionMetadata>> list_sessions();
@@ -218,16 +238,21 @@ class Client
     /// @param filter Filter criteria (cwd / git_root / repository / branch)
     /// @return Future that resolves to list of matching session metadata
     std::future<std::vector<SessionMetadata>> list_sessions(SessionListFilter filter);
+    std::future<std::vector<SessionMetadata>>
+    list_sessions(SessionListFilter filter, std::stop_token token);
 
     /// Get metadata for a specific session by ID (O(1) lookup).
     /// @param session_id ID of the session
     /// @return Future that resolves to metadata, or nullopt if not found
     std::future<std::optional<SessionMetadata>> get_session_metadata(const std::string& session_id);
+    std::future<std::optional<SessionMetadata>>
+    get_session_metadata(const std::string& session_id, std::stop_token token);
 
     /// Delete a session
     /// @param session_id ID of the session to delete
     /// @return Future that completes when deleted
     std::future<void> delete_session(const std::string& session_id);
+    std::future<void> delete_session(const std::string& session_id, std::stop_token token);
 
     /// Force the runtime to drop its cached managed-settings snapshot.
     ///
@@ -239,6 +264,7 @@ class Client
     /// Get the ID of the most recently used session
     /// @return Future that resolves to session ID or nullopt if none
     std::future<std::optional<std::string>> get_last_session_id();
+    std::future<std::optional<std::string>> get_last_session_id(std::stop_token token);
 
     // =========================================================================
     // Server Communication
@@ -249,18 +275,28 @@ class Client
     /// @return Future that resolves to ping response
     std::future<PingResponse> ping(std::optional<std::string> message = std::nullopt);
 
+    /// ping() that a stop request on `token` ends early with RequestCancelledError. A bounded
+    /// health check: cancel the token after the budget, then force_stop() a runtime that did
+    /// not answer.
+    // C# REFERENCE: Client.cs PingAsync(message, CancellationToken)
+    std::future<PingResponse> ping(std::optional<std::string> message, std::stop_token token);
+
     /// Get CLI status including version and protocol information
     /// @return Future that resolves to status response
     std::future<GetStatusResponse> get_status();
+    std::future<GetStatusResponse> get_status(std::stop_token token);
 
     /// Get current authentication status
     /// @return Future that resolves to auth status response
     std::future<GetAuthStatusResponse> get_auth_status();
+    // C# REFERENCE: Client.cs GetAuthStatusAsync(CancellationToken)
+    std::future<GetAuthStatusResponse> get_auth_status(std::stop_token token);
 
     /// List available models with their metadata
     /// @return Future that resolves to list of model info
     /// @throws Error if not authenticated
     std::future<std::vector<ModelInfo>> list_models();
+    std::future<std::vector<ModelInfo>> list_models(std::stop_token token);
 
     /// Decision helpers: one-off yes/no, pick-one and rating questions answered by
     /// Copilot decision models. Requires the runtime's `DECISIONS_API` feature flag.
@@ -279,6 +315,7 @@ class Client
 
     /// Invoke a low-level global RPC method.
     std::future<json> invoke(const std::string& method, json params = json::object());
+    std::future<json> invoke(const std::string& method, json params, std::stop_token token);
 
     /// Current W3C trace context for request propagation.
     json trace_context() const;
@@ -301,9 +338,12 @@ class Client
 
     /// Get the current foreground session ID
     std::future<std::optional<std::string>> get_foreground_session_id();
+    std::future<std::optional<std::string>> get_foreground_session_id(std::stop_token token);
 
     /// Set the foreground session
     std::future<void> set_foreground_session_id(const std::string& session_id);
+    std::future<void>
+    set_foreground_session_id(const std::string& session_id, std::stop_token token);
 
     // =========================================================================
     // Agent Host Protocol (experimental)
@@ -321,6 +361,129 @@ class Client
 
     /// Get session by ID (internal use)
     std::shared_ptr<Session> get_session(const std::string& session_id);
+
+    struct NoDiscard
+    {
+        template <typename T>
+        void operator()(T&&) const noexcept
+        {
+        }
+    };
+
+    /// Internal (used by Session): run `work(CancellationToken)` on its own thread, bounded
+    /// by `stop`. With a stoppable token the returned future is fulfilled as soon as `work`
+    /// finishes or `stop` is requested, whichever comes first, so neither get() nor the
+    /// future's destructor waits on cancelled work. The token passed to `work` is cancelled
+    /// with `stop`, which fails its requests promptly; the worker then ends on its own and
+    /// ~Client waits for it. `cancelled_error` builds the error a cancel reports (default
+    /// RequestCancelledError); `discard` receives a result that arrived after the cancel.
+    template <typename R, typename Work, typename Discard = NoDiscard>
+    std::future<R> run_cancellable(
+        std::stop_token stop,
+        Work work,
+        std::function<std::exception_ptr()> cancelled_error = {},
+        Discard discard = {}
+    )
+    {
+        if (!stop.stop_possible())
+            return std::async(
+                std::launch::async,
+                [work = std::move(work)]() mutable { return work(CancellationToken{}); }
+            );
+
+        struct State
+        {
+            std::mutex mutex;
+            bool settled = false;
+            std::promise<R> promise;
+            CancellationSource cancellation;
+        };
+        auto state = std::make_shared<State>();
+        auto future = state->promise.get_future();
+        auto settle = [](State& s, auto&& action)
+        {
+            std::lock_guard<std::mutex> lock(s.mutex);
+            if (s.settled)
+                return false;
+            s.settled = true;
+            action(s.promise);
+            return true;
+        };
+
+        auto workers = cancellable_workers_;
+        {
+            std::lock_guard<std::mutex> lock(workers->mutex);
+            ++workers->active;
+        }
+        auto callback = std::make_shared<std::stop_callback<std::function<void()>>>(
+            stop,
+            std::function<void()>(
+                [state, settle, cancelled_error]
+                {
+                    state->cancellation.cancel();
+                    settle(
+                        *state,
+                        [&](std::promise<R>& promise)
+                        {
+                            promise.set_exception(
+                                cancelled_error ? cancelled_error()
+                                                : std::make_exception_ptr(RequestCancelledError())
+                            );
+                        }
+                    );
+                }
+            )
+        );
+        try
+        {
+            std::thread(
+                [state, settle, callback, workers, work = std::move(work), discard = std::move(discard)](
+                ) mutable
+                {
+                    try
+                    {
+                        if constexpr (std::is_void_v<R>)
+                        {
+                            work(state->cancellation.token());
+                            settle(*state, [](std::promise<R>& promise) { promise.set_value(); });
+                        }
+                        else
+                        {
+                            R value = work(state->cancellation.token());
+                            bool delivered = false;
+                            settle(
+                                *state,
+                                [&](std::promise<R>& promise)
+                                {
+                                    promise.set_value(value);
+                                    delivered = true;
+                                }
+                            );
+                            if (!delivered)
+                                discard(value);
+                        }
+                    }
+                    catch (...)
+                    {
+                        auto error = std::current_exception();
+                        settle(*state, [&](std::promise<R>& promise) { promise.set_exception(error); });
+                    }
+                    callback.reset();
+                    std::lock_guard<std::mutex> lock(workers->mutex);
+                    if (--workers->active == 0)
+                        workers->idle.notify_all();
+                }
+            ).detach();
+        }
+        catch (...)
+        {
+            std::lock_guard<std::mutex> lock(workers->mutex);
+            if (--workers->active == 0)
+                workers->idle.notify_all();
+            throw;
+        }
+        return future;
+    }
 
     /// Get the JSON-RPC client (internal use). Never waits on a start in progress.
     std::shared_ptr<JsonRpcClient> rpc_client_shared()
@@ -341,19 +504,64 @@ class Client
 
     /// Start the client when disconnected; otherwise require a live connection.
     /// Connects if needed and returns a snapshot of the live connection, taken under the lock.
-    std::shared_ptr<JsonRpcClient> ensure_connected();
+    /// A cancelled `cancellation` stops waiting for the start (the start itself continues)
+    /// and throws RequestCancelledError.
+    std::shared_ptr<JsonRpcClient> ensure_connected(const CancellationToken& cancellation = {});
+
+    /// Background cleanup of sessions whose create/resume was cancelled after the runtime
+    /// answered; stop(), force_stop() and ~Client end it.
+    void cleanup_cancelled_session(
+        std::shared_ptr<JsonRpcClient> connection, std::string method, std::string session_id
+    );
+    void cancel_session_cleanups();
+    /// Ends a session whose create/resume finished after its caller's token was cancelled.
+    void discard_cancelled_session(const std::shared_ptr<Session>& session, const char* method);
+    /// Cancellable calls still running; ~Client waits for them.
+    struct CancellableWorkers
+    {
+        std::mutex mutex;
+        std::condition_variable idle;
+        int active = 0;
+    };
+    std::shared_ptr<CancellableWorkers> cancellable_workers_ = std::make_shared<CancellableWorkers>();
+    /// The session id a create/resume has had confirmed by the runtime, for the error a
+    /// cancelled call reports.
+    struct AnsweredSession
+    {
+        std::mutex mutex;
+        std::optional<std::string> id;
+    };
+    std::mutex cleanup_mutex_;
+    CancellationSource cleanup_cancellation_;
+    struct CleanupThread
+    {
+        std::thread thread;
+        std::shared_ptr<std::atomic<bool>> done;
+    };
+    std::vector<CleanupThread> cleanup_threads_;
     std::string register_github_token_provider(GitHubTokenProvider provider);
     void assign_github_token_registration(const std::string& id, const std::string& session_id);
     void commit_github_token_registration(const std::string& id);
     void remove_github_token_registration(const std::string& id);
-    std::shared_ptr<Session>
-    create_session_impl(CreateSessionOptions options);
+    std::shared_ptr<Session> create_session_impl(
+        CreateSessionOptions options,
+        const CancellationToken& cancellation = {},
+        AnsweredSession* answered = nullptr
+    );
     void setup_session_fs(Session& session, const SessionStateOptions& state) const;
     void setup_session_fs_or_retire(Session& session, const SessionStateOptions& state) const;
     std::shared_ptr<Session> resume_session_impl(
-        std::string session_id, ResumeSessionOptions options, std::optional<bool> permission_request
+        std::string session_id,
+        ResumeSessionOptions options,
+        std::optional<bool> permission_request,
+        const CancellationToken& cancellation = {},
+        AnsweredSession* answered = nullptr
     );
-    std::string resolve_session_id_prefix(const std::string& session_id, const ResumeSessionOptions& options);
+    std::string resolve_session_id_prefix(
+        const std::string& session_id,
+        const ResumeSessionOptions& options,
+        const CancellationToken& cancellation = {}
+    );
     /// Route an inbound session-scoped callback, preferring an in-flight resume whose
     /// requested ID (or abbreviated prefix) matches.
     std::shared_ptr<Session> resolve_session_callback(const std::string& session_id);

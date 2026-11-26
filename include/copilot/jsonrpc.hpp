@@ -97,6 +97,30 @@ class JsonRpcError : public std::runtime_error
     bool has_data_ = false;
 };
 
+/// A request ended by its caller's cancellation token (code RequestCancelled).
+/// `session_id` is set when a create/resume was cancelled after the runtime had already
+/// created or resumed that session; the SDK then removes it in the background.
+class RequestCancelledError : public JsonRpcError
+{
+  public:
+    explicit RequestCancelledError(
+        const std::string& message = "Request cancelled",
+        std::optional<std::string> session_id = std::nullopt
+    )
+        : JsonRpcError(JsonRpcErrorCode::RequestCancelled, message),
+          session_id_(std::move(session_id))
+    {
+    }
+
+    const std::optional<std::string>& session_id() const noexcept
+    {
+        return session_id_;
+    }
+
+  private:
+    std::optional<std::string> session_id_;
+};
+
 // =============================================================================
 // JSON-RPC 2.0 Message Types
 // =============================================================================
@@ -225,6 +249,8 @@ struct PendingRequest
 {
     std::promise<json> promise;
     std::function<void(const json&)> on_success;
+    /// Runs with the result of a request already cancelled by its token (a late answer).
+    std::function<void(const json&)> on_late_result;
     std::chrono::steady_clock::time_point deadline;
 
     PendingRequest(std::chrono::milliseconds timeout = std::chrono::milliseconds{0})
@@ -268,12 +294,16 @@ class JsonRpcClient
     /// @param transport The underlying transport (takes ownership)
     explicit JsonRpcClient(std::unique_ptr<ITransport> transport)
         : wire_(std::make_shared<Wire>(std::move(transport))),
-          incoming_(std::make_shared<IncomingRegistry>()), next_id_(1), running_(false)
+          incoming_(std::make_shared<IncomingRegistry>()),
+          cancels_(std::make_shared<CancelTable>()), next_id_(1), running_(false)
     {
+        cancels_->owner = this;
     }
 
     ~JsonRpcClient()
     {
+        // A token cancelled from now on no longer reaches this client.
+        cancels_->detach();
         stop();
     }
 
@@ -400,6 +430,42 @@ class JsonRpcClient
     )
     {
         return invoke_with_id(method, params, timeout.value_or(default_timeout())).second;
+    }
+
+    /// Send a request that `cancellation` can end early. Cancelling fails only this request
+    /// with JsonRpcErrorCode::RequestCancelled and sends `$/cancelRequest` to the peer (best
+    /// effort). A result that arrives after the cancel is passed to `on_late_result`, if
+    /// set, on the read thread; otherwise it is dropped.
+    // C# REFERENCE: dotnet/src/JsonRpc.cs InvokeAsync (cancellationToken.Register)
+    std::future<json> invoke(
+        const std::string& method,
+        const json& params,
+        const CancellationToken& cancellation,
+        std::optional<std::chrono::milliseconds> timeout = std::nullopt,
+        std::function<void(const json&)> on_late_result = {}
+    )
+    {
+        return invoke_cancellable(
+            method,
+            params,
+            timeout.value_or(default_timeout()),
+            cancellation,
+            {},
+            std::move(on_late_result)
+        );
+    }
+
+    /// invoke_with_completion() that `cancellation` can end early, as invoke() above.
+    std::future<json> invoke_with_completion(
+        const std::string& method,
+        const json& params,
+        std::function<void(const json&)> completion,
+        const CancellationToken& cancellation
+    )
+    {
+        return invoke_cancellable(
+            method, params, default_timeout(), cancellation, std::move(completion), {}
+        );
     }
 
     /// Run completion on the read thread before subsequent inbound messages are dispatched.
@@ -586,28 +652,42 @@ class JsonRpcClient
         const std::string& method,
         const json& params,
         std::chrono::milliseconds timeout,
-        std::function<void(const json&)> completion = {}
+        std::function<void(const json&)> completion = {},
+        std::function<void(const json&)> on_late_result = {},
+        const CancellationToken* cancellation = nullptr
     )
     {
         auto id = next_id_++;
+        if (cancellation)
+            cancels_->remember(id, *cancellation);
 
         auto pending = std::make_shared<PendingRequest>(timeout);
         pending->on_success = std::move(completion);
+        pending->on_late_result = std::move(on_late_result);
         auto future = pending->promise.get_future();
 
+        bool failed_fast = false;
         {
             std::lock_guard<std::mutex> lock(pending_mutex_);
             // Sticky terminal error: once the connection has failed, fail fast
             // instead of writing and waiting out the timeout.
             // C# REFERENCE: dotnet/src/JsonRpc.cs InvokeAsync (_terminalError, 9515b5e85)
-            if (terminal_)
+            if (!terminal_)
+                pending_requests_[id] = pending;
+            else
             {
+                failed_fast = true;
                 pending->promise.set_exception(
                     std::make_exception_ptr(JsonRpcError(*terminal_, "Connection closed"))
                 );
-                return {id, std::move(future)};
             }
-            pending_requests_[id] = pending;
+        }
+        if (failed_fast)
+        {
+            // Lock order is cancel table -> pending_mutex_, so forget outside the lock.
+            if (cancellation)
+                cancels_->forget(id);
+            return {id, std::move(future)};
         }
         pending_cv_.notify_all();
 
@@ -619,12 +699,163 @@ class JsonRpcClient
         }
         catch (...)
         {
-            std::lock_guard<std::mutex> lock(pending_mutex_);
-            pending_requests_.erase(id);
+            {
+                std::lock_guard<std::mutex> lock(pending_mutex_);
+                pending_requests_.erase(id);
+            }
+            cancels_->forget(id);
             throw;
         }
 
         return {id, std::move(future)};
+    }
+
+    std::future<json> invoke_cancellable(
+        const std::string& method,
+        const json& params,
+        std::chrono::milliseconds timeout,
+        const CancellationToken& cancellation,
+        std::function<void(const json&)> completion,
+        std::function<void(const json&)> on_late_result
+    )
+    {
+        if (!cancellation.can_be_cancelled())
+            return invoke_with_id(
+                       method, params, timeout, std::move(completion), std::move(on_late_result)
+            )
+                .second;
+        if (cancellation.is_cancelled())
+        {
+            std::promise<json> cancelled;
+            cancelled.set_exception(std::make_exception_ptr(RequestCancelledError()));
+            return cancelled.get_future();
+        }
+        auto [id, future] = invoke_with_id(
+            method, params, timeout, std::move(completion), std::move(on_late_result), &cancellation
+        );
+        const auto registration =
+            cancellation.on_cancel([cancels = cancels_, id = id] { cancels->fail(id); });
+        cancels_->set_registration(id, registration, cancellation);
+        return std::move(future);
+    }
+
+    // Cancels outgoing requests on behalf of their tokens. Shared with the token callbacks so
+    // a token cancelled after this client is gone does nothing.
+    struct CancelTable
+    {
+        struct Entry
+        {
+            CancellationToken token;
+            uint64_t registration = 0;
+        };
+
+        std::mutex mutex;
+        JsonRpcClient* owner = nullptr;
+        std::map<int64_t, Entry> entries;
+
+        void remember(int64_t id, const CancellationToken& token)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            entries[id] = Entry{token, 0};
+        }
+
+        void set_registration(int64_t id, uint64_t registration, const CancellationToken& token)
+        {
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                const auto it = entries.find(id);
+                if (it != entries.end())
+                {
+                    it->second.registration = registration;
+                    return;
+                }
+            }
+            // The request already finished (or was cancelled inline).
+            token.unregister(registration);
+        }
+
+        void forget(int64_t id)
+        {
+            Entry entry;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                const auto it = entries.find(id);
+                if (it == entries.end())
+                    return;
+                entry = std::move(it->second);
+                entries.erase(it);
+            }
+            entry.token.unregister(entry.registration);
+        }
+
+        void forget_all()
+        {
+            std::map<int64_t, Entry> dropped;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                dropped.swap(entries);
+            }
+            for (auto& [_, entry] : dropped)
+                entry.token.unregister(entry.registration);
+        }
+
+        /// Runs on the cancelling thread. Holds `mutex` so the owner cannot go away meanwhile.
+        void fail(int64_t id)
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            entries.erase(id);
+            if (owner)
+                owner->cancel_pending_request(id);
+        }
+
+        void detach()
+        {
+            std::map<int64_t, Entry> dropped;
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                owner = nullptr;
+                dropped.swap(entries);
+            }
+            for (auto& [_, entry] : dropped)
+                entry.token.unregister(entry.registration);
+        }
+    };
+
+    void cancel_pending_request(int64_t id)
+    {
+        std::shared_ptr<PendingRequest> pending;
+        {
+            std::lock_guard<std::mutex> lock(pending_mutex_);
+            const auto it = pending_requests_.find(id);
+            if (it == pending_requests_.end())
+                return;
+            pending = it->second;
+            pending_requests_.erase(it);
+            if (pending->on_late_result)
+                late_results_[id] = std::move(pending->on_late_result);
+        }
+        try
+        {
+            pending->promise.set_exception(std::make_exception_ptr(RequestCancelledError()));
+        }
+        catch (...)
+        {
+        }
+        // Written from a worker: a runtime that stopped reading could block the write, and
+        // the cancelling thread must not wait on it.
+        spawn_worker(
+            [wire = wire_, id]
+            {
+                wire->try_send(
+                    [&]
+                    {
+                        wire->send(json{
+                            {"jsonrpc", "2.0"}, {"method", "$/cancelRequest"}, {"params", {{"id", id}}}
+                        });
+                    }
+                );
+            }
+        );
     }
 
     void timeout_loop()
@@ -634,6 +865,7 @@ class JsonRpcClient
         while (running_)
         {
             std::vector<std::shared_ptr<PendingRequest>> expired;
+            std::vector<int64_t> expired_ids;
             auto now = clock::now();
             auto next_deadline = clock::time_point::max();
 
@@ -645,6 +877,7 @@ class JsonRpcClient
                     if (pending->deadline <= now)
                     {
                         expired.push_back(pending);
+                        expired_ids.push_back(it->first);
                         it = pending_requests_.erase(it);
                     }
                     else
@@ -668,6 +901,8 @@ class JsonRpcClient
                 }
             }
 
+            for (const auto id : expired_ids)
+                cancels_->forget(id);
             for (auto& pending : expired)
             {
                 try
@@ -695,6 +930,7 @@ class JsonRpcClient
             pending = it->second;
             pending_requests_.erase(it);
         }
+        cancels_->forget(id);
         try
         {
             pending->promise.set_exception(std::make_exception_ptr(JsonRpcError(code, message)));
@@ -790,14 +1026,40 @@ class JsonRpcClient
         }
 
         std::shared_ptr<PendingRequest> pending;
+        std::function<void(const json&)> late_result;
         {
             std::lock_guard<std::mutex> lock(pending_mutex_);
             auto it = pending_requests_.find(id);
             if (it == pending_requests_.end())
-                return; // Unknown request ID
-            pending = it->second;
-            pending_requests_.erase(it);
+            {
+                // The answer to a request its token already cancelled.
+                const auto late = late_results_.find(id);
+                if (late == late_results_.end())
+                    return; // Unknown request ID
+                late_result = std::move(late->second);
+                late_results_.erase(late);
+            }
+            else
+            {
+                pending = it->second;
+                pending_requests_.erase(it);
+            }
         }
+        if (late_result)
+        {
+            if (!response.is_error())
+            {
+                try
+                {
+                    late_result(response.result.value_or(nullptr));
+                }
+                catch (...)
+                {
+                }
+            }
+            return;
+        }
+        cancels_->forget(id);
 
         // Resolve or reject the promise
         if (response.is_error())
@@ -1069,7 +1331,9 @@ class JsonRpcClient
             for (auto& [id, pending] : pending_requests_)
                 to_fail.push_back(pending);
             pending_requests_.clear();
+            late_results_.clear();
         }
+        cancels_->forget_all();
         for (auto& pending : to_fail)
         {
             try
@@ -1086,6 +1350,7 @@ class JsonRpcClient
 
     std::shared_ptr<Wire> wire_;
     std::shared_ptr<IncomingRegistry> incoming_;
+    std::shared_ptr<CancelTable> cancels_;
     std::atomic<int64_t> next_id_;
     std::atomic<bool> running_;
     std::atomic<int64_t> default_timeout_ms_{30000};
@@ -1096,6 +1361,8 @@ class JsonRpcClient
     std::mutex pending_mutex_;
     std::condition_variable pending_cv_;
     std::map<int64_t, std::shared_ptr<PendingRequest>> pending_requests_;
+    /// on_late_result of requests cancelled by their token, until the answer arrives.
+    std::map<int64_t, std::function<void(const json&)>> late_results_;
     std::optional<JsonRpcErrorCode> terminal_;
 
     std::mutex handlers_mutex_;

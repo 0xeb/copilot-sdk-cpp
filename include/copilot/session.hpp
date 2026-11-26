@@ -15,6 +15,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -262,14 +263,23 @@ class Session : public std::enable_shared_from_this<Session>
     /// @return Future that resolves to the message ID
     std::future<std::string> send(MessageOptions options);
 
+    /// send() that a stop request on `token` ends early: the future fails at once with
+    /// RequestCancelledError and the runtime is sent `$/cancelRequest`. A message the runtime
+    /// already accepted keeps running; call abort() to stop the turn.
+    // C# REFERENCE: Session.cs SendAsync(options, CancellationToken)
+    std::future<std::string> send(MessageOptions options, std::stop_token token);
+
     /// Abort the current message processing
     /// @return Future that completes when aborted
     std::future<void> abort();
+    std::future<void> abort(std::stop_token token);
 
     /// Get every event in the session history (`session.getMessages`).
     /// @return Future that resolves to list of session events
     // NODEJS REFERENCE: nodejs/src/session.ts getEvents
     std::future<std::vector<SessionEvent>> get_events();
+    // C# REFERENCE: Session.cs GetEventsAsync(CancellationToken)
+    std::future<std::vector<SessionEvent>> get_events(std::stop_token token);
 
     /// Get the session history as raw JSON, exactly as the runtime sent it.
     /// Unknown fields, explicit nulls and large integers survive untouched, so the
@@ -284,6 +294,12 @@ class Session : public std::enable_shared_from_this<Session>
     /// @throws std::runtime_error if timeout is reached or session error occurs
     std::future<std::optional<SessionEvent>>
     send_and_wait(MessageOptions options, std::chrono::seconds timeout = std::chrono::seconds(60));
+
+    /// send_and_wait() that a stop request on `token` ends early with RequestCancelledError
+    /// (the timeout still applies). The turn is not aborted; call abort() for that.
+    // C# REFERENCE: Session.cs SendAndWaitAsync(options, timeout, CancellationToken)
+    std::future<std::optional<SessionEvent>>
+    send_and_wait(MessageOptions options, std::chrono::seconds timeout, std::stop_token token);
 
     // =========================================================================
     // Event Handling
@@ -532,6 +548,7 @@ class Session : public std::enable_shared_from_this<Session>
     /// response is reported here rather than thrown: teardown should not fail
     /// because the runtime declined to release a session.
     std::future<DetachResult> detach();
+    std::future<DetachResult> detach(std::stop_token token);
 
     /// Destroy the session on the server.
     ///
@@ -541,6 +558,8 @@ class Session : public std::enable_shared_from_this<Session>
     /// Transport and RPC errors still propagate.
     /// @return Future that completes when the session has been detached
     std::future<void> destroy();
+    /// destroy() bounded by `token`: the session is retired at once either way.
+    std::future<void> destroy(std::stop_token token);
 
     /// Disconnect this SDK participant while leaving the session resumable.
     std::future<void> disconnect()
@@ -550,6 +569,7 @@ class Session : public std::enable_shared_from_this<Session>
 
     /// Invoke any session-scoped RPC. sessionId is injected automatically.
     std::future<json> invoke(const std::string& method, json params = json::object());
+    std::future<json> invoke(const std::string& method, json params, std::stop_token token);
 
     template <typename Result>
     std::future<Result> invoke_typed(const std::string& method, json params = json::object())
@@ -722,7 +742,12 @@ class Session : public std::enable_shared_from_this<Session>
     std::string session_id_;
     Client* client_;
     std::future<std::optional<SessionEvent>>
-    wait_for_response(MessageOptions options, std::chrono::seconds timeout, bool structured);
+    wait_for_response(
+        MessageOptions options,
+        std::chrono::seconds timeout,
+        bool structured,
+        std::stop_token token = {}
+    );
     std::atomic<bool> dispatch_stopped_{false};
     std::atomic<bool> confirmed_{false};
     std::map<int, std::function<void()>> retirement_handlers_;

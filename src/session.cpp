@@ -104,18 +104,23 @@ void Session::set_initial_state(
 
 std::future<std::string> Session::send(MessageOptions options)
 {
-    return std::async(
-        std::launch::async,
-        [this, options = std::move(options)]()
+    return send(std::move(options), std::stop_token{});
+}
+
+std::future<std::string> Session::send(MessageOptions options, std::stop_token token)
+{
+    return client_->run_cancellable<std::string>(
+        std::move(token),
+        [self = shared_from_this(), options = std::move(options)](const CancellationToken& cancellation)
         {
-            if (dispatch_stopped_)
+            if (self->dispatch_stopped_)
                 throw std::runtime_error("Session closed");
             json params = options;
-            params["sessionId"] = session_id_;
-            params.update(client_->trace_context());
+            params["sessionId"] = self->session_id_;
+            params.update(self->client_->trace_context());
 
-            auto response = client_->rpc_client_shared()
-                                ->invoke(copilot::rpc::methods::kSessionSend, params)
+            auto response = self->client_->rpc_client_shared()
+                                ->invoke(copilot::rpc::methods::kSessionSend, params, cancellation)
                                 .get();
             return response["messageId"].get<std::string>();
         }
@@ -124,15 +129,20 @@ std::future<std::string> Session::send(MessageOptions options)
 
 std::future<void> Session::abort()
 {
-    return std::async(
-        std::launch::async,
-        [this]()
+    return abort(std::stop_token{});
+}
+
+std::future<void> Session::abort(std::stop_token token)
+{
+    return client_->run_cancellable<void>(
+        std::move(token),
+        [self = shared_from_this()](const CancellationToken& cancellation)
         {
             json params;
-            params["sessionId"] = session_id_;
+            params["sessionId"] = self->session_id_;
 
-            client_->rpc_client_shared()
-                ->invoke(copilot::rpc::methods::kSessionAbort, params)
+            self->client_->rpc_client_shared()
+                ->invoke(copilot::rpc::methods::kSessionAbort, params, cancellation)
                 .get();
         }
     );
@@ -140,16 +150,21 @@ std::future<void> Session::abort()
 
 std::future<std::vector<SessionEvent>> Session::get_events()
 {
+    return get_events(std::stop_token{});
+}
+
+std::future<std::vector<SessionEvent>> Session::get_events(std::stop_token token)
+{
     // NODEJS REFERENCE: nodejs/src/session.ts getEvents
-    return std::async(
-        std::launch::async,
-        [this]()
+    return client_->run_cancellable<std::vector<SessionEvent>>(
+        std::move(token),
+        [self = shared_from_this()](const CancellationToken& cancellation)
         {
             json params;
-            params["sessionId"] = session_id_;
+            params["sessionId"] = self->session_id_;
 
-            auto response = client_->rpc_client_shared()
-                                ->invoke(copilot::rpc::methods::kSessionGetMessages, params)
+            auto response = self->client_->rpc_client_shared()
+                                ->invoke(copilot::rpc::methods::kSessionGetMessages, params, cancellation)
                                 .get();
 
             std::vector<SessionEvent> events;
@@ -187,6 +202,12 @@ Session::send_and_wait(MessageOptions options, std::chrono::seconds timeout)
     return wait_for_response(std::move(options), timeout, false);
 }
 
+std::future<std::optional<SessionEvent>>
+Session::send_and_wait(MessageOptions options, std::chrono::seconds timeout, std::stop_token token)
+{
+    return wait_for_response(std::move(options), timeout, false, std::move(token));
+}
+
 std::future<json>
 Session::send_and_wait_structured(MessageOptions options, std::chrono::seconds timeout)
 {
@@ -202,13 +223,15 @@ Session::send_and_wait_structured(MessageOptions options, std::chrono::seconds t
     );
 }
 
-std::future<std::optional<SessionEvent>>
-Session::wait_for_response(MessageOptions options, std::chrono::seconds timeout, bool structured)
+std::future<std::optional<SessionEvent>> Session::wait_for_response(
+    MessageOptions options, std::chrono::seconds timeout, bool structured, std::stop_token token
+)
 {
     auto self = shared_from_this();
-    return std::async(
-        std::launch::async,
+    return client_->run_cancellable<std::optional<SessionEvent>>(
+        std::move(token),
         [self, options = std::move(options), timeout, structured](
+            const CancellationToken& cancellation
         ) mutable -> std::optional<SessionEvent>
         {
             struct WaitState
@@ -330,7 +353,15 @@ Session::wait_for_response(MessageOptions options, std::chrono::seconds timeout,
                 }
             );
             auto rpc = self->client_->rpc_client_shared();
-            const auto sent_id = self->send(std::move(options)).get();
+            json params = options;
+            params["sessionId"] = self->session_id_;
+            params.update(self->client_->trace_context());
+            if (self->dispatch_stopped_)
+                throw std::runtime_error("Session closed");
+            const auto sent_id =
+                rpc->invoke(copilot::rpc::methods::kSessionSend, params, cancellation)
+                    .get()["messageId"]
+                    .get<std::string>();
             std::unique_lock<std::mutex> lock(state->mutex);
             state->message_id = sent_id;
             state->admitted = true;
@@ -340,6 +371,8 @@ Session::wait_for_response(MessageOptions options, std::chrono::seconds timeout,
             const auto deadline = std::chrono::steady_clock::now() + timeout;
             while (!state->done)
             {
+                if (cancellation.is_cancelled())
+                    throw RequestCancelledError();
                 if (rpc->connection_closed_token().is_cancelled())
                     throw std::runtime_error("Session connection closed before response");
                 if (state->cv.wait_until(
@@ -1717,16 +1750,22 @@ std::future<void> Session::set_tools(std::vector<Tool> tools)
 
 std::future<Session::DetachResult> Session::detach()
 {
-    return std::async(
-        std::launch::async,
-        [this]() -> DetachResult
+    return detach(std::stop_token{});
+}
+
+std::future<Session::DetachResult> Session::detach(std::stop_token token)
+{
+    return client_->run_cancellable<DetachResult>(
+        std::move(token),
+        [self = shared_from_this()](const CancellationToken& cancellation) -> DetachResult
         {
             json params;
-            params["sessionId"] = session_id_;
+            params["sessionId"] = self->session_id_;
 
-            const json response = client_->rpc_client_shared()
-                                      ->invoke(copilot::rpc::methods::kSessionDetach, params)
-                                      .get();
+            const json response =
+                self->client_->rpc_client_shared()
+                    ->invoke(copilot::rpc::methods::kSessionDetach, params, cancellation)
+                    .get();
 
             DetachResult result;
             result.raw = response;
@@ -1745,32 +1784,48 @@ std::future<Session::DetachResult> Session::detach()
 
 std::future<void> Session::destroy()
 {
+    return destroy(std::stop_token{});
+}
+
+std::future<void> Session::destroy(std::stop_token token)
+{
     retire();
-    return std::async(
-        std::launch::async,
-        [this]()
+    return client_->run_cancellable<void>(
+        std::move(token),
+        [self = shared_from_this()](const CancellationToken& cancellation)
         {
             // A declined detach is deliberately not raised: this runs on the
             // teardown path, and failing it would leave callers unable to close
             // a session the runtime already considers gone. Callers who need the
             // status call detach() directly.
-            (void)detach().get();
+            json params;
+            params["sessionId"] = self->session_id_;
+            (void)self->client_->rpc_client_shared()
+                ->invoke(copilot::rpc::methods::kSessionDetach, params, cancellation)
+                .get();
         }
     );
 }
 
 std::future<json> Session::invoke(const std::string& method, json params)
 {
-    return std::async(
-        std::launch::async,
-        [this, method, params = std::move(params)]() mutable
+    return invoke(method, std::move(params), std::stop_token{});
+}
+
+std::future<json> Session::invoke(const std::string& method, json params, std::stop_token token)
+{
+    return client_->run_cancellable<json>(
+        std::move(token),
+        [self = shared_from_this(), method, params = std::move(params)](
+            const CancellationToken& cancellation
+        ) mutable
         {
-            if (dispatch_stopped_)
+            if (self->dispatch_stopped_)
                 throw std::runtime_error("Session closed");
             if (!params.is_object())
                 throw std::invalid_argument("session RPC params must be a JSON object");
-            params["sessionId"] = session_id_;
-            return client_->rpc_client_shared()->invoke(method, params).get();
+            params["sessionId"] = self->session_id_;
+            return self->client_->rpc_client_shared()->invoke(method, params, cancellation).get();
         }
     );
 }

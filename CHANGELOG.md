@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.7
+
+Per-call cancellation (parity with the C# SDK's `CancellationToken` parameters). Additive;
+existing overloads are unchanged.
+
+- `std::stop_token` overloads on `Client::create_session`, `resume_session`, `ping`,
+  `get_status`, `get_auth_status`, `list_models`, `list_sessions`, `get_session_metadata`,
+  `delete_session`, `get_last_session_id`, `invoke`, `get_foreground_session_id` and
+  `set_foreground_session_id`, and on `Session::send`, `send_and_wait`, `abort`,
+  `get_events`, `detach`, `destroy` and `invoke`.
+- A stop request fails only that call with the new `RequestCancelledError` (a
+  `JsonRpcError` with `JsonRpcErrorCode::RequestCancelled`) and sends `$/cancelRequest` to
+  the runtime. The returned future is ready at once, so neither `get()` nor its destructor
+  waits on the cancelled request.
+- A `create_session`/`resume_session` cancelled after the runtime already created or
+  resumed the session reports its id in `RequestCancelledError::session_id()`; the SDK
+  deletes (create) or detaches (resume) it in the background, bounded by
+  `request_timeout`. `stop()`, `force_stop()` and `~Client` end that cleanup.
+- A token also ends the wait for a start in progress (the start itself continues), as in
+  the official SDKs. Calls made while `stop()` is running fail at once with
+  `ConnectionClosed`.
+- `JsonRpcClient::invoke(method, params, CancellationToken, ...)` is the underlying
+  primitive.
+
 ## 0.4.6.1
 
 Fixes to CLI lookup on Windows. No API changes.
