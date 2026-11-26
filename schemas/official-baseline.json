@@ -2,10 +2,10 @@
   "formatVersion": 2,
   "officialSdk": {
     "repository": "github/copilot-sdk",
-    "commit": "6295d6a4936f0839162c7b92477afebc9d40d162",
+    "commit": "661f503e957165d29a16918efb1b629e6b5db85a",
     "protocolVersionSource": "sdk-protocol-version.json",
     "schemaPackage": "@github/copilot",
-    "schemaPackageVersion": "1.0.116-3",
+    "schemaPackageVersion": "1.0.117-2",
     "apiSchemaPath": "schemas/api.schema.json",
     "sessionEventsSchemaPath": "schemas/session-events.schema.json",
     "validationEvidence": [
@@ -20,26 +20,26 @@
     "minimumProtocolVersion": 4
   },
   "schemaSources": {
-    "apiSha256": "d29d81c8d6ee819ff29705151317c3abf28d949639e690cfbbe19c834141132d",
-    "sessionEventsSha256": "0fc4116f2539208f5f4790d69c3d29c11b5da5f30cd53bc67549df356cac57be"
+    "apiSha256": "75d5d8f701feb7d20a9645a2d59cd9df6d4f8e30f8973ac537027fe71013b1af",
+    "sessionEventsSha256": "21792ea90f885f3939aef33e551d6e98c8d49a558ea849ac17208f85a3eab201"
   },
   "coverage": {
-    "apiDefinitionCount": 2662,
-    "sessionEventDefinitionCount": 764,
-    "sharedDefinitionCount": 112,
-    "uniqueDefinitionCount": 3314,
-    "rpcMethodCount": 967,
+    "apiDefinitionCount": 2683,
+    "sessionEventDefinitionCount": 768,
+    "sharedDefinitionCount": 113,
+    "uniqueDefinitionCount": 3338,
+    "rpcMethodCount": 973,
     "sessionEventVariantCount": 185,
-    "apiDefinitionNamesSha256": "a3841cbdbb67ec292c7cbfe250032f58ec1b4cd86bce27f927bfdee7e5da6e0a",
-    "sessionEventDefinitionNamesSha256": "3b0ccf0af796ba7a3003b64f9e1ab38fe85db8b5a6a830bd00158d10dcb3030c",
-    "rpcMethodNamesSha256": "30ab1368e83c9d3f54d6135da834a14ef51dbbc79da982aa8b4464bee501074e",
+    "apiDefinitionNamesSha256": "9437aae6e1f7f89f6c5a4bb725bd65fd0a65d48765e44aa65d2a89dcea59e18b",
+    "sessionEventDefinitionNamesSha256": "3b1412e88f55792f72e90a23cb5ce1bf4603159879a9d2cea53fbb2f2b608cfe",
+    "rpcMethodNamesSha256": "8336c3c344fb7ee667d6fa9c769890f71dc6016ccf60a4cf64f22d27ba443347",
     "sessionEventWireTypesSha256": "a965bbd0d6a5b55b15601757f4d7fa56cdad5ee5ee82aa50ffe1d8fc16b319d3",
     "apiKindCounts": {
       "array": 6,
       "boolean": 1,
-      "enum": 404,
+      "enum": 408,
       "map": 4,
-      "object": 2085,
+      "object": 2102,
       "opaque": 23,
       "string": 7,
       "union": 132
@@ -47,12 +47,12 @@
     "sessionEventKindCounts": {
       "enum": 152,
       "map": 1,
-      "object": 591,
+      "object": 595,
       "opaque": 2,
       "string": 2,
       "union": 16
     },
-    "surfaceSha256": "f4d5146df0f757ab42fdfefe00855453b39f270d50c33e5c180d03b7255055ef"
+    "surfaceSha256": "62cf37f781f367501f974e70ff9482d25b657d674eb9ae1a1e9bd6636a71eea6"
   },
   "surface": {
     "api": [
@@ -1261,6 +1261,50 @@
         "propertyCount": 1,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "AgentsValidateSpawnAgentNameRequest",
+        "kind": "object",
+        "schemaSha256": "95e8c8b6a87b6c9524cbf5c2a710e4bd31674bfbebd1d5b8e47ee86d968f8ff0",
+        "propertyCount": 3,
+        "requiredPropertyCount": 3,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "AgentsValidateSpawnAgentNameResult",
+        "kind": "object",
+        "schemaSha256": "14ba4efdc0a2283301929d7c4b3e0cabb2053c390ee68e02b36cf0281df81fb7",
+        "propertyCount": 3,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "AgentsValidateSpawnCwdRequest",
+        "kind": "object",
+        "schemaSha256": "a8fd28246695c400eb58400f020555b13a69feeaabd32f755cb9f46841b2f83e",
+        "propertyCount": 1,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "AgentsValidateSpawnCwdResult",
+        "kind": "object",
+        "schemaSha256": "569eedf14c45e6ce52cd697a628d4cf88f5dcfd08ed85323f88979dca60fcdf6",
+        "propertyCount": 3,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
@@ -5257,8 +5301,8 @@
       {
         "name": "ConnectRequest",
         "kind": "object",
-        "schemaSha256": "98e72c1af037f4761fa4e922c6bc08315b714fd7f156c3448dcadc891a2056c8",
-        "propertyCount": 6,
+        "schemaSha256": "d35ae0e18501cdd7c13908da79a036f5290044bf3b7919493526871b6ee0f31e",
+        "propertyCount": 8,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -5691,6 +5735,17 @@
           "markdown",
           "hidden_characters"
         ]
+      },
+      {
+        "name": "ContextBoardConsolidationPromptResult",
+        "kind": "object",
+        "schemaSha256": "a376dfd0eaf1443526151f1b1089e8117f73c2fdc2a08ee78df07b47ee032a5e",
+        "propertyCount": 1,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
       },
       {
         "name": "ContextHeaviestMessage",
@@ -6634,7 +6689,7 @@
       {
         "name": "EntraTokenAcquireResult",
         "kind": "union",
-        "schemaSha256": "8d9dd4144e048fb1ce5c0b8aad3bb48e723608dc3517c7b648e7ce0aaa1a7c09",
+        "schemaSha256": "3b90984df972c65ed0356bfea6a6a6e6c5b1d762f0759c7f2ba35c3b73879fdd",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -6896,7 +6951,7 @@
       {
         "name": "Extension",
         "kind": "object",
-        "schemaSha256": "ca1803f918d30ffdcdf8cfeaf6b5cf3d4772836692b2c29d55d5b98db8554f9f",
+        "schemaSha256": "00290ac7f6e43384257b9d92c23995130a3de92e960b8cbba78f54a61684ba42",
         "propertyCount": 7,
         "requiredPropertyCount": 4,
         "hasOptionalProperties": true,
@@ -6962,10 +7017,10 @@
       {
         "name": "ExtensionManagedPolicy",
         "kind": "object",
-        "schemaSha256": "2bb99b39f9e20f035bc2f8aa0cc9a2f4b748c5e0a03f739ade26b60e87d1c125",
-        "propertyCount": 3,
+        "schemaSha256": "c5a621987986fb8f2ba97005cded8a97943cb3c0ad22f3f878376e939fcea2d5",
+        "propertyCount": 4,
         "requiredPropertyCount": 3,
-        "hasOptionalProperties": false,
+        "hasOptionalProperties": true,
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
@@ -6973,7 +7028,7 @@
       {
         "name": "ExtensionSource",
         "kind": "enum",
-        "schemaSha256": "58a2258b134f7eb4d008719d7e3d7c4fb3cdbb699b63e9477e36c47c092be2d4",
+        "schemaSha256": "72ed29f46cce1d41648446b49f01b447d6c972c8baec46f35b8fc8b23504ec50",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -6983,7 +7038,8 @@
           "project",
           "user",
           "plugin",
-          "session"
+          "session",
+          "explicit"
         ]
       },
       {
@@ -11436,6 +11492,23 @@
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
+      },
+      {
+        "name": "ManagedExtensionSource",
+        "kind": "enum",
+        "schemaSha256": "14c284e08ac78ce26be1bf87e1eb765c4af8ce6b8266b750259aeefae96b4a90",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "host",
+          "plugins",
+          "user",
+          "project",
+          "session"
+        ]
       },
       {
         "name": "ManagedFusionTier",
@@ -17292,12 +17365,12 @@
       {
         "name": "PermissionDecisionApproveForLocationApproval",
         "kind": "union",
-        "schemaSha256": "665e4db300e5547ba1aab3e881249be8e449d1ca81d0255ae5c6f98f62e0343e",
+        "schemaSha256": "10aa6eecf979b67428b592bb50b7c2cb30c32ec6355945ff9514715b068e03e0",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 11,
+        "unionVariantCount": 12,
         "knownStringValues": []
       },
       {
@@ -17334,6 +17407,17 @@
         "knownStringValues": []
       },
       {
+        "name": "PermissionDecisionApproveForLocationApprovalExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "ff79e691539b6b89dca8d5fa674dc2c18017a6710945fd81d0af0028df97c4a1",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "PermissionDecisionApproveForLocationApprovalExtensionManagement",
         "kind": "object",
         "schemaSha256": "027fda3a1fd130dd0d3f22799d765742d7b1428da79dffd6220c792486527a7c",
@@ -17347,7 +17431,7 @@
       {
         "name": "PermissionDecisionApproveForLocationApprovalExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "1308f0396a39973e0b578867e6c3aa890311fba5f36917e968f59db406c1fad4",
+        "schemaSha256": "46162035619b7ff9ca3311d195f284221ce9712a41c159d0fefea57ccd33a0cb",
         "propertyCount": 2,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": false,
@@ -17435,12 +17519,12 @@
       {
         "name": "PermissionDecisionApproveForSessionApproval",
         "kind": "union",
-        "schemaSha256": "528fd36b782e1f6391ce6e26519723ec92ea4169a71ac50260fea5c295d9003f",
+        "schemaSha256": "a403f53c544a0653a0b147795269a76a24a29b21b157e020594cf0d67858817d",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 11,
+        "unionVariantCount": 12,
         "knownStringValues": []
       },
       {
@@ -17477,6 +17561,17 @@
         "knownStringValues": []
       },
       {
+        "name": "PermissionDecisionApproveForSessionApprovalExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "88497ebd71c4bf9e8b621d0caaf04e2ab3977056d1483191b5975fe63a8749ce",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "PermissionDecisionApproveForSessionApprovalExtensionManagement",
         "kind": "object",
         "schemaSha256": "76f5a17b6544d06638edba7c8b4649ae6c5bfbfc8ae96cd64ec2241cbf3fb442",
@@ -17490,7 +17585,7 @@
       {
         "name": "PermissionDecisionApproveForSessionApprovalExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "2089ede7f6fff5259ddb4fb0380f734b479a11a9ec6ed77f76fdd4d369330879",
+        "schemaSha256": "9da4c41d5abf8da1dba34cf4a1cbff12f323c32af9b332340a39654f858adf80",
         "propertyCount": 2,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": false,
@@ -17644,7 +17739,7 @@
       {
         "name": "PermissionDecisionContext",
         "kind": "object",
-        "schemaSha256": "15c52317f0c2ed288a80add63c444636b36c7eabb6b0aab4bcfb11ae07123e5c",
+        "schemaSha256": "e77b8e46233594759e5d791299af0aa7cf1fa7b4f2cc7c24f7015868cbceff9d",
         "propertyCount": 5,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -18511,12 +18606,12 @@
       {
         "name": "PermissionsLocationsAddToolApprovalDetails",
         "kind": "union",
-        "schemaSha256": "4dd987388ae9ea70274775ddbef530a5412148f80237c629c835249ff9562c1f",
+        "schemaSha256": "82a7e24f30ef72963462ceae80f4c8d320bcaf25628587cff909c9e053cefeb4",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 11,
+        "unionVariantCount": 12,
         "knownStringValues": []
       },
       {
@@ -18553,6 +18648,17 @@
         "knownStringValues": []
       },
       {
+        "name": "PermissionsLocationsAddToolApprovalDetailsExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "252875c177d32ea7ba1bc07a604d012a4c35e2734d2a7c86d28e7cf82723b5e7",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "PermissionsLocationsAddToolApprovalDetailsExtensionManagement",
         "kind": "object",
         "schemaSha256": "e39f1070895f1cab96f5f498b0b4d2e5d33ef3a01023c1b4ded560a64c8687ab",
@@ -18566,7 +18672,7 @@
       {
         "name": "PermissionsLocationsAddToolApprovalDetailsExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "1cfbd2a5c5216f2f888fdb5487523c0616e3ca03232beec44f776ffc58ab3539",
+        "schemaSha256": "ec89214f8b35d38191cc8428f3e78792ad3627345dfd15f272ec4b215f36674c",
         "propertyCount": 2,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": false,
@@ -19815,13 +19921,27 @@
       {
         "name": "ProtocolExternalToolDefinition",
         "kind": "object",
-        "schemaSha256": "3b9eb3439d6b515ba941d1eb26536793e66aec56dddd723c2edb7efd3fb62673",
-        "propertyCount": 12,
+        "schemaSha256": "0b8ae38b42a6d58d7cda2fdbeae599fca36c5abc75455297f9d9f911278f718f",
+        "propertyCount": 13,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
+      },
+      {
+        "name": "ProtocolExternalToolExposure",
+        "kind": "enum",
+        "schemaSha256": "40e1dbf0afead0d7902fa371539a5482b33b2e8761fa6b09fb696ed2a194fb95",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "automatic",
+          "explicit"
+        ]
       },
       {
         "name": "ProtocolExternalToolNamespace",
@@ -21618,6 +21738,28 @@
         "knownStringValues": []
       },
       {
+        "name": "RemoteWaitForStartRequest",
+        "kind": "object",
+        "schemaSha256": "98cb29daa3fce230929a2ef726cc5aba1434eb051cfe056b9be2d0f31411ba6f",
+        "propertyCount": 1,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "RemoteWaitForStartResult",
+        "kind": "object",
+        "schemaSha256": "6f3bcb9054d1fb4591701c560029d34374aa0208d1a892ee69b48b148ece70b9",
+        "propertyCount": 2,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "RepoSettingsEditRequest",
         "kind": "object",
         "schemaSha256": "cc4d534dae05e22cabf436087a898573f1d6549cd5b6fa4d28f5f0b449213b3b",
@@ -21753,6 +21895,17 @@
         "hasOptionalProperties": false,
         "hasMap": false,
         "unionVariantCount": 1,
+        "knownStringValues": []
+      },
+      {
+        "name": "RuntimeCommandCatalogRequest",
+        "kind": "object",
+        "schemaSha256": "45291085331b4e6af692b4d2dd71f833090e2ab55bf6277a698c55d839d795cb",
+        "propertyCount": 2,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
         "knownStringValues": []
       },
       {
@@ -23015,8 +23168,8 @@
       {
         "name": "SendMessagesRequest",
         "kind": "object",
-        "schemaSha256": "4095bf35cd42cf0c1b15e1e85beb5bd4a9256eb2d43196d064746bb03ebd6810",
-        "propertyCount": 10,
+        "schemaSha256": "1a28b594f17eb41a6f5e3e3d55af58d5560defac1b4d3007b8fadf84f766b195",
+        "propertyCount": 11,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -23051,8 +23204,8 @@
       {
         "name": "SendRequest",
         "kind": "object",
-        "schemaSha256": "d34f7f2f9cb4444aef8a714252c85dc71b729143a151fc475be750d20be1fdee",
-        "propertyCount": 17,
+        "schemaSha256": "6242db7b6294759eb099b583308de94d9f2288edaec43e8a07830404f6eb53f8",
+        "propertyCount": 18,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -24353,6 +24506,17 @@
         "knownStringValues": []
       },
       {
+        "name": "SessionNameMatch",
+        "kind": "object",
+        "schemaSha256": "24f3869f494e7018fb96f9ff2bbcdba6707b26968ad1ca49e85b019af26cad41",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "SessionOpenAgentOptions",
         "kind": "object",
         "schemaSha256": "9c78c3d66ba028343efe992d2ee450142ab4d8eccb8a3218dae090b86e83384b",
@@ -24377,8 +24541,8 @@
       {
         "name": "SessionOpenExecutionOptions",
         "kind": "object",
-        "schemaSha256": "6b025512295be6d3fae92fb213904fa3d8ce01dfdd54dc2fc0fe38fbbe5c5242",
-        "propertyCount": 3,
+        "schemaSha256": "a3d1cfdac8acf8388e007042982b80b10233e6ec7e136b00f000625d99a10f2a",
+        "propertyCount": 4,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -25546,6 +25710,28 @@
         "name": "SessionsEnrichMetadataRequest",
         "kind": "object",
         "schemaSha256": "5340fbda5ed2a979feb498764392a98322ab6440dbce10eafc66857b40c8fca9",
+        "propertyCount": 1,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SessionsFindByNameRequest",
+        "kind": "object",
+        "schemaSha256": "433e78ca3c1a6e9e7186b7557d928fc55895a74f6a4e266f2129338d7cb8f64f",
+        "propertyCount": 2,
+        "requiredPropertyCount": 1,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SessionsFindByNameResult",
+        "kind": "object",
+        "schemaSha256": "c51f0a750c86086437abaadca996fafa553d005c6abeaa101529cd6295f9204e",
         "propertyCount": 1,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": false,
@@ -27351,8 +27537,8 @@
       {
         "name": "SlashCommandInfo",
         "kind": "object",
-        "schemaSha256": "dd2931a7110559e2587033c6ac122049d5f73eb91b6f6d0f4e78a50b93400236",
-        "propertyCount": 8,
+        "schemaSha256": "5b82c0679c85230005034432ab7b0af32e4760a48518713d68fd886f4c68bcf2",
+        "propertyCount": 15,
         "requiredPropertyCount": 4,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -27503,6 +27689,44 @@
         "schemaSha256": "4baa01a5dc4a7c16079c1a84360bb29a37385bf3f9c702b2ffe25e8d75ff45a8",
         "propertyCount": 4,
         "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "SpawnAgentNameValidationReason",
+        "kind": "enum",
+        "schemaSha256": "c1876708056b36bbbe447896c6474c91660499378cd580a91795d09757089e9d",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "unknown-agent"
+        ]
+      },
+      {
+        "name": "SpawnCwdValidationReason",
+        "kind": "enum",
+        "schemaSha256": "3cc9e789b81e4c5c94c0b7e734048c6b87581b340f24b7c4df366e7d56bbe6b1",
+        "propertyCount": 0,
+        "requiredPropertyCount": 0,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": [
+          "cwd-not-found",
+          "cwd-not-directory"
+        ]
+      },
+      {
+        "name": "SpawnValidatableAgent",
+        "kind": "object",
+        "schemaSha256": "52684b88a198f1aea091297be67b9d540b643e5bed8ff37439244004fe04a9f7",
+        "propertyCount": 2,
+        "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
         "unionVariantCount": 0,
@@ -28517,6 +28741,17 @@
         "propertyCount": 1,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
+        "name": "ToolsReportProgressRequest",
+        "kind": "object",
+        "schemaSha256": "6b8326285b3e96835a2d40bf39e720289e67434c45b27fbd49cdb6dc4270f3de",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
         "hasMap": false,
         "unionVariantCount": 0,
         "knownStringValues": []
@@ -30051,12 +30286,12 @@
       {
         "name": "UserToolSessionApproval",
         "kind": "union",
-        "schemaSha256": "426be7ef1237de8d7fd2e059f223795f9047c9e4e47160e835d3549d0c3387e8",
+        "schemaSha256": "480287611f273ac21d04cbf567db674d686fbc72107cd65e30450ec032ebfe60",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 10,
+        "unionVariantCount": 11,
         "knownStringValues": []
       },
       {
@@ -30093,6 +30328,17 @@
         "knownStringValues": []
       },
       {
+        "name": "UserToolSessionApprovalExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "d12b6d754f9d0d7c16ba40fc27cef3b93ad5ca2cc89f271a10e093c4df73de69",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "UserToolSessionApprovalExtensionManagement",
         "kind": "object",
         "schemaSha256": "7604b47c911794dd0d8db94b2b5280f6b3acd23805e7af6115a5b873de9db18d",
@@ -30106,7 +30352,7 @@
       {
         "name": "UserToolSessionApprovalExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "ad85a2981626c628fb510adddc886c93cbb8b4fd032893b7ada7a727ad92a00d",
+        "schemaSha256": "e8ee52e3ba8975da9a033240d565b85df8f9906f3c620b427291c9e0987098d4",
         "propertyCount": 2,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": false,
@@ -31243,8 +31489,8 @@
       {
         "name": "AbortEvent",
         "kind": "object",
-        "schemaSha256": "f4464b4bf0da011c929dd14a32e362349ca53f49e303d7680667fdf4ad2886f0",
-        "propertyCount": 8,
+        "schemaSha256": "c527ffad7cf4bba5a07e934a6b51d1030a4b69e1d2db1b0157e7c8ef51258a3c",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31311,8 +31557,8 @@
       {
         "name": "AgentInterruptedEvent",
         "kind": "object",
-        "schemaSha256": "5e5babfa5afb3c95b0a74be552afb1ec8b12bab50b440c7e17c0760efd602f0a",
-        "propertyCount": 8,
+        "schemaSha256": "a6ce777b1d97cad7b6b6fd6297cd15051d4dd416338ae35e5f578191e4a953ab",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31351,8 +31597,8 @@
       {
         "name": "AssistantFusionPhaseActivityEvent",
         "kind": "object",
-        "schemaSha256": "2c79a433e83e9f469e16bce774d0317afe3eff2a11291aa077fe241039afc26c",
-        "propertyCount": 8,
+        "schemaSha256": "7d65197f64739ecb8aeef37d690cc3009a8bd353f7dc8743212f0dc4ad13c6e8",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31362,8 +31608,8 @@
       {
         "name": "AssistantFusionPhaseCompletedEvent",
         "kind": "object",
-        "schemaSha256": "ffc80abba491bc0feb1e130dd707d0d9851708c3f58a20cc99d679b7406ae6f4",
-        "propertyCount": 8,
+        "schemaSha256": "fb5126832449a2860f94766a1d8ee37ed3b30ffbc2162d879c9fb0145ed2a0da",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31373,8 +31619,8 @@
       {
         "name": "AssistantFusionPhaseFailedEvent",
         "kind": "object",
-        "schemaSha256": "362e74088b2390aa1f763d8962a55ad72659ec000af5bf8ab7bc8afad9699c07",
-        "propertyCount": 8,
+        "schemaSha256": "f5dbd6f1c2dab047b24639a3020bbb0be1eeee44213abaf3cea1a850f78afae5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31384,8 +31630,8 @@
       {
         "name": "AssistantFusionPhaseStartedEvent",
         "kind": "object",
-        "schemaSha256": "3531877ad869218c0611ad3c07fd53833fb5a925a9b9de81c56201c35062bbfa",
-        "propertyCount": 8,
+        "schemaSha256": "0e506ec3035641c67d7b8b2bcc35e94c491110f4a56dc5f3944b4fe210834abc",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31406,8 +31652,8 @@
       {
         "name": "AssistantIdleEvent",
         "kind": "object",
-        "schemaSha256": "f9dfeceb5e847792ee06a47bfd2ac3b203e37d97375a2cce5d53b7feb89583e9",
-        "propertyCount": 8,
+        "schemaSha256": "035d1195b4a5016e335a071a8d2d106bc232590d3b6dbb793dedea1655931c2f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31428,8 +31674,8 @@
       {
         "name": "AssistantIntentEvent",
         "kind": "object",
-        "schemaSha256": "4f807e4c10d2fec2a86356169cddcc470dd955438b95b665de98b550158e784e",
-        "propertyCount": 8,
+        "schemaSha256": "a8dea3259f79addc4ee6700eecf93a8242cdaa3ad25fc798ebc8843a838d71d2",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31461,8 +31707,8 @@
       {
         "name": "AssistantMessageDeltaEvent",
         "kind": "object",
-        "schemaSha256": "0d4acdb5b65d10c6bef2e70d90769e0cbfb658f69105f5ebe40bcb5027ebbbf6",
-        "propertyCount": 8,
+        "schemaSha256": "0d3b5b3c883f5a69add994cae03dc6fcd7faa71122d8ceb3b742839d05536691",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31472,8 +31718,8 @@
       {
         "name": "AssistantMessageEvent",
         "kind": "object",
-        "schemaSha256": "5bc5f946605abad43741bd8132348804bbd81acac1e66a505c365fe91bcd955f",
-        "propertyCount": 8,
+        "schemaSha256": "c6a4c0142321f023b380405e74fac3ea50cf4b0e84473313b3da714f1f2148a1",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31516,8 +31762,8 @@
       {
         "name": "AssistantMessageStartEvent",
         "kind": "object",
-        "schemaSha256": "7ada6c891df8c60a86bbac175cb015da528f9b304b58d811cdd2c22b61d3042c",
-        "propertyCount": 8,
+        "schemaSha256": "cde938b454f4895aa2218b7d41317b983da671acca65169268611bbe5b2e38cf",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31598,8 +31844,8 @@
       {
         "name": "AssistantReasoningDeltaEvent",
         "kind": "object",
-        "schemaSha256": "50e6c633a50283bbd399fd9765c480f0c0e64324453063828d70951c42f5d9ea",
-        "propertyCount": 8,
+        "schemaSha256": "c795ad4dd730c9ae9de291936782c9591843f243f6b1553cc258bc329d12a796",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31609,8 +31855,8 @@
       {
         "name": "AssistantReasoningEvent",
         "kind": "object",
-        "schemaSha256": "b5e45108c129793de3ca1e8eca4667236d7130aa528ac5d541b9c5f1993134f1",
-        "propertyCount": 8,
+        "schemaSha256": "7dbc31df621630f3afae7644e9da4b00b4f35c706b0d9a66b17d7377437eb4dc",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31631,8 +31877,8 @@
       {
         "name": "AssistantServerToolProgressEvent",
         "kind": "object",
-        "schemaSha256": "ebbe5281f49d9f57b9473aa5307e29cdb3490a60e945a374d717771e7d29b905",
-        "propertyCount": 8,
+        "schemaSha256": "749e6cc86db6ecc68c03bb23cbbb95dd55456e99e44407a097ee82a7ece7428b",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31653,8 +31899,8 @@
       {
         "name": "AssistantStreamingDeltaEvent",
         "kind": "object",
-        "schemaSha256": "a3cda2ec4d15c456a3b6d6c2608ad0ce358c0242653f3a222df01a905300b058",
-        "propertyCount": 8,
+        "schemaSha256": "a910525fe7c55b70f08af1e42b86d9e34bcc9704e6cb31eb72cc6adddcc867c8",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31675,8 +31921,8 @@
       {
         "name": "AssistantToolCallDeltaEvent",
         "kind": "object",
-        "schemaSha256": "c46bd2bfaa73b44f9e1f4e388b67bfc5a5da53d3e0b7a4e7ab868baec7fdbb84",
-        "propertyCount": 8,
+        "schemaSha256": "928529b5d44ed6e90e3d841cf8b937cccc84b91538a6fee47f1e1620c587a2e5",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31697,8 +31943,8 @@
       {
         "name": "AssistantTurnEndEvent",
         "kind": "object",
-        "schemaSha256": "b14bb846792434269173c3ac56464f113bf212b3b49af672c803f0f3df202d33",
-        "propertyCount": 8,
+        "schemaSha256": "312382ec27ac627d2b8562cb128b4b152bfe9b74d7044febdb37d66cea610231",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31719,8 +31965,8 @@
       {
         "name": "AssistantTurnRetryEvent",
         "kind": "object",
-        "schemaSha256": "8eec7bc36a655bab0c79ef4359ded54571612e01fc14a8a1112ddb134be5ab1e",
-        "propertyCount": 8,
+        "schemaSha256": "74da92edc68ff5b416b9922f78c328c609e0d39e19a3297938f1df9672086761",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31730,8 +31976,8 @@
       {
         "name": "AssistantTurnStartData",
         "kind": "object",
-        "schemaSha256": "f264f26f385bbd731d3d967e82573b780c9362756f0f5a3a5a9ca557aa2d6cfc",
-        "propertyCount": 5,
+        "schemaSha256": "88f25e1faf7e328050c5703c945be3212fcdae56629bc4043c89586eb846d27e",
+        "propertyCount": 6,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31741,8 +31987,8 @@
       {
         "name": "AssistantTurnStartEvent",
         "kind": "object",
-        "schemaSha256": "060619b64f45ec9d2c463ee7790ff987e4fd16800f3b29720e404ca09b0c2835",
-        "propertyCount": 8,
+        "schemaSha256": "ad42499b0bd432cd4b2eaada4b31b83156d042cd276791643350fd0c6b49c0d5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -31802,8 +32048,8 @@
       {
         "name": "AssistantUsageEvent",
         "kind": "object",
-        "schemaSha256": "ac4ac2dcbe4da031ef02148bc7c467f6c6ac1ba32e46bc2e59d932efadea9752",
-        "propertyCount": 8,
+        "schemaSha256": "012b3a50f384a2c3d992e446fe9066fcdf652aeaac7736fb09d01ff0dfdc0c5c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32175,8 +32421,8 @@
       {
         "name": "AutoModeRecoveryConsentCompletedEvent",
         "kind": "object",
-        "schemaSha256": "c09b6e3642adb3267c7d0a5f642feb3502bbd2237a9191af26f7431fc59182d5",
-        "propertyCount": 8,
+        "schemaSha256": "db08bfe3305513418ef18a42ae6e36ca4350723b10241e872f1b898048d54b1f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32197,8 +32443,8 @@
       {
         "name": "AutoModeRecoveryConsentRequestedEvent",
         "kind": "object",
-        "schemaSha256": "fd82a0f78b8982f2a9b596c160b1e5591fa49805918fa78f17894d8c9e6d134d",
-        "propertyCount": 8,
+        "schemaSha256": "c9ce368bfaf4162a91d467920ee1b9367f6115edfe762089bbccd7a04c014e53",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32219,8 +32465,8 @@
       {
         "name": "AutoModeRecoveryOutcomeEvent",
         "kind": "object",
-        "schemaSha256": "329f974d821393c14aef7d22cfa9131efe13219f6e03ad748b6d5f74b644e893",
-        "propertyCount": 8,
+        "schemaSha256": "5b0d783bbe459051aff27cc2e87d9cc191da14df9cb4b6b77c52b25215d4e0d6",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32241,8 +32487,8 @@
       {
         "name": "AutoModeResolvedEvent",
         "kind": "object",
-        "schemaSha256": "574cf81198deeae35e90b031a54bde9a2ac4dc373cc4c6f915774ad3a00ed09a",
-        "propertyCount": 8,
+        "schemaSha256": "004656214fffd61a6b537cfdd52e75ab69db1be4da15eaf9a9784ef354a5c336",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32278,8 +32524,8 @@
       {
         "name": "AutoModeSwitchCompletedEvent",
         "kind": "object",
-        "schemaSha256": "350beb6e0dc9011a43528510793b5989a13883666942d54156ba009c7e42fe3e",
-        "propertyCount": 8,
+        "schemaSha256": "78fed4452b24899af222d7989f7ce0877931b5e03b28696ec91ceba8d386a2da",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32300,8 +32546,8 @@
       {
         "name": "AutoModeSwitchRequestedEvent",
         "kind": "object",
-        "schemaSha256": "533e1f3e8f6928af02d68454f3de6421f0d9437ff61ad75d45f2a8d798330bc3",
-        "propertyCount": 8,
+        "schemaSha256": "716bb144d9ee21c56952b170e61534ee4744e55088922c6b4aafcb00c4c929d0",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32348,8 +32594,8 @@
       {
         "name": "AutoTierRecommendationEvent",
         "kind": "object",
-        "schemaSha256": "1695c84bc8ed59f9d9464b2fe781f1b67980341f90dfa043865e24aeab48e99a",
-        "propertyCount": 8,
+        "schemaSha256": "c4d6d70dea65d8fb966f2636c77d3679f6c875b9a22123064b88a3a55a5331c5",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32370,8 +32616,8 @@
       {
         "name": "AutoTierSwitchFailedEvent",
         "kind": "object",
-        "schemaSha256": "4315f8ae1a58264f6da0ae411d48c7e6cb9a5242ccb169145d65a663d9baad60",
-        "propertyCount": 8,
+        "schemaSha256": "b20e7cf446f6f12a2c1151e55dd84ba83452ff52730b5ad65abad956d5586972",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32408,8 +32654,8 @@
       {
         "name": "AutopilotObjectiveChangedEvent",
         "kind": "object",
-        "schemaSha256": "a0cce1eda5b98de93473892dc603b1db0a61063d89dea29f6eca011e7618729f",
-        "propertyCount": 8,
+        "schemaSha256": "6c223f6cb9bcc18a6c0d9e7d16afc74536c9b15874ea4c66ad607ff7f4856b82",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32461,8 +32707,8 @@
       {
         "name": "AutopilotStoppedEvent",
         "kind": "object",
-        "schemaSha256": "6af9b9a0ffe4017a0f2bb58cdacea60081d3f739e8ec9c00b6d633175a585350",
-        "propertyCount": 8,
+        "schemaSha256": "e5ef61989f39cfaabf9637f897b2699137315c7a46e1f74fede3a970d5af554b",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32483,8 +32729,8 @@
       {
         "name": "BackgroundTasksChangedEvent",
         "kind": "object",
-        "schemaSha256": "94033f11b886783a486d3d44d2eeb465ba4a64a877a88c4b311b112846b4d4f6",
-        "propertyCount": 8,
+        "schemaSha256": "d3776955f8fe3060463c3f04a890b4828a1833c945476116b2e8f4581ca5bb79",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32505,8 +32751,8 @@
       {
         "name": "BinaryAssetEvent",
         "kind": "object",
-        "schemaSha256": "41fe7f04024c42fa048e45a1b7182d289e77ba1f74fac87304e32688d08caaff",
-        "propertyCount": 8,
+        "schemaSha256": "c8c421835770adaa3d3f21e5f9045f03a373d3415498d06176b59ceaa03c129b",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32577,8 +32823,8 @@
       {
         "name": "CanvasClosedEvent",
         "kind": "object",
-        "schemaSha256": "9b68ae8fba12d7c51e262fa2f14e20e67aecec203ce328ab5a4dc64d2ec848b8",
-        "propertyCount": 8,
+        "schemaSha256": "e0f0ff80d767184d2fbf899fa15f694ca420a732d2400e1baa6601388fb759c5",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32599,8 +32845,8 @@
       {
         "name": "CanvasOpenedEvent",
         "kind": "object",
-        "schemaSha256": "863f19987383b26257e2b45673f1d5e542aafc865cef631d8fd2df7e100a229c",
-        "propertyCount": 8,
+        "schemaSha256": "a19cb3a17e67bebfd8bf97074323b1f54244b0fe203d3ee02a1da120583344b4",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32621,8 +32867,8 @@
       {
         "name": "CanvasRecordedEvent",
         "kind": "object",
-        "schemaSha256": "346100dc33456efe257474525f29819fa835e5d701c478f1c989390a8f85cd18",
-        "propertyCount": 8,
+        "schemaSha256": "2a4a08a9815f4fbb322021fcb79dd042c4c66ab2c5121393b48d265e397d3c14",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32665,8 +32911,8 @@
       {
         "name": "CanvasRegistryChangedEvent",
         "kind": "object",
-        "schemaSha256": "49b6dc02d1332d28c4574e10fec2666f855633ef58ba11f9e2e6987756537e0c",
-        "propertyCount": 8,
+        "schemaSha256": "fc2cf263994a5e391b1e900229cc8db970d0852c241b5fceaf3a412966fdc139",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32687,8 +32933,8 @@
       {
         "name": "CanvasRemovedEvent",
         "kind": "object",
-        "schemaSha256": "cd7c0bbbcaccbc61b016cbdc8563aa1e6b312efba15f27fccbc234a9aaec924b",
-        "propertyCount": 8,
+        "schemaSha256": "54c617a8b7ebb1d3857f5390b0dd444c3ef4dd7137be3bfd27b8a6f71cbbb0f7",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32709,8 +32955,8 @@
       {
         "name": "CanvasUnavailableEvent",
         "kind": "object",
-        "schemaSha256": "07f03f03f3fa871368dd6dd198f7fd9c3f6f22ac57096c0aabc4fa33c8cf6084",
-        "propertyCount": 8,
+        "schemaSha256": "23c9f625c6a39862d1fca16988370ff3e66ccbeedc2228605d6e9f774a28c67c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32731,8 +32977,8 @@
       {
         "name": "CapabilitiesChangedEvent",
         "kind": "object",
-        "schemaSha256": "e215b19b1541d7fd5336eff4457a90bb691b04709e70648db8601378837807fe",
-        "propertyCount": 8,
+        "schemaSha256": "8db02dddca2ced736d8761bb566f36065938fbe1108dce91d88dd4d68370ee41",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32878,8 +33124,8 @@
       {
         "name": "CommandCompletedEvent",
         "kind": "object",
-        "schemaSha256": "69315ea4e55c8ab2ea2bd48e0bc01baa25ae1cc6f9657fae76331cc33686abba",
-        "propertyCount": 8,
+        "schemaSha256": "b2dfc5a919ea04bc391d51a73d518105e30645379e3d3c03ce4c16a5aa2df841",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32900,8 +33146,8 @@
       {
         "name": "CommandExecuteEvent",
         "kind": "object",
-        "schemaSha256": "fb1b7000ddaf358a6b33e6c3796c74f631850d713dbc571eec99816be400aa54",
-        "propertyCount": 8,
+        "schemaSha256": "beebdfbadf8332a53a747e96858bc36a39064ab5102e54e8f807241cc693bbcd",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32922,8 +33168,8 @@
       {
         "name": "CommandQueuedEvent",
         "kind": "object",
-        "schemaSha256": "7ad4e30f7b0eb8a56c9338862cb23fbadffa246e3be11c0c6efb9366055d1779",
-        "propertyCount": 8,
+        "schemaSha256": "b724333fb6f2b29b172b5965aedaeab5e174d952c00329f482c8c300dcbd13cf",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -32955,8 +33201,8 @@
       {
         "name": "CommandsChangedEvent",
         "kind": "object",
-        "schemaSha256": "cdaaaf07f7a875f9ef32f2ca452c5407e6545f8901be6963daa9a0c6eb6f04c1",
-        "propertyCount": 8,
+        "schemaSha256": "10fbe787486c5649f1a1ba46c7d521328a9f5a23ca921975440ab2530b5f1d1d",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33021,8 +33267,8 @@
       {
         "name": "CompactionCompleteEvent",
         "kind": "object",
-        "schemaSha256": "a16561c6981a87268fa063dbab057ebf318d96942ca3f5c7f3e4c4f7b036de52",
-        "propertyCount": 8,
+        "schemaSha256": "c8ae61521eba6d3f8809a840790fb6f47e8190ba45f5c5919a1edfbf8deae9d2",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33065,8 +33311,8 @@
       {
         "name": "CompactionStartEvent",
         "kind": "object",
-        "schemaSha256": "62ba4d85170eea74e57fe3dcd28f79d72a27f6917ab0ef86ed0a2b1f98369ec9",
-        "propertyCount": 8,
+        "schemaSha256": "d330fc09762e11bc2f546a477bcfe81df16328ce83f289b6c49ba1dbfc622ed7",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33087,8 +33333,8 @@
       {
         "name": "CompactionSummarizedEvent",
         "kind": "object",
-        "schemaSha256": "0957cc515a9f971a7edb82481e5088f619c7e6bddf6cb9b0a1fc134df50fd2c1",
-        "propertyCount": 8,
+        "schemaSha256": "a6467c6291a5f4ed3af0d1cdc850bffc7e1fd48f5eded5cdbe75bf1ce3fe2e18",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33126,8 +33372,8 @@
       {
         "name": "CompletionReceiptEvent",
         "kind": "object",
-        "schemaSha256": "4f2fa57c9ba6d81f59e29c76aa15fba3cbbb242f8ba7c2fee455f3813d468b8b",
-        "propertyCount": 8,
+        "schemaSha256": "81cb868df6f10ad596a2a9dda864b99ef78d674113de21d1b9334dcc6b423c98",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33191,8 +33437,8 @@
       {
         "name": "ContextChangedEvent",
         "kind": "object",
-        "schemaSha256": "2056b4135cd6e604f9de7ea6d90154d17265e34fdd24081343d6fc7c306380cd",
-        "propertyCount": 8,
+        "schemaSha256": "31ce13eb0a4b4a1ef6875674428234d8348051c94cccd561391d7721007c83c7",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33213,8 +33459,8 @@
       {
         "name": "ContextClearedEvent",
         "kind": "object",
-        "schemaSha256": "f8e53b6026dfeedfd6a556748afb4bd31a52240048ca6cd98bdcf9567f133e01",
-        "propertyCount": 8,
+        "schemaSha256": "fdf884efaf126fb0083b493e6b5af7eb4dac0001d2163760c0efd92d8fd06c5a",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33260,8 +33506,8 @@
       {
         "name": "CustomAgentsUpdatedEvent",
         "kind": "object",
-        "schemaSha256": "c3a2d190565de05eba19ccce78a11109659cf130ae56feb39eb7e8eb9959431f",
-        "propertyCount": 8,
+        "schemaSha256": "ab6058d06d6810dac1a51b4eb9ebc238414ecddac231f3229e0a59838862d65e",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33282,8 +33528,8 @@
       {
         "name": "CustomNotificationEvent",
         "kind": "object",
-        "schemaSha256": "45b2ce39ffb4b8cd6e6fbe9b0ce2c7ce93ac6bbe221a8ea70703f1bc0653ca78",
-        "propertyCount": 8,
+        "schemaSha256": "bae93863065679779c626c47c6286c1a65ec051ba51f42458ccd66d535a62e0a",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33366,8 +33612,8 @@
       {
         "name": "ElicitationCompletedEvent",
         "kind": "object",
-        "schemaSha256": "d2625a82d9e9fb4ca843a806d7f2392c0aed486e90f6f8831a42382f96c0eeeb",
-        "propertyCount": 8,
+        "schemaSha256": "2ad9a5ab0fd4722109f538dab0c8bbeeecd5ba278d8d6a8f49ae831643c7b78b",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33388,8 +33634,8 @@
       {
         "name": "ElicitationRequestedEvent",
         "kind": "object",
-        "schemaSha256": "0ef06558a527a042d272e3aadb99faf2cc82dd17b25afe252eb18592b729f5aa",
-        "propertyCount": 8,
+        "schemaSha256": "67cc4cd1a25dc6c8b54e713225a475636068fcbedb05dd9841e5c7d67c222cf3",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33457,8 +33703,8 @@
       {
         "name": "ErrorEvent",
         "kind": "object",
-        "schemaSha256": "bdb95f2aa3246320f148a98db8348b924bf7af422f2db1248557d3aa5027a82c",
-        "propertyCount": 8,
+        "schemaSha256": "8b3f466a4b7df125263cdc5d1a930f2f17b98963bb837a9529ef98708ab2586d",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33495,8 +33741,8 @@
       {
         "name": "ExitPlanModeCompletedEvent",
         "kind": "object",
-        "schemaSha256": "921c81f13f6022b5247c7bcb5817e45c2780cedcf75b7a70115edb3f4e2f0c5a",
-        "propertyCount": 8,
+        "schemaSha256": "14bf99d56d9a6fe45f1d99186079ca04935b936ca79abd8a9d50faa8b3f2b67b",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33517,8 +33763,8 @@
       {
         "name": "ExitPlanModeRequestedEvent",
         "kind": "object",
-        "schemaSha256": "9c0525161ab30ac1b13c13004fe299235d7fd48f8d8971bb4af3ea84dc0ccd9e",
-        "propertyCount": 8,
+        "schemaSha256": "f6c75bedbdfc8531dc78cb9e6867caaa86511c566421bee24aa302863f709238",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33539,8 +33785,8 @@
       {
         "name": "ExtensionsAttachmentsPushedEvent",
         "kind": "object",
-        "schemaSha256": "d637df2438f5c855cc4fdcf0141402518d3f183c1af70557de5a9c51f69558a9",
-        "propertyCount": 8,
+        "schemaSha256": "948e325a9aebdd6da2acd5afdbf239bd7973c8cb74872839852b89dcf244d3a1",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33561,8 +33807,8 @@
       {
         "name": "ExtensionsLoadedEvent",
         "kind": "object",
-        "schemaSha256": "c45e5674a5491a6c0f5c181f8a08c6f1523deb8942ef3bc7397e5c7cb9986ac5",
-        "propertyCount": 8,
+        "schemaSha256": "d1ac74059930ffcb4da131d91d09661f5fabce6fb7a9876e9742fb9a882c8b87",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33583,7 +33829,7 @@
       {
         "name": "ExtensionsLoadedExtensionSource",
         "kind": "enum",
-        "schemaSha256": "3575805521bfac3dc08077922105e4f04b2f8e077b2c98da349e159b70d3dcbb",
+        "schemaSha256": "445fea36b9c0fb54357f4441dae5a5a735b814992608d8f8933a69ea4bd833dd",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
@@ -33593,7 +33839,8 @@
           "project",
           "user",
           "plugin",
-          "session"
+          "session",
+          "explicit"
         ]
       },
       {
@@ -33627,8 +33874,8 @@
       {
         "name": "ExternalToolCompletedEvent",
         "kind": "object",
-        "schemaSha256": "407f20fbc365931cc03fa3ed647246c05dc9f7c0199fb37b5cbe123844baae72",
-        "propertyCount": 8,
+        "schemaSha256": "1b2a77e0b75700e0c74f641406ac67f0548ae11ec259b6c949a7d987c6224cde",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33649,8 +33896,8 @@
       {
         "name": "ExternalToolRequestedEvent",
         "kind": "object",
-        "schemaSha256": "b9f42bd8da8fd589de5913c4a861cc51043f90c4affb6245c648b0992c8b1606",
-        "propertyCount": 8,
+        "schemaSha256": "b62588f1bf03025d41b46cd6007b90c45b53a67932c11e825fa0bb3402978445",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33682,8 +33929,8 @@
       {
         "name": "FusionChangeCheckpointEvent",
         "kind": "object",
-        "schemaSha256": "e29490e0847e7fff3f41e28e40370d0b67e000a16b2294c069937a02155f3626",
-        "propertyCount": 8,
+        "schemaSha256": "472b90b8919cad14297bf47a7ba8200d6e55b1ae76f621c56f57d93a1995c0dd",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33718,8 +33965,8 @@
       {
         "name": "FusionCommitStartedEvent",
         "kind": "object",
-        "schemaSha256": "1e11f52e5267ed6a4ac355f606ca7aa8a746372ce11506a0453fb6c97a65b28d",
-        "propertyCount": 8,
+        "schemaSha256": "1191b6dedc09b57cbd285465402489450d55f47fa4528352211c159a5dec44a5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33740,8 +33987,8 @@
       {
         "name": "FusionCompletedEvent",
         "kind": "object",
-        "schemaSha256": "38497837743d429a3417059f58cf179a0457bb2b88519250fd19e14e5be77bba",
-        "propertyCount": 8,
+        "schemaSha256": "3d2dac391d81618a5ec8331e4266c07f2d5afc63b21b8e26f0acb370f29d3a76",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33812,8 +34059,8 @@
       {
         "name": "FusionHandoffEvent",
         "kind": "object",
-        "schemaSha256": "fd3af6d877bdd72788e4c8fa6e0a88318d1b8f43ce2360ca9f4b37797cbcac02",
-        "propertyCount": 8,
+        "schemaSha256": "e163753ad5a38ee8af84697a6a29c776d0073e7e526721cf24f78153a02e33ba",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -33979,8 +34226,8 @@
       {
         "name": "FusionResolvedEvent",
         "kind": "object",
-        "schemaSha256": "270f588d48038591a4158f6c1f0e236c695223ecf0da42504035acae8d6ad095",
-        "propertyCount": 8,
+        "schemaSha256": "fe99ad9ecfdb8c95eae386276874787a33bee139a31dd6699f35ccb3e36cea0b",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34001,8 +34248,8 @@
       {
         "name": "FusionRouteFailedEvent",
         "kind": "object",
-        "schemaSha256": "3a606e3e66c7acaa4e8b15041319097969bb0b5715d7b3d0b766f044a14eb0c7",
-        "propertyCount": 8,
+        "schemaSha256": "e1c8220a51875f671f236cebe0d181ec528f371edd522882569514c3e9dd9177",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34023,8 +34270,8 @@
       {
         "name": "FusionRouteStartedEvent",
         "kind": "object",
-        "schemaSha256": "5acd2b1927c9b8cfc8d45530c5ad6174e2fd0395ca0bdb5e6f4d36540684b5c5",
-        "propertyCount": 8,
+        "schemaSha256": "e9ae7e1650d9663bc4d453486463382e26324bcc32cabe2fc97e69df91a4a8b8",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34103,8 +34350,8 @@
       {
         "name": "HandoffEvent",
         "kind": "object",
-        "schemaSha256": "10c94340ddb269e5e2a9f1dbb16247dc159f95ebae87dc80719cb7503bf348ed",
-        "propertyCount": 8,
+        "schemaSha256": "307688d9dc516f4c38ccd302def448e5381c3c9dbbc7b0eebfadee868b3d912c",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34172,8 +34419,8 @@
       {
         "name": "HookEndEvent",
         "kind": "object",
-        "schemaSha256": "4b47cf659577b1ec6da27db7a93d6c525a7f899c4859be85697c42bc96b4502c",
-        "propertyCount": 8,
+        "schemaSha256": "7d5f54a4eb9f80c616853f86b2577bb2271e87846385724c52c3dcde7a073dd2",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34194,8 +34441,8 @@
       {
         "name": "HookProgressEvent",
         "kind": "object",
-        "schemaSha256": "4ed23841a67e650776705c5be3ca512616808016e8a0374b80b6f21d412c70e0",
-        "propertyCount": 8,
+        "schemaSha256": "da51a854756d342cdd2084ab3ed2144792c0dfb9c9c392477abc6fa4b51420ea",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34216,8 +34463,8 @@
       {
         "name": "HookStartEvent",
         "kind": "object",
-        "schemaSha256": "2422aadb256109810c1527a3de119804648cecd6c190e77550229dfb64f0f63d",
-        "propertyCount": 8,
+        "schemaSha256": "a143ac50d0336da1e3e2b3a2dd307213583d3522e943d97a9faa6d0b56884af6",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34267,8 +34514,8 @@
       {
         "name": "HumanResponseRecordedEvent",
         "kind": "object",
-        "schemaSha256": "9b5457770d4bd3835ae24c99ebc6825c0f0a3e377e38909ea38ab6c7843e7d2a",
-        "propertyCount": 8,
+        "schemaSha256": "3dcd810beca4f992da36dfdc7fb61f786b3c67078263acf8fe49bef7ce8b2a54",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34300,8 +34547,8 @@
       {
         "name": "IdeAddFileReferenceEvent",
         "kind": "object",
-        "schemaSha256": "20b3b5284ebec02d0463f0630f08b3766dc5a1950b2b435ac07438d0aa06ba9d",
-        "propertyCount": 8,
+        "schemaSha256": "625a60b175ae6290fed6df401209c396a1a5614d73233d49a31528817495fc35",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34322,8 +34569,8 @@
       {
         "name": "IdeConnectionChangedEvent",
         "kind": "object",
-        "schemaSha256": "9af779c7b6f49744f56ded6192a8926ac52530d79ae952ddc79b22580e6f4dbf",
-        "propertyCount": 8,
+        "schemaSha256": "68f85a5ab89dea65fc28d794da4c190fa05cc5fdbc2887d9e0c1747cf5ba5ec3",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34355,8 +34602,8 @@
       {
         "name": "IdeElicitationCompleteEvent",
         "kind": "object",
-        "schemaSha256": "aac02b790e76d28437cd9a0c39fb5309cbd6a7b700a6c17f75232369b0039e50",
-        "propertyCount": 8,
+        "schemaSha256": "060fff4321086d367b82138bce9f25afe91eab39e02738a6121c6f0e8c93adad",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34421,8 +34668,8 @@
       {
         "name": "IdeSelectionChangedEvent",
         "kind": "object",
-        "schemaSha256": "f57edbcfb1f58a5edeb50a93d54c8343f7937aad0bfd39b30984b60efde390b3",
-        "propertyCount": 8,
+        "schemaSha256": "c7930f7f44d87f47228fd290c050173662364d35be88cf9b74e62dd487b6030c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34454,8 +34701,8 @@
       {
         "name": "IdleEvent",
         "kind": "object",
-        "schemaSha256": "6afab8c6d213141cfe4ef1941cff4e7eb93c7b9cf333b655d9f99dae97623005",
-        "propertyCount": 8,
+        "schemaSha256": "8d1525335b35569906ce184c74b9134a99f8bbf883f06e75eff35eb4f8a23531",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34516,8 +34763,8 @@
       {
         "name": "IndexedSearchEvent",
         "kind": "object",
-        "schemaSha256": "daf03bff64151b51f3431f3a11aa31875aba24fe7ae8968e410d181163c16cef",
-        "propertyCount": 8,
+        "schemaSha256": "35a9d491e095fa8f1ab6b2d443cdd2944284b07263c4bf61dbb352e54d436f9a",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34587,8 +34834,8 @@
       {
         "name": "InfoEvent",
         "kind": "object",
-        "schemaSha256": "0079028a057952797a5add91b72d8ee60dcc21fdf9b1eece24e66e8b865729ad",
-        "propertyCount": 8,
+        "schemaSha256": "b217dd218badb123d86980deafda1ac097fcad67c6795d4d766cf22c2bc299f2",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34664,8 +34911,8 @@
       {
         "name": "InstructionUpdateDeliveryEvent",
         "kind": "object",
-        "schemaSha256": "1e49889b2397a2f49db38309a2ab4b729ec1db06b34560b72728158ec02eda52",
-        "propertyCount": 8,
+        "schemaSha256": "4b6511ab4422becd8ed4a5d818d4d703104f0a25cd7a084cf78d252e1777ead3",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34709,8 +34956,8 @@
       {
         "name": "InstructionUpdateEvent",
         "kind": "object",
-        "schemaSha256": "d4323ff1e22796fe0e2c8aedc6710cb52f1347b39a373066c11258b670254481",
-        "propertyCount": 8,
+        "schemaSha256": "bb7db23a1541947d3785a6b6ac1af3f0729f32f9fcbd5224c1637bb777d27519",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34759,8 +35006,8 @@
       {
         "name": "JournalLinkEvent",
         "kind": "object",
-        "schemaSha256": "4c6e4a069be84aac39a792d0e0c3c01cdf4cdf45301f56e26ba5926eb01d595b",
-        "propertyCount": 8,
+        "schemaSha256": "05b5b12dea49da081ea81058fe86fc9892e9cbdbabea0ffe1c4e0b26e4031cb5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34792,8 +35039,8 @@
       {
         "name": "ManagedPluginProgressEvent",
         "kind": "object",
-        "schemaSha256": "d6dae4b466c393e2edcb18e4bc6afa03ddd0123c2a958d05c3c8d14417cc44c0",
-        "propertyCount": 8,
+        "schemaSha256": "1a28c094090a22fbedd9cfae0ec362f53d9b88de8bee85cb3515b3a6ac740145",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34861,8 +35108,8 @@
       {
         "name": "ManagedSettingsEnforcedEvent",
         "kind": "object",
-        "schemaSha256": "6b9dfc777c8f2682b05189c0c892340ea1ed87fbdfc3b290a21547aee3bdda49",
-        "propertyCount": 8,
+        "schemaSha256": "8224bcf406da69361cb20a0ded6b5f77be5f707ac7037a22fe89efb183c0ec6d",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34883,8 +35130,8 @@
       {
         "name": "ManagedSettingsResolvedEvent",
         "kind": "object",
-        "schemaSha256": "69abae1829993bcf823484200f6c47a67d540ec30f753d3cd13b735b7494c134",
-        "propertyCount": 8,
+        "schemaSha256": "273a695bea1589710936343df2c9d8a3d5a396e8a18737644122d8459f09c9f0",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34934,8 +35181,8 @@
       {
         "name": "McpAppToolCallCompleteEvent",
         "kind": "object",
-        "schemaSha256": "1c14f01c2e65953fe93a09fb8774d772457bbb19507bc0fd0ec1bb9d67f2551c",
-        "propertyCount": 8,
+        "schemaSha256": "90d1adda7a76fa397836272d094d5ea0624d38bed9a64e1af4063e32bfd4964f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -34978,8 +35225,8 @@
       {
         "name": "McpHeadersRefreshCompletedEvent",
         "kind": "object",
-        "schemaSha256": "55779b0bd54bb25bc09fe878a7cf1a43a467159ced4241ce3af8d323631e0914",
-        "propertyCount": 8,
+        "schemaSha256": "7eb5d2fbc997cae2ef627b3154863bc06e68d9874554e90b12164c85a9293c68",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35016,8 +35263,8 @@
       {
         "name": "McpHeadersRefreshRequiredEvent",
         "kind": "object",
-        "schemaSha256": "3423d22572a1e75d7f898fd2f42e25885fdc73c590c996182a4e2a492c7f5121",
-        "propertyCount": 8,
+        "schemaSha256": "676aa0b075d70014064c7a3822d318b928b16f1069af30b9484377abb8bdad0e",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35064,8 +35311,8 @@
       {
         "name": "McpOauthCompletedEvent",
         "kind": "object",
-        "schemaSha256": "e431ca132ab9dfcf07508f7037e05cfd99ca73349e3daa44f48e93dd891512c6",
-        "propertyCount": 8,
+        "schemaSha256": "b32e4ea7e2536f28edb23a39418f5d5c21e78db4bfcac74ec92382accc30a98c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35111,8 +35358,8 @@
       {
         "name": "McpOauthRecoveryCompletedEvent",
         "kind": "object",
-        "schemaSha256": "ae8bf257605f0cfe42d86846e8bc68e72a712300d5c490233cbaaa69c245430a",
-        "propertyCount": 8,
+        "schemaSha256": "fbec7854e5ddbbdb77a0eb6f90065aabdf73ce2fabba7aa3e22be9a2f6e31421",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35164,8 +35411,8 @@
       {
         "name": "McpOauthRequiredEvent",
         "kind": "object",
-        "schemaSha256": "f282507f961903e53fcb5945a0b6d0f356408ffd6feab7ece6a579f2494cd43a",
-        "propertyCount": 8,
+        "schemaSha256": "a96ae0f97d60303ffe0f8105f4fc5f4f250341897eb421de832328272ff7cb3a",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35197,8 +35444,8 @@
       {
         "name": "McpPromptsListChangedEvent",
         "kind": "object",
-        "schemaSha256": "5c4ad36549e812d1d27218cee610cafe1cfad4e55d1a23f88725327853ff74e7",
-        "propertyCount": 8,
+        "schemaSha256": "326ec4c6dd5996853f337e59e22aa24207dcc775038b986a0d313c66c9b1f41c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35208,8 +35455,8 @@
       {
         "name": "McpResourcesListChangedEvent",
         "kind": "object",
-        "schemaSha256": "f9982ac204c2365d9cb83ca4ddd23204ca625d4f690692b1b40cf9c91592e4aa",
-        "propertyCount": 8,
+        "schemaSha256": "05e64e9cef38018e751183c9102c4a81bfcda88a030bc1a0a46f8a43becb752a",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35241,8 +35488,8 @@
       {
         "name": "McpServerNeedsReconnectEvent",
         "kind": "object",
-        "schemaSha256": "f3a77c9f53398cd0766a4d572353b7165bcb5c3074d422ad288355e01ca34416",
-        "propertyCount": 8,
+        "schemaSha256": "97ece2ef07a30872b7e619aaedec7a6b9db06050c55e379044c227b3a15236c5",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35263,8 +35510,8 @@
       {
         "name": "McpServerRemovedEvent",
         "kind": "object",
-        "schemaSha256": "3b62b3eca334cadfadf3834b0c800a6f361391e45669e55e01c7d78d6a9e6845",
-        "propertyCount": 8,
+        "schemaSha256": "db93d9f4a90c567b3d1199500bdd26f0d61bcef33d119bc6ff473c25d44106a2",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35322,8 +35569,8 @@
       {
         "name": "McpServerStatusChangedEvent",
         "kind": "object",
-        "schemaSha256": "982b6c2556e3ea9c9c2b521f5dc71beeb2039091a37f80ff8d8b7f5c99740c33",
-        "propertyCount": 8,
+        "schemaSha256": "36783050696428c2d7509e1d2b3d00513b6171176e3da48f624b1bfbf292cc70",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35344,8 +35591,8 @@
       {
         "name": "McpServerToolsLoadedEvent",
         "kind": "object",
-        "schemaSha256": "9b096a6e36521526bd626ab9a79167db5f02ed3d8d925dd58e318a780ba812b1",
-        "propertyCount": 8,
+        "schemaSha256": "7586c3b53dbb62a1b11b3c5dd3b31a6475133f07a53675a4d0470813e88cf6a6",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35382,8 +35629,8 @@
       {
         "name": "McpServersLoadedEvent",
         "kind": "object",
-        "schemaSha256": "df802ffbee3ca402055132aae586209f4e4b38dc7893b168c07f40872fb41f8d",
-        "propertyCount": 8,
+        "schemaSha256": "9c9811eb3d691e6f3e5c3264692744c929d5f3b429b1a10cceeabd9d38c0c672",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35415,8 +35662,8 @@
       {
         "name": "McpToolsListChangedEvent",
         "kind": "object",
-        "schemaSha256": "ca4a8b196f64918b1a47462c5bb448b9dbb4de850447a11eff62e8a7687b20dd",
-        "propertyCount": 8,
+        "schemaSha256": "c85da7e7454be6417ebe4c03ecd43917c6821127ec6027e143d0901eb9381ebd",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35437,8 +35684,8 @@
       {
         "name": "MemoryChangedEvent",
         "kind": "object",
-        "schemaSha256": "633bafcac46275486a3d14daa5ef4b3f0a71214b95bcc0b4356d2b7df2450dfa",
-        "propertyCount": 8,
+        "schemaSha256": "e12b077e426ac565865bcc1fe2699076798f08224f9c0a88859beddf62cd223d",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35459,8 +35706,8 @@
       {
         "name": "ModeChangedEvent",
         "kind": "object",
-        "schemaSha256": "ece93bba27d01959fb025cc75e04cd8e9505e4f4eafd4c952234204cd3996846",
-        "propertyCount": 8,
+        "schemaSha256": "562ac7da678fde3d0fd629617925a04d6925c5e701d10a75f3ba2e4d82ef0f5f",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35481,8 +35728,8 @@
       {
         "name": "ModeNoticeDeliveredEvent",
         "kind": "object",
-        "schemaSha256": "c5b82f0b39f30b16aaf2273b0b481c8585be6e6d5a365dd3b567f01614ec9034",
-        "propertyCount": 8,
+        "schemaSha256": "751e6a2a7e3b370eeb448286e76d2d45442cb41eaa97dd31584e33322f879bfb",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35517,8 +35764,8 @@
       {
         "name": "ModelCallFailureEvent",
         "kind": "object",
-        "schemaSha256": "bc64d1b4009e1102e30a9c0a1389a013717adf734c48a7cd7ffc1ecd2b3dd153",
-        "propertyCount": 8,
+        "schemaSha256": "7ae64ad4ffdf113d48f10189e5c3a36616c38ca8960ced8cc3451cb6e8fae587",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35613,8 +35860,8 @@
       {
         "name": "ModelCallFinalResultEvent",
         "kind": "object",
-        "schemaSha256": "e5b2b77ae3321d7ea4c50a390a2ba20867a7fa1c450313a62466f6ed2168d11c",
-        "propertyCount": 8,
+        "schemaSha256": "2db2adaed584800fa82fb670a25932ac85cc1b327bcb50c5c975d7b9ad9d0b15",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35635,8 +35882,8 @@
       {
         "name": "ModelCallFinishedEvent",
         "kind": "object",
-        "schemaSha256": "bdfe18c00864a39b42c50dcb7f5466d4a2f959841905ae515d2b41539002b29c",
-        "propertyCount": 8,
+        "schemaSha256": "281976a81f9ef0b6441b600f6e1c175c574d24020bceff25ff9fa864fa5a80e6",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35715,8 +35962,8 @@
       {
         "name": "ModelCallStartEvent",
         "kind": "object",
-        "schemaSha256": "b3079ddc26278cb7909bd4ebf431284e04fed2e05ebf3cd23ab7c9f190c95a52",
-        "propertyCount": 8,
+        "schemaSha256": "7c9bee649db43bb569d19573a32e6faa2b435e5d8aace70b602ba77842e3921b",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35778,8 +36025,8 @@
       {
         "name": "ModelChangeEvent",
         "kind": "object",
-        "schemaSha256": "1dfcfbe898ed369dab7ede38f6c392a125ee96410cae09345e7e14e09643134a",
-        "propertyCount": 8,
+        "schemaSha256": "147495d8a5f38db2876eab9498200f5b5a426aa27a643590bc74beda927479d5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35825,8 +36072,8 @@
       {
         "name": "ModelDeselectedEvent",
         "kind": "object",
-        "schemaSha256": "163ce171f3ebc2ab573ca73fe7ee43c2b0efd8a676187eb05fad22221fae4c41",
-        "propertyCount": 8,
+        "schemaSha256": "946654dc87a805c043a8d6217e08cd1ae0ccadd06b18c59686b0bd7d5ff4719f",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -35925,8 +36172,8 @@
       {
         "name": "PendingMessagesModifiedEvent",
         "kind": "object",
-        "schemaSha256": "aaa8c1fa618c5587e6c915900a376284f0cfceafdab376c38287b3f5cedce3b8",
-        "propertyCount": 8,
+        "schemaSha256": "6faea8b8266b552503acb251bf53f2007684f5d7781f7d640dc7489a50e2dd38",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36002,8 +36249,8 @@
       {
         "name": "PermissionAssentDetectedEvent",
         "kind": "object",
-        "schemaSha256": "c8df12aafe605c0c6a10f9c7f519adb5d42737ca3f37a3fc339813e2ed82060a",
-        "propertyCount": 8,
+        "schemaSha256": "dd00d674109f3f903e86e1ea7bf8621ffe0b3cdcd2a1988bbe8181e92fd70583",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36013,8 +36260,8 @@
       {
         "name": "PermissionAssistedApproval",
         "kind": "object",
-        "schemaSha256": "234865ae7dbe45d077d3651a8c1b0ac26afbc8d678925b101708bff68d80da64",
-        "propertyCount": 7,
+        "schemaSha256": "9ecc4b7ad71d853e0f5e2ea98130480171736236a84a0bae41e0e875108a31b4",
+        "propertyCount": 8,
         "requiredPropertyCount": 1,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36046,8 +36293,8 @@
       {
         "name": "PermissionCarriedForwardEvent",
         "kind": "object",
-        "schemaSha256": "8d87626dae6657e8bfd80f0b72c8029af652793456ef735107e4d3dd756d8930",
-        "propertyCount": 8,
+        "schemaSha256": "87e8914de080e7076debbd8af4b9baf603f1d6fddd7490244d8b3ffeba0d883b",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36068,8 +36315,8 @@
       {
         "name": "PermissionCompletedEvent",
         "kind": "object",
-        "schemaSha256": "8dc07826d64ac75e930c1e478f86a3aecc21683718d542cc2d22f23f3023f45a",
-        "propertyCount": 8,
+        "schemaSha256": "354164c428ba42e3a39d723c5d3657395e82854a8f75e6f7c02388494257e704",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36090,8 +36337,8 @@
       {
         "name": "PermissionContextualAuthorizationEvent",
         "kind": "object",
-        "schemaSha256": "267146d1c8e94e24ed9cb241bd9b32ede711d7034282820a47edaa40e063155a",
-        "propertyCount": 8,
+        "schemaSha256": "475e556e2d67a7b368e19e0985d7b06b88fd74169385af48b34af54c9a7af377",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36195,8 +36442,8 @@
       {
         "name": "PermissionGrantsRecordedEvent",
         "kind": "object",
-        "schemaSha256": "c142f7dc728ae99023536390f700de8764fb13fbd6d1fc47a89c97d60ffc11df",
-        "propertyCount": 8,
+        "schemaSha256": "232141fca5ef2f61e11a0af7d744b60be6a01c4eb42af3d72dd33fbce09bee42",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36239,8 +36486,8 @@
       {
         "name": "PermissionMessageAuthorizationDegradedEvent",
         "kind": "object",
-        "schemaSha256": "e24b28a93a4cfe25456d121d544041e46f5f4c479054acb9bc5abe43cd93cdfc",
-        "propertyCount": 8,
+        "schemaSha256": "21ad326bc38ebfefd8e2c4937bb3c80eeda4d24d9839a2ef5a5ddebd5e2f4c24",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36250,8 +36497,8 @@
       {
         "name": "PermissionMessageAuthorizationEvent",
         "kind": "object",
-        "schemaSha256": "59b94e1825465debe5228045a2f69da97491ecd069332ea96027862eaf129208",
-        "propertyCount": 8,
+        "schemaSha256": "6b6f9b8f0509119adbcc000edc4638fcd75f62fa891c20f629021a601962df03",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36286,8 +36533,8 @@
       {
         "name": "PermissionMessageAuthorizationReadEvent",
         "kind": "object",
-        "schemaSha256": "eb525eb971f54f12e149df80aabc6e42b5f8edc0539756b9eb3c8bfa7ed75bf0",
-        "propertyCount": 8,
+        "schemaSha256": "dae588f5dbf8f13996ba17d87ffef6907cf2b5336ef81f1c305abf2f6ff43f91",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36312,12 +36559,12 @@
       {
         "name": "PermissionPromptRequest",
         "kind": "union",
-        "schemaSha256": "5b12eb4ab3326136ce548f034fdbac3a7adb769915b1b74ea7787f14b79d1ade",
+        "schemaSha256": "7b0c2dc911f20e64d2fd5806fcdf43bcef4549d29a60f8aa3f34e1245f9d4a01",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 13,
+        "unionVariantCount": 14,
         "knownStringValues": []
       },
       {
@@ -36354,6 +36601,17 @@
         "knownStringValues": []
       },
       {
+        "name": "PermissionPromptRequestExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "f5d823302ab8972816bba330cae17d8b0aed1020a0b0b751450c0b80326beb3b",
+        "propertyCount": 5,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "PermissionPromptRequestExtensionManagement",
         "kind": "object",
         "schemaSha256": "b3fc3355ebbf43dbfc0eba1623fc13a470ba7ba9e56918139eef52447a6bee10",
@@ -36367,7 +36625,7 @@
       {
         "name": "PermissionPromptRequestExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "7497ff9fc0ecf4b6ac6e663dd6d94aaf76aa5e8ba2b4ac76bdc4129a348203cd",
+        "schemaSha256": "d892d4faa3d670d6d252f4de25caa901fc43ddb36ab7a6c44b8ade4c02663dfc",
         "propertyCount": 5,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -36568,8 +36826,8 @@
       {
         "name": "PermissionRecoveryEvent",
         "kind": "object",
-        "schemaSha256": "5438f8085cbacf56fdd427f1174f73b8d413a7c7dc73f003b1cd3e23cec7c618",
-        "propertyCount": 8,
+        "schemaSha256": "43ee384410c2e02870d783faac1f968f8691ad2e1636acbacb1f9f102d0fa979",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36639,12 +36897,12 @@
       {
         "name": "PermissionRequest",
         "kind": "union",
-        "schemaSha256": "66311c6dbf1f0d40517e0a4705dd385fa2372ede17dc1a33d13fef2376a086d0",
+        "schemaSha256": "6d52a589ec254438537a7e789595298cf025c29e2f95baf538a65dbd416b30a8",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 12,
+        "unionVariantCount": 13,
         "knownStringValues": []
       },
       {
@@ -36670,6 +36928,17 @@
         "knownStringValues": []
       },
       {
+        "name": "PermissionRequestExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "7873032e17001671d053ab4b45c872ca924a2d0f2d29e92e5d21c7bd9a7bc7c7",
+        "propertyCount": 4,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": true,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "PermissionRequestExtensionManagement",
         "kind": "object",
         "schemaSha256": "bb372dec0fa54f05a29db3a295dd565d2554ff6b256050de97e6e9c70fee821f",
@@ -36683,7 +36952,7 @@
       {
         "name": "PermissionRequestExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "2e875ff781608b1b28839f9cbe6708a42f1e3deac27f9dec959df98d28152cf7",
+        "schemaSha256": "84b775307e23f7521855a00faa51aee711c551ec6e34c32f3523d42128111e73",
         "propertyCount": 4,
         "requiredPropertyCount": 3,
         "hasOptionalProperties": true,
@@ -36868,8 +37137,8 @@
       {
         "name": "PermissionRequestedEvent",
         "kind": "object",
-        "schemaSha256": "1245102ec274f9ff1df58a63a5934f0f2416b1f6d98ac42295c3b775f0499b86",
-        "propertyCount": 8,
+        "schemaSha256": "31b86e9de173822c3f68687616852df136cad02cb0afb68f409dde323a493eda",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -36959,8 +37228,8 @@
       {
         "name": "PermissionsChangedEvent",
         "kind": "object",
-        "schemaSha256": "6fbfcabe88ae0714c997146bbe0381daec57aa4b1c1eb001e6808c6a0f189830",
-        "propertyCount": 8,
+        "schemaSha256": "39298cffb182c5309c87077e40ec55d158bdaf0d86ec03914db28af7eac0f9c7",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37017,8 +37286,8 @@
       {
         "name": "PlanChangedEvent",
         "kind": "object",
-        "schemaSha256": "0b212fbbde82331c9773e0de7552781a177fe48808d308ba0c200b44a284e07a",
-        "propertyCount": 8,
+        "schemaSha256": "6292577d6226712f1a24140d63203e79c9655a61c93febbb4edac6b88c1bf635",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37098,8 +37367,8 @@
       {
         "name": "ProgramExecutionEvent",
         "kind": "object",
-        "schemaSha256": "937fbc8b0b4d9277258bba6d158c3507964d7563d196381e94fae18a34846c79",
-        "propertyCount": 8,
+        "schemaSha256": "b9848d52a783f2f3066d62ef6e5aa5805c33706a9816e0fe06c0c7f2877c2190",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37109,8 +37378,8 @@
       {
         "name": "ProgramPermissionRequestedEvent",
         "kind": "object",
-        "schemaSha256": "c59bd84fdca265c264577c241c53f67cbdc2c8df41c951831a630d0aeee969fd",
-        "propertyCount": 8,
+        "schemaSha256": "a26af24b709d48d28602da2b793299e145c544a6fb2c89ff782a3ad4651d2ecf",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37120,8 +37389,8 @@
       {
         "name": "ProgramToolExecutionCompleteEvent",
         "kind": "object",
-        "schemaSha256": "3f00da4c9d36a198a598ffe417d1183556658c0fed489f203af0b0d5bc92be88",
-        "propertyCount": 8,
+        "schemaSha256": "2c7e854ec89999df70455f1a5baa7cc87962d74192523bf234fc2095be805a66",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37131,8 +37400,8 @@
       {
         "name": "ProgramToolExecutionStartEvent",
         "kind": "object",
-        "schemaSha256": "0bcb998fe17791e22b250f13b05bec5cd58771db8c5422e8ddaf85f38d6bf4fd",
-        "propertyCount": 8,
+        "schemaSha256": "c4ec23e43e21639a985bc80c8aff17381f7aa69b6ae31271da3400cad9e26440",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37153,8 +37422,8 @@
       {
         "name": "PromptCacheBreakEvent",
         "kind": "object",
-        "schemaSha256": "04100afe1c8c5563380fc486993c8d41a92965a42a4b3379127cc1d8a8149207",
-        "propertyCount": 8,
+        "schemaSha256": "638dc01908f1f2e45bd05e2502c43ab3639e9a08159837f0933b9ebe287d7093",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37175,8 +37444,8 @@
       {
         "name": "PromptCachePrefixChangeEvent",
         "kind": "object",
-        "schemaSha256": "6ec04ff319d6869a67a71c86e2275dfad741708aa9a07a8bd87f14d42b6db8f3",
-        "propertyCount": 8,
+        "schemaSha256": "233f62f26dbc39cba303534c635bdae90581e0e8aa5b7d1b09a6e3168ae81b8d",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37230,8 +37499,8 @@
       {
         "name": "PromptCacheToolUpdateEvent",
         "kind": "object",
-        "schemaSha256": "e7fc5f9844ee06a65d561d981af58db3eac46c73eaa4cf797745c63c8c5ad390",
-        "propertyCount": 8,
+        "schemaSha256": "04e0e2e3e1668a61c4a20fdd4fa05cd269bf61a8dd7d6c5fff8e6e17cb988633",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37355,8 +37624,8 @@
       {
         "name": "ProviderQuotaObservationEvent",
         "kind": "object",
-        "schemaSha256": "1be15f7f8734eee023ddce0d029e0022e0cc34539680893e7aeb3d4d2e07a4af",
-        "propertyCount": 8,
+        "schemaSha256": "6e74eb49d168bb4587e6fe382006f0c0301815a13d64b266673017a18190392e",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37488,8 +37757,8 @@
       {
         "name": "RemoteSteerableChangedEvent",
         "kind": "object",
-        "schemaSha256": "f5b1f03d9b0fe81888d2a7916693832492b5dcd91dd2f97951d4ee599a35d434",
-        "propertyCount": 8,
+        "schemaSha256": "57e217be80cea1aa4f85b4e395d9a572d30765800b8c572376314c13768b4a41",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37510,8 +37779,8 @@
       {
         "name": "RequestBodyCompressionDisabledEvent",
         "kind": "object",
-        "schemaSha256": "e16e24f63e460c1e33a272a5650aeb1895493fbda0193a603750f6ea3c89cc97",
-        "propertyCount": 8,
+        "schemaSha256": "ded0f02ed63468938460b426545ecd1d589ee3a489e22e83a3370574aeed5888",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37532,8 +37801,8 @@
       {
         "name": "ResumeData",
         "kind": "object",
-        "schemaSha256": "ed5fc041ef472ff940519f83a5529555d4e7c9355329e66de94f262a31f74716",
-        "propertyCount": 23,
+        "schemaSha256": "f5b700eab43881bf7886278b2cbdac7b0a35debb54284a2015adc060cfa68d4a",
+        "propertyCount": 24,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37543,8 +37812,8 @@
       {
         "name": "ResumeEvent",
         "kind": "object",
-        "schemaSha256": "3384333757d5338d1215a030355e61ddc9046256d7d90c65ab8de87d5805beb4",
-        "propertyCount": 8,
+        "schemaSha256": "7f70ec9aaddbb4d5286a368cf0f234743982c6ab0389ae8e4eda303591ecaa0d",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37565,8 +37834,8 @@
       {
         "name": "SamplingCompletedEvent",
         "kind": "object",
-        "schemaSha256": "db55be0e28c9056142e645731ee148c10f630df63b3478cbd032f7cfba7ef0cb",
-        "propertyCount": 8,
+        "schemaSha256": "a7ec11d418f80c9b9a3933f0ede7064f1c137f44dfa504f6b910c6916584cdb4",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37587,8 +37856,8 @@
       {
         "name": "SamplingRequestedEvent",
         "kind": "object",
-        "schemaSha256": "30be1e5b9299624b2d0b331a824c6b765f62274e5e2d3e33094181d62e15aad3",
-        "propertyCount": 8,
+        "schemaSha256": "aea8d76cae4f5d3155a158ef7830f37f8015aa6782f119c584124504183d745f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37674,8 +37943,8 @@
       {
         "name": "SandboxDecisionEvent",
         "kind": "object",
-        "schemaSha256": "15e98e57fe268066bd21be196e6884dbcfa052263d8dd07206abfaa591f43f5b",
-        "propertyCount": 8,
+        "schemaSha256": "4eafb2d3314d7982b1c0ea8692de2113edee4ffa9175616d7394cc9b1abd7580",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37875,8 +38144,8 @@
       {
         "name": "SandboxStateChangedEvent",
         "kind": "object",
-        "schemaSha256": "126e5d21dc1f50ba6cc26e1497f759ed2b26d435ae90ab8e398cc5be8886236c",
-        "propertyCount": 8,
+        "schemaSha256": "0cb9a3c97a937c3511df5d90c9fc72bb17f160b6d135cfe6a761aadc675b8262",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37897,8 +38166,8 @@
       {
         "name": "ScheduleCancelledEvent",
         "kind": "object",
-        "schemaSha256": "41ef4a67521cef93b557c5e77d68ae8d9df2de6d1e22ffdf5c86500c6833316a",
-        "propertyCount": 8,
+        "schemaSha256": "dd36a08e0389ad6d9df017c0eb7c726119c29f2a57bf7b3b41062845a82f2dcc",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37919,8 +38188,8 @@
       {
         "name": "ScheduleCreatedEvent",
         "kind": "object",
-        "schemaSha256": "e17f1037ea71112c990db3c64042296d1b394b53de1a4c38910c22690f670974",
-        "propertyCount": 8,
+        "schemaSha256": "1c05f7ac9fc4347196fd794e21aa163d57706f945aaa088b2ea6f6e2104e0f45",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37955,8 +38224,8 @@
       {
         "name": "ScheduleRearmedEvent",
         "kind": "object",
-        "schemaSha256": "3267192c51db40079fedc82290ccfecb2532acc33ffc58d07279042b5a308244",
-        "propertyCount": 8,
+        "schemaSha256": "1158b1c13a0ce36fa63b4abe59a2e180b79b8bb30a63887aa4c4ff7ba5825bb4",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -37999,8 +38268,8 @@
       {
         "name": "SensitivityLabelObservationEvent",
         "kind": "object",
-        "schemaSha256": "037c9e0ba326a8206643c351f703adf6809b27060135655e060d3501fba6e8db",
-        "propertyCount": 8,
+        "schemaSha256": "60b5ebe49823a5636383bc27283b91c305efc3b3aababbe29d5cca11a0c4e0aa",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38234,8 +38503,8 @@
       {
         "name": "SessionLimitsChangedEvent",
         "kind": "object",
-        "schemaSha256": "9af056edbcbbde58b74f21e9c45608bc38e032d9a28ff15d200dafbdbe86913d",
-        "propertyCount": 8,
+        "schemaSha256": "df13dee67500a7d2cdd2c13491f32022e660c215750c1ae0e9c1303806dcce75",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38267,8 +38536,8 @@
       {
         "name": "SessionLimitsExhaustedCompletedEvent",
         "kind": "object",
-        "schemaSha256": "7ff23b9193df768196a30feb9c8d21684b2e417964028c016f73453d7f20be1c",
-        "propertyCount": 8,
+        "schemaSha256": "d140b43b3e6b26cd96963660e8636067ca53c247fb9c5626be8dfc8cc9862025",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38289,8 +38558,8 @@
       {
         "name": "SessionLimitsExhaustedRequestedEvent",
         "kind": "object",
-        "schemaSha256": "9fe6db19a3dcbbbd03289b9ba30f6d151eaa5148cf59ad8fd369a3004a85f1db",
-        "propertyCount": 8,
+        "schemaSha256": "7662c76c2789871dceac7037e8eac33307215a0142560a35c8fedbc5e2704d4c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38375,8 +38644,8 @@
       {
         "name": "ShutdownEvent",
         "kind": "object",
-        "schemaSha256": "51b44e5412e0d2609362f4486ff2ec2a8e8567081cc8e8cbd641e90d9f0e1d6a",
-        "propertyCount": 8,
+        "schemaSha256": "e0a309dbc6b8fc9280d2ac3f5a6b4004ca4c2d2b65599ec61f02fb495a836564",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38466,8 +38735,8 @@
       {
         "name": "SkillContextDeliveredEvent",
         "kind": "object",
-        "schemaSha256": "e3d754d591dc3e07c2b2139d0844c31209940a7540088072ac3f0bc6df8c1620",
-        "propertyCount": 8,
+        "schemaSha256": "fc22e0dda57639dc5f17d0dc9d3ad7f6b62ad12c1f49c5c1586a8534a858d9cb",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38488,8 +38757,8 @@
       {
         "name": "SkillContextDeliveredRefEvent",
         "kind": "object",
-        "schemaSha256": "73904272a2df5e9b66b5557af14517cef684787ef8c3f4a7423da70db262d5b0",
-        "propertyCount": 8,
+        "schemaSha256": "d37a0d09b4154cfcf34c118f521865b201e0ef4dc939b97b005a881d3c7667b3",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38510,8 +38779,8 @@
       {
         "name": "SkillInvokedEvent",
         "kind": "object",
-        "schemaSha256": "69fcbaf7a1edbc1a5b74795b41d17a0b85d5759e7ca53df604910557e81db45d",
-        "propertyCount": 8,
+        "schemaSha256": "eb750c2019ab91adaebd7492d74b848419aedb11616ea14e9f5e4659ef8a75e0",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38532,8 +38801,8 @@
       {
         "name": "SkillInvokedRefEvent",
         "kind": "object",
-        "schemaSha256": "1756a483edc9c032a31f717a0340fe31f3e2ff5fbbdcc450261a795ce0cfc874",
-        "propertyCount": 8,
+        "schemaSha256": "2367192cccf0a6d9554b1e3bfe31082f0b0f2182b7c2524e5bf6ecf4a14b8ab5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38590,8 +38859,8 @@
       {
         "name": "SkillsLoadedEvent",
         "kind": "object",
-        "schemaSha256": "05be90edf138778fe0e5df83f04696e030ebdb95063eaa5cbb2c8ef2dbf43219",
-        "propertyCount": 8,
+        "schemaSha256": "49fe37d42d9e4af2dc234a7128f7e076eda4a1f7c83bd3854216f461853653f0",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38623,8 +38892,8 @@
       {
         "name": "SnapshotRewindEvent",
         "kind": "object",
-        "schemaSha256": "90402f18d7d00823d3b329d6c8d8e44e90280de7a587eea8140ecf8d3f6b163c",
-        "propertyCount": 8,
+        "schemaSha256": "2ee02d2cc14e28552ed62591c7d8dad6dc71a5929deeca0cac05ad9330160738",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38634,8 +38903,8 @@
       {
         "name": "StartData",
         "kind": "object",
-        "schemaSha256": "261ffb960696635b2198398faf8c06cde308190867e69b50321bd5d900cfc09f",
-        "propertyCount": 23,
+        "schemaSha256": "30269e6f6538dd0d112ed33c53546e5d8fd331828f8b92a109c37da8a16c3b1c",
+        "propertyCount": 24,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38645,8 +38914,8 @@
       {
         "name": "StartEvent",
         "kind": "object",
-        "schemaSha256": "e7f18c3cf8cd6759a78562c43579370050443bb945a2ffa33c6278d5de8969af",
-        "propertyCount": 8,
+        "schemaSha256": "3bb4eba54927311f69e321d65de652aa77b80a1b2da5785bf000d8d6b61934b8",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38667,8 +38936,8 @@
       {
         "name": "SubagentCompletedEvent",
         "kind": "object",
-        "schemaSha256": "fea8cd7ff031a66db45782d05508c5c563ae8a753f7ff0d861aa6ae2a7b2679e",
-        "propertyCount": 8,
+        "schemaSha256": "54490a5281e237adab32b2d6e6f7c4abce9a2d180c97207e68ce83a0830735a2",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38689,8 +38958,8 @@
       {
         "name": "SubagentConfiguredEvent",
         "kind": "object",
-        "schemaSha256": "7130350d41c86f4a6d5c789653d096640483c5e8fd7ea45be29bc561ad57253e",
-        "propertyCount": 8,
+        "schemaSha256": "39d15ed52971e2e769c6fd4627734fb0c3f808fbaafdd5d1cf515e14cf6cf525",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38711,8 +38980,8 @@
       {
         "name": "SubagentDeselectedEvent",
         "kind": "object",
-        "schemaSha256": "19b1384275312b00124bd602c819475761d3bb97ed584591d7553cb2d10230fe",
-        "propertyCount": 8,
+        "schemaSha256": "4ecdeb173ca368f671a86b0e8dceb4c7d9a4e6a7dab1f60ca085196e1109f573",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38733,8 +39002,8 @@
       {
         "name": "SubagentFailedEvent",
         "kind": "object",
-        "schemaSha256": "72459923c1f252ceeef080a19a2cea8bac0563db153a144e26613c893b506806",
-        "propertyCount": 8,
+        "schemaSha256": "11dd6d885ab843ee770abbdbe3ce51a6c67fbeb2faf245b86b732010363e2ea7",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38774,8 +39043,8 @@
       {
         "name": "SubagentSelectedEvent",
         "kind": "object",
-        "schemaSha256": "0067b8555d0fd9a2f0016a0a2b4c478d020753f054d505ed37e41754edd6b378",
-        "propertyCount": 8,
+        "schemaSha256": "e456f8d6c4a07d31bb46b35b68676d9606398f36efda3e6a851594e08d797118",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38785,7 +39054,7 @@
       {
         "name": "SubagentStartedData",
         "kind": "object",
-        "schemaSha256": "a873be2ad7c6b660fb5365b9690c851c55407c4a2eb145a3a7ed1355a58d7e20",
+        "schemaSha256": "8552fde78c3a5269fff29794c6d6cd351a2d6aec52afda620cd21ca888f26669",
         "propertyCount": 13,
         "requiredPropertyCount": 4,
         "hasOptionalProperties": true,
@@ -38796,8 +39065,8 @@
       {
         "name": "SubagentStartedEvent",
         "kind": "object",
-        "schemaSha256": "68597eaeb2e463c2006bd5e575c8d409f0917a1fa9a4bc700e691837d8e4e827",
-        "propertyCount": 8,
+        "schemaSha256": "4ca400d68a6459c98cb90bc5343d9c4264589e69171dbc7eade011c181faa8d5",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38845,8 +39114,8 @@
       {
         "name": "SystemMessageEvent",
         "kind": "object",
-        "schemaSha256": "1c26bb13803c724680a3b3610c036785f5cbf13946c54c0321ea1468f5c35a7a",
-        "propertyCount": 8,
+        "schemaSha256": "f3751864859b9295bee8afbdb8973d0f3a818932a7881f37a85dcdd9ee8fa330",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -38939,8 +39208,8 @@
       {
         "name": "SystemNotificationEvent",
         "kind": "object",
-        "schemaSha256": "0f583175d9b8f8108a6f3821c0d76c4ce3d6f8d17fe37cd5f87ef9947b0f1f0b",
-        "propertyCount": 8,
+        "schemaSha256": "7818523d4ad6a347833a490d01b909a406fb804940545b80be953214d9db2f99",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39099,8 +39368,8 @@
       {
         "name": "TaskCompleteEvent",
         "kind": "object",
-        "schemaSha256": "e4816d86ffae213134faccb7e39210ac44a1843929fa53d94e49b31f32dd9976",
-        "propertyCount": 8,
+        "schemaSha256": "66465c8db8ffc86dbcbf693b365b5faf9668beef792b00b2216306be0726a369",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39136,8 +39405,8 @@
       {
         "name": "TitleChangedEvent",
         "kind": "object",
-        "schemaSha256": "9cd971e2a0378a30703908cf0d775c6cacf3ac23ed27f6541d724cacc5067cdf",
-        "propertyCount": 8,
+        "schemaSha256": "710409217c8cd16a98c96b0667b0fba3b85da1c1f75d8b2b7fc9ea5cbe79f61c",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39158,8 +39427,8 @@
       {
         "name": "TodosChangedEvent",
         "kind": "object",
-        "schemaSha256": "ba9755b396a8647dba7194fa3782111192c792b62780991ad46642e560d0d684",
-        "propertyCount": 8,
+        "schemaSha256": "1925702b0070df4c4754ce2e12705f580b61b27d921e1e2b5a4b73856d48a91d",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39191,8 +39460,8 @@
       {
         "name": "ToolBaselineEvent",
         "kind": "object",
-        "schemaSha256": "085b5be289159095e6fda5478c380cf267692a2f8310a152b99d3f935a73bbb1",
-        "propertyCount": 8,
+        "schemaSha256": "9bdf95042f09c8766485427f6a1d96ca5c9ccc047019e9d85742ed681f7c9133",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39348,8 +39617,8 @@
       {
         "name": "ToolExecutionCompleteEvent",
         "kind": "object",
-        "schemaSha256": "c9e975d03bbb4d8f1bb616711d14f2084c09e103bf4c5f24949887b301f73558",
-        "propertyCount": 8,
+        "schemaSha256": "1db8371c511c5bb16265daab782988b5f40d62d29eae975d2681a0e25b35c140",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39564,8 +39833,8 @@
       {
         "name": "ToolExecutionProgressEvent",
         "kind": "object",
-        "schemaSha256": "000d89b512be46edbc0c2812aca210c3e8a60695aaf593ab2e87c5e5666280b5",
-        "propertyCount": 8,
+        "schemaSha256": "f213ee7a5ff1f7e074b78f9489f3ad9f50a771e48c100c92233301521ee38e5f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39586,8 +39855,8 @@
       {
         "name": "ToolExecutionStartEvent",
         "kind": "object",
-        "schemaSha256": "dc1a1f3be1c0e911381db7fabcfbf5bea3ab36e11dcedc767be38347829d40c4",
-        "propertyCount": 8,
+        "schemaSha256": "9ae7d87a0509b8508c12ef2523b2be16ac54921ba2aadbf56197f866756fb3d2",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39699,8 +39968,8 @@
       {
         "name": "ToolOutcomesRecordedEvent",
         "kind": "object",
-        "schemaSha256": "f0e4a7d3fa5a95b72a0a1d2bb7574841c5a39517f047c6081a0487dac7491bd1",
-        "propertyCount": 8,
+        "schemaSha256": "c2cec89d575a77e4802dea8aac96712eb87148e960151c4782c9c9900a900dc0",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39721,8 +39990,8 @@
       {
         "name": "ToolSearchActivatedEvent",
         "kind": "object",
-        "schemaSha256": "7f7d8aab55620461ca06cec2532be26839e5c57a1ad0069c4d6cf410c2015225",
-        "propertyCount": 8,
+        "schemaSha256": "b927ac8834e589eb62493f6f13e49bc9f6ac41321ce41810ef4eafa0bb468524",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39743,8 +40012,8 @@
       {
         "name": "ToolShellOutputEvent",
         "kind": "object",
-        "schemaSha256": "a6463ccb7a836bd18eecb40c350fb124a249eec2ffdeceaae770a9851f7e6096",
-        "propertyCount": 8,
+        "schemaSha256": "3d626422d683ee90b8a31def23319b6723e1b5ced33dfe830458455b4bc41746",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39767,6 +40036,17 @@
         ]
       },
       {
+        "name": "ToolTurnBudget",
+        "kind": "object",
+        "schemaSha256": "c9cf14780fb704bf8ab58eed870b689abd90387057ca5a3ad6adce0672978706",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "ToolUpdateData",
         "kind": "object",
         "schemaSha256": "4870c47a12c840261e3cb991e7f4447f963d17219cdedcb22eb661c60069290b",
@@ -39780,8 +40060,8 @@
       {
         "name": "ToolUpdateEvent",
         "kind": "object",
-        "schemaSha256": "8a55c710c62d294cc63016846e957dd963e3db6ac13136542032e07eb599410d",
-        "propertyCount": 8,
+        "schemaSha256": "703b1da36b2278c770a31c486cd9a4f6dc47bbe07b20a5856464dba41f70a3aa",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39802,8 +40082,8 @@
       {
         "name": "ToolUserRequestedEvent",
         "kind": "object",
-        "schemaSha256": "ee9fbf4686d46265178e4b9b6d9aeb0760cca604ad22fff4bae5841fc27625a3",
-        "propertyCount": 8,
+        "schemaSha256": "c8bb722238b81e1517fe66ea7c08bc94035f97de17a0aa2f3e9cadf40a10cc78",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39824,8 +40104,8 @@
       {
         "name": "ToolsUpdatedEvent",
         "kind": "object",
-        "schemaSha256": "d68c98a3f5de9efd07b746d5b1965653ffea6d90b30cd2aad6b02e94ea81018c",
-        "propertyCount": 8,
+        "schemaSha256": "e5200d2517ef77f1aec86633cb1923d91dccb059365130a1e655fe824c584485",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39846,8 +40126,8 @@
       {
         "name": "TruncationEvent",
         "kind": "object",
-        "schemaSha256": "6bcffcba25791dda59a44b53461ac37214ff14133f7b550d2eefb6d0b9daacc6",
-        "propertyCount": 8,
+        "schemaSha256": "1503374ca8ad07ab4af4efdad366b97089ba8bdcd50ed6861ab2e6ce4c380333",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39868,8 +40148,8 @@
       {
         "name": "UIEphemeralQueryEvent",
         "kind": "object",
-        "schemaSha256": "8dfb5a23cf158a0bfbec1647b110a04b57e31948de8b53df2c63f35e27d3e7ad",
-        "propertyCount": 8,
+        "schemaSha256": "162ee51f2f38fb07b2884ae5d91a313da2ae7c257366bba010eb6d047076832a",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39918,8 +40198,8 @@
       {
         "name": "UsageAccountingRecordEvent",
         "kind": "object",
-        "schemaSha256": "926edea88927d25e2d8cddc8814cb73248f08ee10ad7c881eb0d5f26486af48d",
-        "propertyCount": 8,
+        "schemaSha256": "e4858a02918b0f214e7031c81184fa0c15a82dfc5786426b878621c41498c984",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39940,8 +40220,8 @@
       {
         "name": "UsageCheckpointEvent",
         "kind": "object",
-        "schemaSha256": "01c23722e8826df98494477c900208f4798256303d549eb17a26ce824dad0356",
-        "propertyCount": 8,
+        "schemaSha256": "9cf12ebcf464bf640a14603378300e5dffda9c895170c911bf8026e2fc42a535",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -39984,8 +40264,8 @@
       {
         "name": "UsageInfoEvent",
         "kind": "object",
-        "schemaSha256": "6caa8c2f390d64137556f482ef5d50e7b18c8560813f08137d58498f39d70f25",
-        "propertyCount": 8,
+        "schemaSha256": "b6b1ceb8fcf5706b649c6de9d5d695558925e5e1571142df17823c8d165a4de4",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40094,8 +40374,8 @@
       {
         "name": "UserInputCompletedEvent",
         "kind": "object",
-        "schemaSha256": "359fc0bfec570eda4a52d250d8470129b8e9b431c6b277a3f32bf90b50a620b8",
-        "propertyCount": 8,
+        "schemaSha256": "f1aff413b07c9c9ca5ea7df19d87acc2260eaf139c895669c1b79cd5edb1546e",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40138,8 +40418,8 @@
       {
         "name": "UserInputRequestedEvent",
         "kind": "object",
-        "schemaSha256": "6a908a6430f2dc2fbcfb5bd0283ba1c4132b3274a3d5d8eef1af3ae86c367890",
-        "propertyCount": 8,
+        "schemaSha256": "82982606cbca9cf7410f7c28a9f98bb29cebec2a91ec8df8e6fc3491acc339c9",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40191,8 +40471,8 @@
       {
         "name": "UserMessageEvent",
         "kind": "object",
-        "schemaSha256": "682b00967574e83c0e3632123cd9fcd2c5bf00ffdcd380d696b7d1a37a97ec93",
-        "propertyCount": 8,
+        "schemaSha256": "5c8e0bb57ead4957534982e751242f66d43fd473bbaecb97268095049a1d7540",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40202,12 +40482,12 @@
       {
         "name": "UserToolSessionApproval",
         "kind": "union",
-        "schemaSha256": "426be7ef1237de8d7fd2e059f223795f9047c9e4e47160e835d3549d0c3387e8",
+        "schemaSha256": "480287611f273ac21d04cbf567db674d686fbc72107cd65e30450ec032ebfe60",
         "propertyCount": 0,
         "requiredPropertyCount": 0,
         "hasOptionalProperties": false,
         "hasMap": false,
-        "unionVariantCount": 10,
+        "unionVariantCount": 11,
         "knownStringValues": []
       },
       {
@@ -40244,6 +40524,17 @@
         "knownStringValues": []
       },
       {
+        "name": "UserToolSessionApprovalExtensionLaunch",
+        "kind": "object",
+        "schemaSha256": "d12b6d754f9d0d7c16ba40fc27cef3b93ad5ca2cc89f271a10e093c4df73de69",
+        "propertyCount": 2,
+        "requiredPropertyCount": 2,
+        "hasOptionalProperties": false,
+        "hasMap": false,
+        "unionVariantCount": 0,
+        "knownStringValues": []
+      },
+      {
         "name": "UserToolSessionApprovalExtensionManagement",
         "kind": "object",
         "schemaSha256": "7604b47c911794dd0d8db94b2b5280f6b3acd23805e7af6115a5b873de9db18d",
@@ -40257,7 +40548,7 @@
       {
         "name": "UserToolSessionApprovalExtensionPermissionAccess",
         "kind": "object",
-        "schemaSha256": "ad85a2981626c628fb510adddc886c93cbb8b4fd032893b7ada7a727ad92a00d",
+        "schemaSha256": "e8ee52e3ba8975da9a033240d565b85df8f9906f3c620b427291c9e0987098d4",
         "propertyCount": 2,
         "requiredPropertyCount": 2,
         "hasOptionalProperties": false,
@@ -40349,8 +40640,8 @@
       {
         "name": "WarningEvent",
         "kind": "object",
-        "schemaSha256": "7f232a4adb1afdb6cce904107d5219ea203cb3cf14d52bd8dfd707b12ca70614",
-        "propertyCount": 8,
+        "schemaSha256": "7c54b509b0232b2df0df96a6483f5e785d667cfc4b1607b6c8343380ab9701b4",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40396,8 +40687,8 @@
       {
         "name": "WorkflowRunSettledEvent",
         "kind": "object",
-        "schemaSha256": "6e16d1ef1dde497ee8e8d0ee2d871268869809bdfbdb4109bc31308987945ecd",
-        "propertyCount": 8,
+        "schemaSha256": "0b0c027661db0e8619b55fff20b9070f96ef5e3c97ce34f5b95cc01c3a31267f",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40435,8 +40726,8 @@
       {
         "name": "WorkflowRunStartedEvent",
         "kind": "object",
-        "schemaSha256": "d0f0d8dd0878561db14227d11df84b517c1347088b0109e303d1e29fbcd538a5",
-        "propertyCount": 8,
+        "schemaSha256": "b3c7f03d1d9b8570442ef7c52e73266cd1355832f2f4cdac257d135947d6f0a1",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40457,8 +40748,8 @@
       {
         "name": "WorkflowRunUpdatedEvent",
         "kind": "object",
-        "schemaSha256": "8a472254cd4837d8356e2acb5e05058c13483edba247eccea04ca1da4901efc4",
-        "propertyCount": 8,
+        "schemaSha256": "f44d5873cd6c3c7dfbd0e2146693623089fcb8f3ea2e7e81ba75c538236dbdc0",
+        "propertyCount": 9,
         "requiredPropertyCount": 6,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40504,8 +40795,8 @@
       {
         "name": "WorkspaceFileChangedEvent",
         "kind": "object",
-        "schemaSha256": "d55c4caad1886960d003d3489c87556b5c492e1e0b6787814b33c95f9f46f13f",
-        "propertyCount": 8,
+        "schemaSha256": "1999e5cc8492d7ff097d3f464cbc85ffc69f0ef1d4bbe6f025f92612c37111c4",
+        "propertyCount": 9,
         "requiredPropertyCount": 5,
         "hasOptionalProperties": true,
         "hasMap": false,
@@ -40630,6 +40921,7 @@
       "sessions.listNonEmptySessionIds",
       "sessions.findByTaskId",
       "sessions.findByPrefix",
+      "sessions.findByName",
       "sessions.getLastForContext",
       "sessions.hasEvents",
       "sessions.getEventFilePath",
@@ -40916,7 +41208,9 @@
       "catalog.getGeneratedFeed",
       "catalog.select",
       "catalog.planInstallFromReference",
+      "agents.validateSpawnAgentName",
       "agents.validateName",
+      "agents.validateSpawnCwd",
       "agents.listToolCategories",
       "agents.generateFileContent",
       "agents.createFile",
@@ -40931,6 +41225,7 @@
       "globalState.loadForConfigDir",
       "globalState.writeKey",
       "commands.list",
+      "contextBoard.getConsolidationPrompt",
       "settings.removeRawKey",
       "settings.redactValueForDisplay",
       "gitHubRepository.atPath",
@@ -41105,6 +41400,7 @@
       "session.remote.sendWithAdmission",
       "session.remote.publishState",
       "session.remote.attachMissionControl",
+      "session.remote.waitForStart",
       "session.remote.enable",
       "session.remote.disable",
       "session.remote.notifySteerableChanged",
@@ -41299,6 +41595,7 @@
       "session.tools.getBuiltinAgentFlagOverrides",
       "session.tools.taskCompleteEventData",
       "session.tools.handlePendingToolCall",
+      "session.tools.reportProgress",
       "session.tools.listPendingRequests",
       "session.tools.initializeAndValidate",
       "session.tools.getCurrentMetadata",

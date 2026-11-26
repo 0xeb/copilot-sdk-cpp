@@ -385,6 +385,28 @@ inline void from_json(const json& j, ToolResultObject& r)
         r.tool_references = j.at("toolReferences").get<std::vector<std::string>>();
 }
 
+namespace detail
+{
+/// `maxToolTurns` on the wire: a non-negative integer that fits in 32 bits.
+inline std::optional<std::uint32_t> read_tool_turns(const json& j)
+{
+    const auto it = j.find("maxToolTurns");
+    if (it == j.end() || !it->is_number_integer())
+        return std::nullopt;
+    if (it->is_number_unsigned())
+    {
+        const auto value = it->get<std::uint64_t>();
+        if (value <= 0xFFFFFFFFull)
+            return static_cast<std::uint32_t>(value);
+        return std::nullopt;
+    }
+    const auto value = it->get<std::int64_t>();
+    if (value < 0 || value > 0xFFFFFFFFll)
+        return std::nullopt;
+    return static_cast<std::uint32_t>(value);
+}
+} // namespace detail
+
 /// Information about a tool invocation from the server
 struct ToolInvocation
 {
@@ -399,6 +421,21 @@ struct ToolInvocation
     std::optional<std::string> request_id;
     /// Cancelled when the runtime completes this request or the session disconnects.
     CancellationToken cancellation;
+
+    /// Report progress for this call while it runs. The runtime emits a
+    /// `tool.execution_progress` session event with this call's `tool_call_id` and
+    /// `message` verbatim. Best-effort: delivery failures never fail the tool call, and
+    /// progress for a completed call is dropped. Does nothing after the handler has
+    /// returned, once the session is closed, or for an invocation the SDK did not create.
+    /// @experimental
+    void report_progress(const std::string& message) const
+    {
+        if (progress_reporter)
+            progress_reporter(message);
+    }
+
+    /// Set by the SDK for a pending runtime tool call; see report_progress().
+    std::function<void(const std::string&)> progress_reporter;
 };
 
 /// Tool handler function type
@@ -2387,6 +2424,9 @@ struct CustomAgentConfig
     std::optional<std::string> model_policy;
     /// Reasoning effort for this agent's model.
     std::optional<std::string> reasoning_effort;
+    /// Maximum logical model turns per request as a local subagent. Overrides the
+    /// inherited limit.
+    std::optional<std::uint32_t> max_tool_turns;
 };
 
 inline void to_json(json& j, const CustomAgentConfig& c)
@@ -2412,6 +2452,8 @@ inline void to_json(json& j, const CustomAgentConfig& c)
         j["modelPolicy"] = *c.model_policy;
     if (c.reasoning_effort)
         j["reasoningEffort"] = *c.reasoning_effort;
+    if (c.max_tool_turns)
+        j["maxToolTurns"] = *c.max_tool_turns;
 }
 
 inline void from_json(const json& j, CustomAgentConfig& c)
@@ -2438,6 +2480,7 @@ inline void from_json(const json& j, CustomAgentConfig& c)
         c.model_policy = j.at("modelPolicy").get<std::string>();
     if (j.contains("reasoningEffort") && j["reasoningEffort"].is_string())
         c.reasoning_effort = j["reasoningEffort"].get<std::string>();
+    c.max_tool_turns = detail::read_tool_turns(j);
 }
 
 struct DefaultAgentConfig
@@ -2551,6 +2594,24 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
     }
 )
 
+/// Controls which agents receive a tool. A visibility policy, not an execution permission.
+enum class ToolExposure
+{
+    /// Normal selection: the default agent receives the tool, unrestricted custom agents
+    /// inherit it, and custom agents with tool lists receive it only when listed.
+    Automatic,
+    /// Only custom agents whose `tools` list names the tool receive it.
+    Explicit
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    ToolExposure,
+    {
+        {ToolExposure::Automatic, "automatic"},
+        {ToolExposure::Explicit, "explicit"},
+    }
+)
+
 /// Builder for source-qualified available/excluded tool filters.
 class ToolSet
 {
@@ -2647,6 +2708,9 @@ struct Tool
 
     /// Lazy-loading policy for tool search.
     std::optional<ToolDefer> defer;
+
+    /// Which agents receive this tool. Unset means ToolExposure::Automatic.
+    std::optional<ToolExposure> exposure;
 
     /// Opaque host-defined metadata, preserved on the wire.
     std::optional<json> metadata;
@@ -3445,6 +3509,9 @@ struct CreateSessionFilesystemOptions
 struct SessionExecutionOptions
 {
     std::optional<SessionLimitsConfig> limits;
+    /// Default maximum logical model turns per request. Zero prevents any primary model
+    /// call.
+    std::optional<std::uint32_t> max_tool_turns;
     std::optional<AutopilotOptions> autopilot;
 };
 
@@ -3696,6 +3763,13 @@ struct CreateSessionOptions
     /// change overrides; a cold resume without it restores defaults. Requires a supporting
     /// runtime.
     std::optional<ExtensionSources> extension_sources;
+    /// Standalone extension.mjs, extension.cjs or extension.js modules supplied and trusted
+    /// by the host. Discovered entries and filesystem aliases are unsupported; exact
+    /// discovered overlaps fail per entry. Relative entries resolve against this request's
+    /// working directory. Does not enable extensions or grant trust. Re-supply on an owning
+    /// resume; omission or an empty list removes previous explicit entries. Requires a
+    /// supporting runtime.
+    std::optional<std::vector<std::string>> extension_paths;
     SessionInteractionOptions interaction;
     std::optional<SystemMessageConfig> system_message;
     SessionAgentOptions agents;
@@ -3737,6 +3811,13 @@ struct ResumeSessionOptions
     /// change overrides; a cold resume without it restores defaults. Requires a supporting
     /// runtime.
     std::optional<ExtensionSources> extension_sources;
+    /// Standalone extension.mjs, extension.cjs or extension.js modules supplied and trusted
+    /// by the host. Discovered entries and filesystem aliases are unsupported; exact
+    /// discovered overlaps fail per entry. Relative entries resolve against this request's
+    /// working directory. Does not enable extensions or grant trust. Re-supply on an owning
+    /// resume; omission or an empty list removes previous explicit entries. Requires a
+    /// supporting runtime.
+    std::optional<std::vector<std::string>> extension_paths;
     SessionInteractionOptions interaction;
     std::optional<SystemMessageConfig> system_message;
     SessionAgentOptions agents;
@@ -3830,6 +3911,9 @@ struct MessageOptions
     std::optional<json> response_schema;
     /// Caller-chosen id echoed on the resulting turn events.
     std::optional<std::string> client_turn_id;
+    /// Overrides the session's logical model-turn limit for this request. Not supported
+    /// for immediate steering.
+    std::optional<std::uint32_t> max_tool_turns;
 };
 
 inline void to_json(json& j, const MessageOptions& o)
@@ -3849,6 +3933,8 @@ inline void to_json(json& j, const MessageOptions& o)
         j["source"] = o.source->value();
     if (o.client_turn_id)
         j["clientTurnId"] = *o.client_turn_id;
+    if (o.max_tool_turns)
+        j["maxToolTurns"] = *o.max_tool_turns;
     if (o.response_schema)
         j["responseFormat"] = {
             {"type", "json_schema"},
@@ -3871,6 +3957,7 @@ inline void from_json(const json& j, MessageOptions& o)
         o.display_prompt = j.at("displayPrompt").get<std::string>();
     if (j.contains("clientTurnId") && j["clientTurnId"].is_string())
         o.client_turn_id = j.at("clientTurnId").get<std::string>();
+    o.max_tool_turns = detail::read_tool_turns(j);
     if (j.contains("responseFormat") && j["responseFormat"].is_object())
     {
         const auto& format = j["responseFormat"];
@@ -4850,6 +4937,12 @@ struct ClientObservabilityOptions
 
 struct ClientGitHubOptions
 {
+    /// GitHub.com OAuth app client ID for runtime-managed sign-in and Entra-to-GitHub token
+    /// exchange. Supply with client_secret, or omit both to use the built-in app.
+    std::optional<std::string> client_id;
+    /// Secret matching client_id. Not used for enterprise-host sign-in or for an
+    /// already-issued GitHub token.
+    std::optional<std::string> client_secret;
     /// Forwarded via COPILOT_SDK_AUTH_TOKEN + --auth-token-env.
     std::optional<std::string> token;
     /// Defaults to true unless token is set.

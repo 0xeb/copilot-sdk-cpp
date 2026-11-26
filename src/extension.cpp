@@ -27,6 +27,8 @@ std::future<ExtensionSession> join_session(JoinSessionOptions options)
             session_options.tools.image_generation.reset();
             // Only the session's owning connection may set extension sources.
             session_options.extension_sources.reset();
+            // NODEJS REFERENCE: extension.ts joinSession (delete resumeOptions.extensionPaths)
+            session_options.extension_paths.reset();
             // Only the session's owning connection may declare a host-policy pre-check.
             session_options.permissions.host_policy_pre_check.reset();
             if (!session_options.suppress_resume_event)

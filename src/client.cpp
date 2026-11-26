@@ -332,6 +332,19 @@ void apply_granted_environment(
 // NODEJS REFERENCE: client.ts constructor
 Client::Client(ClientOptions options) : options_(std::move(options))
 {
+    // NODEJS REFERENCE: client.ts constructor (github.clientId / clientSecret pairing)
+    const auto blank = [](const std::optional<std::string>& value)
+    {
+        return !value || std::all_of(
+                             value->begin(),
+                             value->end(),
+                             [](unsigned char c) { return std::isspace(c) != 0; }
+                         );
+    };
+    if ((options_.github.client_id || options_.github.client_secret) &&
+        (blank(options_.github.client_id) || blank(options_.github.client_secret)))
+        throw std::invalid_argument("github.clientId and github.clientSecret must both be non-empty");
+
     runtime_ = options_.runtime ? *options_.runtime : RuntimeConnection::for_default();
     const auto kind = runtime_.kind;
     const bool attached =
@@ -1120,10 +1133,12 @@ std::vector<StopError> Client::stop_impl(std::chrono::steady_clock::time_point d
                       std::chrono::duration_cast<std::chrono::milliseconds>(kCleanupTimeout).count()
                   ) +
                   "ms shutdown timeout";
-    for (const auto& session : sessions)
+    // NODEJS REFERENCE: client.ts doStop (Promise.all over the active sessions)
+    // Sessions detach concurrently; each keeps its own retry loop under the shared deadline.
+    std::vector<std::optional<std::string>> detach_errors(sessions.size());
+    const auto detach_one = [&](std::size_t index)
     {
-        if (!session->is_confirmed())
-            continue;
+        const auto& session = sessions[index];
         std::optional<std::string> last_error;
         int attempts = 0;
         for (int attempt = 1; attempt <= 3; ++attempt)
@@ -1184,12 +1199,32 @@ std::vector<StopError> Client::stop_impl(std::chrono::steady_clock::time_point d
                 ));
         }
         if (last_error)
-            errors.push_back(StopError{
-                "Failed to disconnect session " + session->session_id() + " after " +
-                std::to_string(attempts) + (attempts == 1 ? " attempt: " : " attempts: ") +
-                *last_error
-            });
+            detach_errors[index] = "Failed to disconnect session " + session->session_id() +
+                                   " after " + std::to_string(attempts) +
+                                   (attempts == 1 ? " attempt: " : " attempts: ") + *last_error;
+    };
+    {
+        std::vector<std::thread> detaches;
+        detaches.reserve(sessions.size());
+        for (std::size_t index = 0; index < sessions.size(); ++index)
+        {
+            if (!sessions[index]->is_confirmed())
+                continue;
+            try
+            {
+                detaches.emplace_back(detach_one, index);
+            }
+            catch (const std::system_error&)
+            {
+                detach_one(index);
+            }
+        }
+        for (auto& detach : detaches)
+            detach.join();
     }
+    for (auto& error : detach_errors)
+        if (error)
+            errors.push_back(StopError{std::move(*error)});
 
     {
         std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
@@ -2249,6 +2284,10 @@ void Client::verify_protocol_version()
             if (options_.entra->token_provider)
                 params["entraTokenProvider"] = true;
         }
+        if (options_.github.client_id)
+            params["githubClientId"] = *options_.github.client_id;
+        if (options_.github.client_secret)
+            params["githubClientSecret"] = *options_.github.client_secret;
         params["supportedTaskKinds"] = json::array({"agent", "client", "shell"});
         response = rpc_->invoke(copilot::rpc::methods::kConnect, params).get();
         if (options_.entra && options_.entra->token_provider &&
@@ -2265,6 +2304,10 @@ void Client::verify_protocol_version()
         // A legacy runtime without `connect` cannot carry the Entra registration.
         if (options_.entra)
             throw std::runtime_error("This runtime does not support Entra client configuration.");
+        if (options_.github.client_id)
+            throw std::runtime_error(
+                "This runtime does not support GitHub OAuth client configuration."
+            );
         response = rpc_->invoke(copilot::rpc::methods::kPing, json{{"message", nullptr}}).get();
     }
 

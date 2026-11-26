@@ -278,6 +278,7 @@ template <typename Options> void read_common(const json& config, Options& option
 
     const auto& execution = group_of(config, "execution");
     read(execution, "limits", options.execution.limits);
+    read(execution, "maxToolTurns", options.execution.max_tool_turns);
     read(execution, "autopilot", options.execution.autopilot);
 
     const auto& permissions = group_of(config, "permissions");

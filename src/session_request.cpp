@@ -181,6 +181,7 @@ json build_session_request_common(
     put(request, "configDirectory", options.config_directory);
     put(request, "enableConfigDiscovery", options.enable_config_discovery);
     put(request, "extensionSources", options.extension_sources);
+    put(request, "extensionPaths", options.extension_paths);
     put(request, "diagnostics", options.diagnostics);
     put(request, "lifecycleDiagnostics", options.lifecycle_diagnostics);
 
@@ -310,6 +311,7 @@ json build_session_request_common(
 
     json execution = json::object();
     put(execution, "limits", options.execution.limits);
+    put(execution, "maxToolTurns", options.execution.max_tool_turns);
     put(execution, "autopilot", options.execution.autopilot);
     request["execution"] = std::move(execution);
 
@@ -452,6 +454,8 @@ json build_tool_definition(const Tool& tool)
     result["hasHandler"] = static_cast<bool>(tool.handler);
     if (tool.defer)
         result["defer"] = *tool.defer;
+    if (tool.exposure)
+        result["exposure"] = *tool.exposure;
     if (tool.metadata)
         result["metadata"] = *tool.metadata;
     result["isTerminal"] = tool.is_terminal;

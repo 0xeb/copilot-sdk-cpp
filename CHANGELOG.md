@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.4.9
+
+Targets Copilot CLI 1.0.117-2 (SDK protocol 4, unchanged). Additive; no breaking changes.
+
+- Regenerate the protocol catalog from CLI 1.0.117-2 (973 RPC methods, 185 event
+  variants). New methods include `session.tools.reportProgress`, `sessions.findByName`,
+  `agents.validateSpawnAgentName`/`validateSpawnCwd`, `session.remote.waitForStart` and
+  `contextBoard.getConsolidationPrompt`; the permission kind `extension-permission-access`
+  is now `extension-launch`.
+- `ToolInvocation::report_progress(message)` (experimental): a running tool handler can
+  report progress, which the runtime emits as `tool.execution_progress`. Best-effort; it
+  does nothing once the handler has returned.
+- `Tool::exposure` (`ToolExposure::Automatic` / `Explicit`): an explicit tool is offered
+  only to custom agents whose `tools` list names it.
+- `max_tool_turns` limits logical model turns per request: on
+  `SessionExecutionOptions` (create/resume), per message on `MessageOptions`, and per
+  agent on `CustomAgentConfig`. Zero prevents any model call.
+- `extension_paths` on create/resume options: host-supplied standalone extension
+  modules. `join_session()` strips it.
+- `ClientGitHubOptions::client_id` / `client_secret`: a GitHub OAuth app for
+  runtime-managed sign-in, sent on `connect`. Both or neither must be set; a runtime
+  without `connect` fails the start.
+- `stop()` detaches sessions concurrently under its shared deadline instead of one
+  after another.
+- Events: `SessionEvent::occurred_at`, `AssistantTurnStartData::tool_turn_budget`, and
+  `max_tool_turns` on `SessionStartData`/`SessionResumeData`.
+
 ## 0.4.8
 
 Unicode on Windows. No API changes.

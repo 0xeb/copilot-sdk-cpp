@@ -6,7 +6,14 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.8
+## Version 0.4.9
+
+Targets Copilot CLI 1.0.117-2. Adds tool progress reporting
+(`ToolInvocation::report_progress`), tool exposure, `max_tool_turns` limits,
+`extension_paths`, a GitHub OAuth app option, and concurrent session detach in
+`stop()`. See `CHANGELOG.md`.
+
+### 0.4.8
 
 Unicode on Windows: CLI paths, working directories and environment values outside the
 active code page (for example a Japanese user folder on an en-US machine) now work. All
@@ -61,6 +68,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.9           | 4                 | 1.0.117-2              | 1.0.117-2               |
 | 0.4.8           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.7           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6.1         | 4                 | 1.0.116-3              | 1.0.116-3               |

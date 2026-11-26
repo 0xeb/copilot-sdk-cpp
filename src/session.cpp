@@ -889,7 +889,51 @@ void Session::execute_external_tool(
                         .request_id = request.request_id,
                         .cancellation = source.token(),
                     };
-                    const auto result = tool.handler(invocation);
+                    // NODEJS REFERENCE: session.ts _executeToolAndRespond (reportProgress)
+                    // A handler may keep a copy of its invocation, so the reporter goes
+                    // inert once the handler returns and never keeps the session alive.
+                    auto reporting = std::make_shared<std::atomic<bool>>(true);
+                    std::weak_ptr<Session> weak = weak_from_this();
+                    invocation.progress_reporter =
+                        [reporting, weak, request_id = request.request_id](const std::string& message)
+                    {
+                        if (!reporting->load(std::memory_order_acquire))
+                            return;
+                        const auto self = weak.lock();
+                        if (!self || !self->client_ || self->dispatch_stopped_ ||
+                            self->tool_invocations_cancelled_.load(std::memory_order_acquire))
+                            return;
+                        try
+                        {
+                            self->client_->rpc_client_shared()
+                                ->invoke(
+                                    copilot::rpc::methods::kSessionToolsReportProgress,
+                                    json{
+                                        {"sessionId", self->session_id_},
+                                        {"requestId", request_id},
+                                        {"message", message},
+                                    }
+                                )
+                                .get();
+                        }
+                        catch (...)
+                        {
+                            // Progress is best-effort and must never fail the tool call.
+                        }
+                    };
+                    ToolResultObject result;
+                    {
+                        // Inert as soon as the handler returns, before the result is sent.
+                        struct StopReporting
+                        {
+                            std::atomic<bool>& flag;
+                            ~StopReporting()
+                            {
+                                flag.store(false, std::memory_order_release);
+                            }
+                        } stop_reporting{*reporting};
+                        result = tool.handler(invocation);
+                    }
                     if (claim_external_tool(request.request_id))
                     {
                         claimed = true;

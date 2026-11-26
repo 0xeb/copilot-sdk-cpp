@@ -371,6 +371,8 @@ struct SessionStartData
     std::string copilot_version;
     std::string start_time; // ISO 8601
     std::optional<std::string> selected_model;
+    /// Default maximum logical model turns per request.
+    std::optional<std::uint32_t> max_tool_turns;
 };
 
 inline void from_json(const json& j, SessionStartData& d)
@@ -382,18 +384,22 @@ inline void from_json(const json& j, SessionStartData& d)
     j.at("startTime").get_to(d.start_time);
     if (j.contains("selectedModel"))
         d.selected_model = j.at("selectedModel").get<std::string>();
+    d.max_tool_turns = detail::read_tool_turns(j);
 }
 
 struct SessionResumeData
 {
     std::string resume_time; // ISO 8601
     double event_count;
+    /// Default maximum logical model turns per request, when changed on resume.
+    std::optional<std::uint32_t> max_tool_turns;
 };
 
 inline void from_json(const json& j, SessionResumeData& d)
 {
     j.at("resumeTime").get_to(d.resume_time);
     j.at("eventCount").get_to(d.event_count);
+    d.max_tool_turns = detail::read_tool_turns(j);
 }
 
 struct SessionErrorData
@@ -552,14 +558,31 @@ struct PendingMessagesModifiedData
 
 inline void from_json(const json&, PendingMessagesModifiedData&) {}
 
+/// Maximum and consumed logical model turns for the active request.
+struct ToolTurnBudget
+{
+    std::uint64_t limit = 0;
+    std::uint64_t used = 0;
+};
+
 struct AssistantTurnStartData
 {
     std::string turn_id;
+    /// Internal-visibility runtime accounting; present when the runtime reports it.
+    std::optional<ToolTurnBudget> tool_turn_budget;
 };
 
 inline void from_json(const json& j, AssistantTurnStartData& d)
 {
     j.at("turnId").get_to(d.turn_id);
+    if (j.contains("toolTurnBudget") && j["toolTurnBudget"].is_object())
+    {
+        const auto& budget = j["toolTurnBudget"];
+        d.tool_turn_budget = ToolTurnBudget{
+            .limit = budget.value("limit", std::uint64_t{0}),
+            .used = budget.value("used", std::uint64_t{0}),
+        };
+    }
 }
 
 struct AssistantIntentData
@@ -3359,6 +3382,10 @@ struct SessionEvent
 {
     std::string id;
     std::string timestamp; // ISO 8601
+    /// When the event happened, if it was recorded elsewhere and copied into this session
+    /// later (e.g. a sub-agent's event forwarded to its parent); `timestamp` is when this
+    /// copy was recorded.
+    std::optional<std::string> occurred_at;
     std::optional<std::string> parent_id;
     std::optional<bool> ephemeral;
     std::optional<std::string> agent_id; // sub-agent instance identifier
@@ -3396,6 +3423,8 @@ inline SessionEvent parse_session_event(const json& j)
     // Parse common fields
     event.id = j.at("id").get<std::string>();
     event.timestamp = j.at("timestamp").get<std::string>();
+    if (j.contains("occurredAt") && j.at("occurredAt").is_string())
+        event.occurred_at = j.at("occurredAt").get<std::string>();
     if (j.contains("parentId") && !j.at("parentId").is_null())
         event.parent_id = j.at("parentId").get<std::string>();
     if (j.contains("ephemeral"))

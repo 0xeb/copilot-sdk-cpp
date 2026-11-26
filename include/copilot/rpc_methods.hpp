@@ -59,6 +59,13 @@ inline constexpr const char* kEntraTokenGetToken = "entraToken.getToken";
 // Session lifecycle (top-level)
 inline constexpr const char* kSessionsFork = "sessions.fork";
 inline constexpr const char* kSessionsConnect = "sessions.connect";
+inline constexpr const char* kSessionsFindByName = "sessions.findByName";
+
+// Agent spawn validation and context board
+inline constexpr const char* kAgentsValidateSpawnAgentName = "agents.validateSpawnAgentName";
+inline constexpr const char* kAgentsValidateSpawnCwd = "agents.validateSpawnCwd";
+inline constexpr const char* kContextBoardGetConsolidationPrompt =
+    "contextBoard.getConsolidationPrompt";
 
 // =============================================================================
 // Server-to-client requests (the runtime calls these on the SDK client)
@@ -156,6 +163,7 @@ inline constexpr const char* kSessionExtensionsReload = "session.extensions.relo
 
 inline constexpr const char* kSessionToolsHandlePendingToolCall =
     "session.tools.handlePendingToolCall";
+inline constexpr const char* kSessionToolsReportProgress = "session.tools.reportProgress";
 
 inline constexpr const char* kSessionCommandsList = "session.commands.list";
 inline constexpr const char* kSessionCommandsInvoke = "session.commands.invoke";
@@ -187,6 +195,7 @@ inline constexpr const char* kSessionUsageGetMetrics = "session.usage.getMetrics
 
 inline constexpr const char* kSessionRemoteEnable = "session.remote.enable";
 inline constexpr const char* kSessionRemoteDisable = "session.remote.disable";
+inline constexpr const char* kSessionRemoteWaitForStart = "session.remote.waitForStart";
 
 // =============================================================================
 // Legacy / pre-v3 helpers that the C++ port still invokes against the CLI.

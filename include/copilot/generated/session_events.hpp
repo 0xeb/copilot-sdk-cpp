@@ -9,7 +9,7 @@
 namespace copilot::generated::events
 {
 
-inline constexpr std::size_t kGeneratedDefinitionCount = 764;
+inline constexpr std::size_t kGeneratedDefinitionCount = 768;
 inline constexpr std::array<std::string_view, 185> kSessionEventWireTypes{{
     "session.sandbox_state_changed",
     "ide.connection_changed",
@@ -218,7 +218,7 @@ struct AbortEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -283,7 +283,7 @@ struct AgentInterruptedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -322,7 +322,7 @@ struct AssistantFusionPhaseActivityEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -335,7 +335,7 @@ struct AssistantFusionPhaseCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -348,7 +348,7 @@ struct AssistantFusionPhaseFailedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -361,7 +361,7 @@ struct AssistantFusionPhaseStartedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -387,7 +387,7 @@ struct AssistantIdleEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -413,7 +413,7 @@ struct AssistantIntentEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -452,7 +452,7 @@ struct AssistantMessageDeltaEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -465,7 +465,7 @@ struct AssistantMessageEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -517,7 +517,7 @@ struct AssistantMessageStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -608,7 +608,7 @@ struct AssistantReasoningDeltaEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -621,7 +621,7 @@ struct AssistantReasoningEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -647,7 +647,7 @@ struct AssistantServerToolProgressEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -673,7 +673,7 @@ struct AssistantStreamingDeltaEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -699,7 +699,7 @@ struct AssistantToolCallDeltaEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -725,7 +725,7 @@ struct AssistantTurnEndEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -751,7 +751,7 @@ struct AssistantTurnRetryEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -764,7 +764,7 @@ struct AssistantTurnStartDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t property_count = 6;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -777,7 +777,7 @@ struct AssistantTurnStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -842,7 +842,7 @@ struct AssistantUsageEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1258,7 +1258,7 @@ struct AutoModeRecoveryConsentCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1284,7 +1284,7 @@ struct AutoModeRecoveryConsentRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1310,7 +1310,7 @@ struct AutoModeRecoveryOutcomeEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1336,7 +1336,7 @@ struct AutoModeResolvedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1375,7 +1375,7 @@ struct AutoModeSwitchCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1401,7 +1401,7 @@ struct AutoModeSwitchRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1453,7 +1453,7 @@ struct AutoTierRecommendationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1479,7 +1479,7 @@ struct AutoTierSwitchFailedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1518,7 +1518,7 @@ struct AutopilotObjectiveChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1570,7 +1570,7 @@ struct AutopilotStoppedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1596,7 +1596,7 @@ struct BackgroundTasksChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1622,7 +1622,7 @@ struct BinaryAssetEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1700,7 +1700,7 @@ struct CanvasClosedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1726,7 +1726,7 @@ struct CanvasOpenedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1752,7 +1752,7 @@ struct CanvasRecordedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1804,7 +1804,7 @@ struct CanvasRegistryChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1830,7 +1830,7 @@ struct CanvasRemovedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1856,7 +1856,7 @@ struct CanvasUnavailableEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -1882,7 +1882,7 @@ struct CapabilitiesChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2051,7 +2051,7 @@ struct CommandCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2077,7 +2077,7 @@ struct CommandExecuteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2103,7 +2103,7 @@ struct CommandQueuedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2142,7 +2142,7 @@ struct CommandsChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2220,7 +2220,7 @@ struct CompactionCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2272,7 +2272,7 @@ struct CompactionStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2298,7 +2298,7 @@ struct CompactionSummarizedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2337,7 +2337,7 @@ struct CompletionReceiptEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2402,7 +2402,7 @@ struct ContextChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2428,7 +2428,7 @@ struct ContextClearedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2480,7 +2480,7 @@ struct CustomAgentsUpdatedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2506,7 +2506,7 @@ struct CustomNotificationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2597,7 +2597,7 @@ struct ElicitationCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2623,7 +2623,7 @@ struct ElicitationRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2701,7 +2701,7 @@ struct ErrorEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2740,7 +2740,7 @@ struct ExitPlanModeCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2766,7 +2766,7 @@ struct ExitPlanModeRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2792,7 +2792,7 @@ struct ExtensionsAttachmentsPushedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2818,7 +2818,7 @@ struct ExtensionsLoadedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2847,7 +2847,7 @@ struct ExtensionsLoadedExtensionSourceSchemaTag
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
     inline static constexpr std::size_t union_variant_count = 0;
-    inline static constexpr std::array<std::string_view, 4> known_string_values{"project", "user", "plugin", "session"};
+    inline static constexpr std::array<std::string_view, 5> known_string_values{"project", "user", "plugin", "session", "explicit"};
 };
 using ExtensionsLoadedExtensionSource = detail::SchemaValue<ExtensionsLoadedExtensionSourceSchemaTag>;
 
@@ -2883,7 +2883,7 @@ struct ExternalToolCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2909,7 +2909,7 @@ struct ExternalToolRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2948,7 +2948,7 @@ struct FusionChangeCheckpointEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -2987,7 +2987,7 @@ struct FusionCommitStartedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3013,7 +3013,7 @@ struct FusionCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3091,7 +3091,7 @@ struct FusionHandoffEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3260,7 +3260,7 @@ struct FusionResolvedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3286,7 +3286,7 @@ struct FusionRouteFailedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3312,7 +3312,7 @@ struct FusionRouteStartedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3403,7 +3403,7 @@ struct HandoffEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3481,7 +3481,7 @@ struct HookEndEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3507,7 +3507,7 @@ struct HookProgressEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3533,7 +3533,7 @@ struct HookStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3585,7 +3585,7 @@ struct HumanResponseRecordedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3624,7 +3624,7 @@ struct IdeAddFileReferenceEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3650,7 +3650,7 @@ struct IdeConnectionChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3689,7 +3689,7 @@ struct IdeElicitationCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3767,7 +3767,7 @@ struct IdeSelectionChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3806,7 +3806,7 @@ struct IdleEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3858,7 +3858,7 @@ struct IndexedSearchEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -3923,7 +3923,7 @@ struct InfoEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4001,7 +4001,7 @@ struct InstructionUpdateDeliveryEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4040,7 +4040,7 @@ struct InstructionUpdateEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4092,7 +4092,7 @@ struct JournalLinkEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4131,7 +4131,7 @@ struct ManagedPluginProgressEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4196,7 +4196,7 @@ struct ManagedSettingsEnforcedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4222,7 +4222,7 @@ struct ManagedSettingsResolvedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4274,7 +4274,7 @@ struct McpAppToolCallCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4326,7 +4326,7 @@ struct McpHeadersRefreshCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4365,7 +4365,7 @@ struct McpHeadersRefreshRequiredEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4417,7 +4417,7 @@ struct McpOauthCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4469,7 +4469,7 @@ struct McpOauthRecoveryCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4521,7 +4521,7 @@ struct McpOauthRequiredEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4560,7 +4560,7 @@ struct McpPromptsListChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4573,7 +4573,7 @@ struct McpResourcesListChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4612,7 +4612,7 @@ struct McpServerNeedsReconnectEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4638,7 +4638,7 @@ struct McpServerRemovedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4690,7 +4690,7 @@ struct McpServerStatusChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4716,7 +4716,7 @@ struct McpServerToolsLoadedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4755,7 +4755,7 @@ struct McpServersLoadedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4794,7 +4794,7 @@ struct McpToolsListChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4820,7 +4820,7 @@ struct MemoryChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4846,7 +4846,7 @@ struct ModeChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4872,7 +4872,7 @@ struct ModeNoticeDeliveredEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -4911,7 +4911,7 @@ struct ModelCallFailureEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5002,7 +5002,7 @@ struct ModelCallFinalResultEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5028,7 +5028,7 @@ struct ModelCallFinishedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5106,7 +5106,7 @@ struct ModelCallStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5158,7 +5158,7 @@ struct ModelChangeEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5197,7 +5197,7 @@ struct ModelDeselectedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5301,7 +5301,7 @@ struct PendingMessagesModifiedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5392,7 +5392,7 @@ struct PermissionAssentDetectedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5405,7 +5405,7 @@ struct PermissionAssistedApprovalSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 7;
+    inline static constexpr std::size_t property_count = 8;
     inline static constexpr std::size_t required_property_count = 1;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5444,7 +5444,7 @@ struct PermissionCarriedForwardEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5470,7 +5470,7 @@ struct PermissionCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5496,7 +5496,7 @@ struct PermissionContextualAuthorizationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5613,7 +5613,7 @@ struct PermissionGrantsRecordedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5665,7 +5665,7 @@ struct PermissionMessageAuthorizationDegradedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5678,7 +5678,7 @@ struct PermissionMessageAuthorizationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5717,7 +5717,7 @@ struct PermissionMessageAuthorizationReadEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -5745,7 +5745,7 @@ struct PermissionPromptRequestSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 13;
+    inline static constexpr std::size_t union_variant_count = 14;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionPromptRequest = detail::SchemaValue<PermissionPromptRequestSchemaTag>;
@@ -5788,6 +5788,19 @@ struct PermissionPromptRequestExtensionEnvAccessSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionPromptRequestExtensionEnvAccess = detail::SchemaValue<PermissionPromptRequestExtensionEnvAccessSchemaTag>;
+
+struct PermissionPromptRequestExtensionLaunchSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionPromptRequestExtensionLaunch";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 5;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionPromptRequestExtensionLaunch = detail::SchemaValue<PermissionPromptRequestExtensionLaunchSchemaTag>;
 
 struct PermissionPromptRequestExtensionManagementSchemaTag
 {
@@ -6016,7 +6029,7 @@ struct PermissionRecoveryEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6083,7 +6096,7 @@ struct PermissionRequestSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 12;
+    inline static constexpr std::size_t union_variant_count = 13;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionRequest = detail::SchemaValue<PermissionRequestSchemaTag>;
@@ -6113,6 +6126,19 @@ struct PermissionRequestExtensionEnvAccessSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using PermissionRequestExtensionEnvAccess = detail::SchemaValue<PermissionRequestExtensionEnvAccessSchemaTag>;
+
+struct PermissionRequestExtensionLaunchSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "PermissionRequestExtensionLaunch";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = true;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 4;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using PermissionRequestExtensionLaunch = detail::SchemaValue<PermissionRequestExtensionLaunchSchemaTag>;
 
 struct PermissionRequestExtensionManagementSchemaTag
 {
@@ -6341,7 +6367,7 @@ struct PermissionRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6445,7 +6471,7 @@ struct PermissionsChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6510,7 +6536,7 @@ struct PlanChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6601,7 +6627,7 @@ struct ProgramExecutionEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6614,7 +6640,7 @@ struct ProgramPermissionRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6627,7 +6653,7 @@ struct ProgramToolExecutionCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6640,7 +6666,7 @@ struct ProgramToolExecutionStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6666,7 +6692,7 @@ struct PromptCacheBreakEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6692,7 +6718,7 @@ struct PromptCachePrefixChangeEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6757,7 +6783,7 @@ struct PromptCacheToolUpdateEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -6874,7 +6900,7 @@ struct ProviderQuotaObservationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7004,7 +7030,7 @@ struct RemoteSteerableChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7030,7 +7056,7 @@ struct RequestBodyCompressionDisabledEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7056,7 +7082,7 @@ struct ResumeDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 23;
+    inline static constexpr std::size_t property_count = 24;
     inline static constexpr std::size_t required_property_count = 2;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7069,7 +7095,7 @@ struct ResumeEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7095,7 +7121,7 @@ struct SamplingCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7121,7 +7147,7 @@ struct SamplingRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7199,7 +7225,7 @@ struct SandboxDecisionEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7368,7 +7394,7 @@ struct SandboxStateChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7394,7 +7420,7 @@ struct ScheduleCancelledEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7420,7 +7446,7 @@ struct ScheduleCreatedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7459,7 +7485,7 @@ struct ScheduleRearmedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7511,7 +7537,7 @@ struct SensitivityLabelObservationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7563,7 +7589,7 @@ struct SessionLimitsChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7602,7 +7628,7 @@ struct SessionLimitsExhaustedCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7628,7 +7654,7 @@ struct SessionLimitsExhaustedRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7719,7 +7745,7 @@ struct ShutdownEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7823,7 +7849,7 @@ struct SkillContextDeliveredEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7849,7 +7875,7 @@ struct SkillContextDeliveredRefEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7875,7 +7901,7 @@ struct SkillInvokedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7901,7 +7927,7 @@ struct SkillInvokedRefEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7953,7 +7979,7 @@ struct SkillsLoadedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -7992,7 +8018,7 @@ struct SnapshotRewindEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8005,7 +8031,7 @@ struct StartDataSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 23;
+    inline static constexpr std::size_t property_count = 24;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8018,7 +8044,7 @@ struct StartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8044,7 +8070,7 @@ struct SubagentCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8070,7 +8096,7 @@ struct SubagentConfiguredEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8096,7 +8122,7 @@ struct SubagentDeselectedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8122,7 +8148,7 @@ struct SubagentFailedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8161,7 +8187,7 @@ struct SubagentSelectedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8187,7 +8213,7 @@ struct SubagentStartedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8239,7 +8265,7 @@ struct SystemMessageEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8343,7 +8369,7 @@ struct SystemNotificationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8512,7 +8538,7 @@ struct TaskCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8551,7 +8577,7 @@ struct TitleChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8577,7 +8603,7 @@ struct TodosChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8616,7 +8642,7 @@ struct ToolBaselineEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -8798,7 +8824,7 @@ struct ToolExecutionCompleteEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9045,7 +9071,7 @@ struct ToolExecutionProgressEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9071,7 +9097,7 @@ struct ToolExecutionStartEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9201,7 +9227,7 @@ struct ToolOutcomesRecordedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9227,7 +9253,7 @@ struct ToolSearchActivatedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9253,7 +9279,7 @@ struct ToolShellOutputEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9272,6 +9298,19 @@ struct ToolShellOutputStreamSchemaTag
     inline static constexpr std::array<std::string_view, 3> known_string_values{"stdout", "stderr", "terminal"};
 };
 using ToolShellOutputStream = detail::SchemaValue<ToolShellOutputStreamSchemaTag>;
+
+struct ToolTurnBudgetSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "ToolTurnBudget";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using ToolTurnBudget = detail::SchemaValue<ToolTurnBudgetSchemaTag>;
 
 struct ToolUpdateDataSchemaTag
 {
@@ -9292,7 +9331,7 @@ struct ToolUpdateEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9318,7 +9357,7 @@ struct ToolUserRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9344,7 +9383,7 @@ struct ToolsUpdatedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9370,7 +9409,7 @@ struct TruncationEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9396,7 +9435,7 @@ struct UIEphemeralQueryEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9448,7 +9487,7 @@ struct UsageAccountingRecordEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9474,7 +9513,7 @@ struct UsageCheckpointEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9526,7 +9565,7 @@ struct UsageInfoEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9656,7 +9695,7 @@ struct UserInputCompletedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9708,7 +9747,7 @@ struct UserInputRequestedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9760,7 +9799,7 @@ struct UserMessageEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9775,7 +9814,7 @@ struct UserToolSessionApprovalSchemaTag
     inline static constexpr bool has_map = false;
     inline static constexpr std::size_t property_count = 0;
     inline static constexpr std::size_t required_property_count = 0;
-    inline static constexpr std::size_t union_variant_count = 10;
+    inline static constexpr std::size_t union_variant_count = 11;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using UserToolSessionApproval = detail::SchemaValue<UserToolSessionApprovalSchemaTag>;
@@ -9818,6 +9857,19 @@ struct UserToolSessionApprovalExtensionEnvAccessSchemaTag
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
 };
 using UserToolSessionApprovalExtensionEnvAccess = detail::SchemaValue<UserToolSessionApprovalExtensionEnvAccessSchemaTag>;
+
+struct UserToolSessionApprovalExtensionLaunchSchemaTag
+{
+    inline static constexpr std::string_view schema_name = "UserToolSessionApprovalExtensionLaunch";
+    inline static constexpr SchemaKind kind = SchemaKind::Object;
+    inline static constexpr bool has_optional_properties = false;
+    inline static constexpr bool has_map = false;
+    inline static constexpr std::size_t property_count = 2;
+    inline static constexpr std::size_t required_property_count = 2;
+    inline static constexpr std::size_t union_variant_count = 0;
+    inline static constexpr std::array<std::string_view, 0> known_string_values{};
+};
+using UserToolSessionApprovalExtensionLaunch = detail::SchemaValue<UserToolSessionApprovalExtensionLaunchSchemaTag>;
 
 struct UserToolSessionApprovalExtensionManagementSchemaTag
 {
@@ -9942,7 +9994,7 @@ struct WarningEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -9994,7 +10046,7 @@ struct WorkflowRunSettledEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -10033,7 +10085,7 @@ struct WorkflowRunStartedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -10059,7 +10111,7 @@ struct WorkflowRunUpdatedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 6;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
@@ -10111,7 +10163,7 @@ struct WorkspaceFileChangedEventSchemaTag
     inline static constexpr SchemaKind kind = SchemaKind::Object;
     inline static constexpr bool has_optional_properties = true;
     inline static constexpr bool has_map = false;
-    inline static constexpr std::size_t property_count = 8;
+    inline static constexpr std::size_t property_count = 9;
     inline static constexpr std::size_t required_property_count = 5;
     inline static constexpr std::size_t union_variant_count = 0;
     inline static constexpr std::array<std::string_view, 0> known_string_values{};
