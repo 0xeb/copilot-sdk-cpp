@@ -6,7 +6,13 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.7
+## Version 0.4.8
+
+Unicode on Windows: CLI paths, working directories and environment values outside the
+active code page (for example a Japanese user folder on an en-US machine) now work. All
+strings the SDK takes and returns are UTF-8. See `CHANGELOG.md`.
+
+### 0.4.7
 
 Adds per-call cancellation: `std::stop_token` overloads on the client and session calls
 (see "Client lifetime" below). See `CHANGELOG.md`.
@@ -55,6 +61,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.8           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.7           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6.1         | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6           | 4                 | 1.0.116-3              | 1.0.116-3               |

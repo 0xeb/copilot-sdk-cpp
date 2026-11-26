@@ -40,9 +40,9 @@ using json = nlohmann::json;
 
 namespace detail
 {
-/// Value of an environment variable, or nullopt when unset. On Windows this reads the
-/// process environment block (GetEnvironmentVariable), the copy a spawned child inherits,
-/// so a change made with SetEnvironmentVariable is seen; the C runtime's copy may lag it.
+/// Value of an environment variable as UTF-8, or nullopt when unset. On Windows this reads
+/// the process environment block (GetEnvironmentVariableW), the copy a spawned child
+/// inherits, so a change made with SetEnvironmentVariable is seen.
 std::optional<std::string> env_value(const char* name);
 
 /// Like env_value(), but an empty value counts as unset.
@@ -53,6 +53,11 @@ inline std::optional<std::string> non_empty_env_value(const char* name)
         return std::nullopt;
     return value;
 }
+
+/// The SDK's strings are UTF-8. On Windows a narrow std::filesystem::path is read in the
+/// active code page, so paths go through these instead of path(std::string)/.string().
+std::filesystem::path path_from_utf8(const std::string& value);
+std::string path_to_utf8(const std::filesystem::path& value);
 } // namespace detail
 
 // Forward declarations

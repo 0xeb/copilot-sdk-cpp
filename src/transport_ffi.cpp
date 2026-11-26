@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 #include <copilot/transport_ffi.hpp>
+#include <copilot/types.hpp>
 #include <nlohmann/json.hpp>
 #include <algorithm>
 #include <filesystem>
@@ -57,7 +58,7 @@ FfiTransport::~FfiTransport()
 void FfiTransport::load()
 {
 #ifdef _WIN32
-    library_ = LoadLibraryW(std::filesystem::path(library_path_).c_str());
+    library_ = LoadLibraryW(detail::path_from_utf8(library_path_).c_str());
     if (!library_)
         throw TransportError("Failed to load FFI runtime library: " + library_path_);
 #else

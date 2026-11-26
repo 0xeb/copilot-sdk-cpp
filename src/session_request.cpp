@@ -672,7 +672,7 @@ std::map<std::string, std::string> build_cli_environment(
         env["COPILOT_HOME"] = *runtime.base_directory;
         if (runtime.kind == RuntimeConnectionKind::InProcess)
             env["COPILOT_CACHE_HOME"] =
-                (std::filesystem::path(*runtime.base_directory) / "cache").string();
+                detail::path_to_utf8(detail::path_from_utf8(*runtime.base_directory) / "cache");
     }
     if (options.mode == ClientMode::Empty)
         env["COPILOT_DISABLE_KEYTAR"] = "1";

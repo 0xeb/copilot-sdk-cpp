@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.8
+
+Unicode on Windows. No API changes.
+
+- The Windows process layer uses the Unicode APIs (`CreateProcessW`, a UTF-16
+  environment block, `GetEnvironmentVariableW`, `FormatMessageW`). The SDK's strings are
+  UTF-8 throughout, so a CLI path, working directory, `COPILOT_HOME` or other environment
+  value with characters outside the active code page (for example a Japanese user
+  folder on an en-US machine) now reaches the runtime intact. Previously the start
+  failed (`The directory name is invalid`) or the value was garbled.
+- Path handling in CLI lookup, the in-process runtime loader and the runtime cache
+  directory converts UTF-8 explicitly instead of through the active code page.
+
 ## 0.4.7
 
 Per-call cancellation (parity with the C# SDK's `CancellationToken` parameters). Additive;

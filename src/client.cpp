@@ -398,7 +398,7 @@ Client::Client(ClientOptions options) : options_(std::move(options))
     {
         for (const auto& path : *options_.plugins.builtin_directories)
         {
-            if (!std::filesystem::path(path).is_absolute())
+            if (!detail::path_from_utf8(path).is_absolute())
                 throw std::invalid_argument(
                     "builtinPluginDirectories must contain only absolute paths: " + path
                 );
@@ -1582,7 +1582,7 @@ Client::CliCommand Client::resolve_cli_command(
         return {*node_path, std::move(full_args), cli_path};
     }
 
-    const std::filesystem::path path(cli_path);
+    const auto path = detail::path_from_utf8(cli_path);
     // An absolute path, or one relative to the working directory, is spawned as given.
     if (path.is_absolute() || path.has_parent_path())
         return {cli_path, args, cli_path};
@@ -1605,7 +1605,7 @@ Client::CliCommand Client::resolve_cli_command(
     // and within a directory the PATHEXT order decides. A name that already ends in a
     // PATHEXT extension is looked up as given.
     const auto extensions = split_list(pathext, ';');
-    const auto extension = path.extension().string();
+    const auto extension = detail::path_to_utf8(path.extension());
     const bool has_extension =
         !extension.empty() &&
         std::any_of(
@@ -1622,11 +1622,11 @@ Client::CliCommand Client::resolve_cli_command(
     std::optional<std::filesystem::path> script;
     for (const auto& directory : split_list(search_path, ';'))
     {
-        const std::filesystem::path base(directory);
+        const auto base = detail::path_from_utf8(directory);
         for (const auto& suffix : suffixes)
         {
-            const auto candidate = base / (cli_path + suffix);
-            const auto kind = candidate.extension().string();
+            const auto candidate = base / detail::path_from_utf8(cli_path + suffix);
+            const auto kind = detail::path_to_utf8(candidate.extension());
             const bool is_script = iequals(kind, ".bat") || iequals(kind, ".cmd");
             // Other PATHEXT types (.vbs, .js, ...) run through a file association, which
             // CreateProcess cannot spawn; keep searching past them.
@@ -1639,7 +1639,7 @@ Client::CliCommand Client::resolve_cli_command(
                 script = candidate;
                 break;
             }
-            const auto found = candidate.string();
+            const auto found = detail::path_to_utf8(candidate);
             return {found, args, found};
         }
         if (script)
@@ -1649,7 +1649,7 @@ Client::CliCommand Client::resolve_cli_command(
     {
         // A .cmd/.bat (such as the npm shim) came first: run it by absolute path through
         // cmd.exe. /s strips the outer quotes, so the inner ones survive.
-        const auto found = script->string();
+        const auto found = detail::path_to_utf8(*script);
         std::string line = cmd_quote(found);
         for (const auto& arg : args)
         {
@@ -1717,11 +1717,11 @@ void Client::start_in_process_runtime()
     std::filesystem::path library;
     if (runtime_.ffi_library_path)
     {
-        library = *runtime_.ffi_library_path;
+        library = detail::path_from_utf8(*runtime_.ffi_library_path);
     }
     else
     {
-        const auto sibling = std::filesystem::path(*entrypoint).parent_path() / "runtime.node";
+        const auto sibling = detail::path_from_utf8(*entrypoint).parent_path() / "runtime.node";
         std::error_code ec;
         if (std::filesystem::exists(sibling, ec))
         {
@@ -1747,13 +1747,13 @@ void Client::start_in_process_runtime()
 #else
             throw std::runtime_error("unsupported architecture for in-process FFI runtime");
 #endif
-            library = std::filesystem::path(*entrypoint).parent_path() / "prebuilds" / folder /
+            library = detail::path_from_utf8(*entrypoint).parent_path() / "prebuilds" / folder /
                       "runtime.node";
         }
     }
 
     transport_ = std::make_unique<FfiTransport>(
-        library.string(),
+        detail::path_to_utf8(library),
         *entrypoint,
         build_cli_environment(options_),
         build_in_process_args(options_)

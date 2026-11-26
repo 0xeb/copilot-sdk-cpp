@@ -12,6 +12,8 @@
 #include <copilot/types.hpp>
 #include <thread>
 
+#include "win32_strings.hpp"
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -71,19 +73,20 @@ static std::string get_last_error_message()
     if (error == 0)
         return "No error";
 
-    LPSTR buffer = nullptr;
-    size_t size = FormatMessageA(
+    LPWSTR buffer = nullptr;
+    size_t size = FormatMessageW(
         FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
         nullptr,
         error,
         MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        reinterpret_cast<LPSTR>(&buffer),
+        reinterpret_cast<LPWSTR>(&buffer),
         0,
         nullptr
     );
 
-    std::string message(buffer, size);
-    LocalFree(buffer);
+    std::string message = buffer ? detail::wide_to_utf8(std::wstring(buffer, size)) : std::string();
+    if (buffer)
+        LocalFree(buffer);
 
     // Remove trailing newline
     while (!message.empty() && (message.back() == '\n' || message.back() == '\r'))
@@ -155,22 +158,22 @@ build_command_line(const std::string& executable, const std::vector<std::string>
 static std::string
 resolve_executable_for_spawn(const std::string& executable, const ProcessOptions& options)
 {
-    std::filesystem::path exe_path(executable);
+    const auto exe_path = detail::path_from_utf8(executable);
     if (exe_path.is_absolute())
-        return exe_path.string();
+        return executable;
 
     if (exe_path.has_parent_path())
     {
         std::error_code ec;
-        std::filesystem::path base_dir = options.working_directory.empty()
-                                             ? std::filesystem::current_path(ec)
-                                             : std::filesystem::path(options.working_directory);
+        const std::filesystem::path base_dir =
+            options.working_directory.empty() ? std::filesystem::current_path(ec)
+                                              : detail::path_from_utf8(options.working_directory);
         if (ec)
             return executable;
 
         std::filesystem::path candidate = (base_dir / exe_path).lexically_normal();
         if (std::filesystem::exists(candidate, ec) && !ec)
-            return candidate.string();
+            return detail::path_to_utf8(candidate);
         return executable;
     }
 
@@ -452,44 +455,54 @@ void Process::spawn(
     for (const auto& arg : args)
         cmdline += " " + (options.verbatim_arguments ? arg : quote_argument(arg));
 
-    // Build environment block
-    std::string env_block;
+    // Build environment block (UTF-16, so values outside the active code page survive)
+    std::wstring env_block;
     if (!options.environment.empty() || !options.inherit_environment)
     {
-        std::map<std::string, std::string> env;
+        // Windows variable names are case-insensitive: one entry per name, sorted.
+        struct NoCase
+        {
+            bool operator()(const std::wstring& a, const std::wstring& b) const
+            {
+                return _wcsicmp(a.c_str(), b.c_str()) < 0;
+            }
+        };
+        std::map<std::wstring, std::wstring, NoCase> env;
 
         if (options.inherit_environment)
         {
-            // Get current environment
-            LPCH env_strings = GetEnvironmentStrings();
+            LPWCH env_strings = GetEnvironmentStringsW();
             if (env_strings)
             {
-                for (LPCH p = env_strings; *p; p += strlen(p) + 1)
+                for (LPWCH p = env_strings; *p; p += wcslen(p) + 1)
                 {
-                    std::string entry(p);
-                    size_t eq = entry.find('=');
-                    if (eq != std::string::npos && eq > 0)
+                    std::wstring entry(p);
+                    // Skip the first character: hidden per-drive entries start with '='.
+                    const size_t eq = entry.find(L'=', 1);
+                    if (eq != std::wstring::npos)
                         env[entry.substr(0, eq)] = entry.substr(eq + 1);
                 }
-                FreeEnvironmentStrings(env_strings);
+                FreeEnvironmentStringsW(env_strings);
             }
         }
 
-        // Merge/override with provided environment
         for (const auto& [key, value] : options.environment)
-            env[key] = value;
+            env[detail::utf8_to_wide(key)] = detail::utf8_to_wide(value);
 
-        // Build null-terminated block
         for (const auto& [key, value] : env)
         {
-            env_block += key + "=" + value;
-            env_block.push_back('\0');
+            env_block += key + L"=" + value;
+            env_block.push_back(L'\0');
         }
-        env_block.push_back('\0');
+        env_block.push_back(L'\0');
     }
 
+    std::wstring application = detail::utf8_to_wide(resolved_executable);
+    std::wstring command_line = detail::utf8_to_wide(cmdline);
+    std::wstring working_directory = detail::utf8_to_wide(options.working_directory);
+
     // Setup startup info
-    STARTUPINFOA si;
+    STARTUPINFOW si;
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES;
@@ -502,19 +515,19 @@ void Process::spawn(
     PROCESS_INFORMATION pi;
     ZeroMemory(&pi, sizeof(pi));
 
-    DWORD creation_flags = CREATE_SUSPENDED;
+    DWORD creation_flags = CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT;
     if (options.create_no_window)
         creation_flags |= CREATE_NO_WINDOW;
 
-    BOOL success = CreateProcessA(
-        resolved_executable.c_str(),
-        cmdline.data(),
+    BOOL success = CreateProcessW(
+        application.c_str(),
+        command_line.data(),
         nullptr,
         nullptr,
         TRUE, // Inherit handles
         creation_flags,
         env_block.empty() ? nullptr : env_block.data(),
-        options.working_directory.empty() ? nullptr : options.working_directory.c_str(),
+        working_directory.empty() ? nullptr : working_directory.c_str(),
         &si,
         &pi
     );
@@ -545,7 +558,7 @@ void Process::spawn(
     handle_->running = true;
 
     // Each child gets its own job; killing one runtime must not terminate other clients.
-    handle_->job_handle = CreateJobObjectA(nullptr, nullptr);
+    handle_->job_handle = CreateJobObjectW(nullptr, nullptr);
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION job_info{};
     job_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if (!handle_->job_handle ||
@@ -750,9 +763,9 @@ static bool executable_path_exists(const std::filesystem::path& candidate)
 std::optional<std::string> find_executable(const std::string& name)
 {
     // Check if it's an absolute path
-    if (std::filesystem::path(name).is_absolute())
+    if (detail::path_from_utf8(name).is_absolute())
     {
-        if (executable_path_exists(name))
+        if (executable_path_exists(detail::path_from_utf8(name)))
             return name;
         return std::nullopt;
     }
@@ -794,29 +807,29 @@ std::optional<std::string> find_executable(const std::string& name)
         // Try with extensions
         for (const auto& ext : extensions)
         {
-            std::filesystem::path candidate = std::filesystem::path(dir) / (name + ext);
+            const auto candidate = detail::path_from_utf8(dir) / detail::path_from_utf8(name + ext);
             if (executable_path_exists(candidate))
-                return candidate.string();
+                return detail::path_to_utf8(candidate);
         }
 
         // Try without extension (in case name already has one)
-        std::filesystem::path candidate = std::filesystem::path(dir) / name;
+        const auto candidate = detail::path_from_utf8(dir) / detail::path_from_utf8(name);
         if (executable_path_exists(candidate))
-            return candidate.string();
+            return detail::path_to_utf8(candidate);
     }
 
     // Check last directory in PATH
     std::string dir = path.substr(start);
     for (const auto& ext : extensions)
     {
-        std::filesystem::path candidate = std::filesystem::path(dir) / (name + ext);
+        const auto candidate = detail::path_from_utf8(dir) / detail::path_from_utf8(name + ext);
         if (executable_path_exists(candidate))
-            return candidate.string();
+            return detail::path_to_utf8(candidate);
     }
 
-    std::filesystem::path candidate = std::filesystem::path(dir) / name;
+    const auto candidate = detail::path_from_utf8(dir) / detail::path_from_utf8(name);
     if (executable_path_exists(candidate))
-        return candidate.string();
+        return detail::path_to_utf8(candidate);
 
     return std::nullopt;
 }
