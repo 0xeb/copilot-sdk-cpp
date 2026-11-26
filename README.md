@@ -6,7 +6,16 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.5
+## Version 0.4.6
+
+Targets Copilot CLI 1.0.116-3. Adds the experimental host-policy pre-check
+(`permissions.host_policy_pre_check`), `extension_sources`, MCP `defer_tools`,
+ask_user image attachments, request IDs and `_meta` on permission/elicitation
+callbacks, and buffering of events that arrive before a session is registered.
+Client lifetime: a start can be cancelled, `stop()` is bounded, and a bare CLI name is
+resolved on `PATH` (see "Client lifetime" below). See `CHANGELOG.md`.
+
+### 0.4.5
 
 Adds experimental session management (peer sessions): sessions in separate
 processes can discover each other by name and exchange messages via
@@ -36,6 +45,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.6           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.5           | 4                 | 1.0.115-1              | 1.0.115-1               |
 | 0.4.4           | 4                 | 1.0.115-1              | 1.0.115-1               |
 | 0.4.3           | 2–3               | 1.0.102-1              | 1.0.102-1               |
@@ -160,6 +170,29 @@ Other client settings are grouped: `observability` (`log_level`, `telemetry`,
 `models` (`on_list_models`, `request_handler`), `plugins.builtin_directories`,
 `extensions.launch_provider`, and `installations.confirmation_handler`. `mode`,
 `session_fs`, and `client_info` stay at the root.
+
+## Client lifetime
+
+```cpp
+Client client(options);
+std::stop_source cancel;
+auto starting = client.start(cancel.get_token()); // cancel.request_stop() ends it
+
+auto errors = client.stop().get();          // graceful; detaches share one 10 s deadline
+auto bounded = client.stop(std::chrono::steady_clock::now() + 1s).get(); // hard bound
+client.force_stop();                        // kill the runtime now
+client.abort();                             // fail pending requests, do not wait
+```
+
+- `stop()`, `force_stop()`, `abort()` and a stop request on the token all end a start in
+  progress; the start throws `StartCancelled` and the client can be started again.
+- `stop(deadline)` and `abort()` are C++ extensions. `abort()` closes the connection
+  and fails pending requests with `JsonRpcErrorCode::ConnectionClosed` without waiting;
+  a spawned runtime it leaves is reaped by the next `start()` or `force_stop()`.
+- A spawned runtime named without a directory (default `copilot`, or
+  `COPILOT_CLI_PATH=copilot`) is looked up on `PATH`. A native executable is spawned
+  directly; a `.cmd`/`.bat` shim runs through `cmd.exe` by absolute path. Set
+  `COPILOT_CLI_PATH` to the executable to skip the lookup.
 
 ## Session options
 

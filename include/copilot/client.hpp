@@ -7,6 +7,7 @@
 /// @brief CopilotClient for managing connections to the Copilot CLI server
 
 #include <atomic>
+#include <copilot/cancellation.hpp>
 #include <copilot/decisions.hpp>
 #include <copilot/events.hpp>
 #include <copilot/host.hpp>
@@ -21,8 +22,10 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <optional>
 #include <regex>
+#include <stop_token>
 #include <string>
 #include <vector>
 
@@ -82,6 +85,19 @@ std::map<std::string, std::string> build_cli_environment(
     const std::optional<std::string>& effective_connection_token = std::nullopt
 );
 
+namespace detail
+{
+/// Points in Client::start() reported to the start-phase hook.
+enum class StartPhase
+{
+    /// The runtime process was spawned and is not yet visible to stop()/force_stop().
+    RuntimeSpawned,
+};
+/// Test-only: called on the starting thread at each StartPhase (empty to clear). Not part
+/// of the supported API.
+void set_start_phase_hook(std::function<void(StartPhase)> hook);
+} // namespace detail
+
 // =============================================================================
 // CopilotClient - Main client class
 // =============================================================================
@@ -133,17 +149,40 @@ class Client
     /// Start the client and connect to the server
     /// @return Future that completes when connected
     /// @throws std::runtime_error on connection failure
+    /// @throws StartCancelled when stop(), force_stop() or abort() ends the start first.
+    ///         A cancelled start leaves the client Disconnected and reusable.
     std::future<void> start();
 
+    /// Start the client; a stop request on `token` cancels the start the same way stop()
+    /// does (the future fails with StartCancelled and any spawned runtime is killed).
+    /// The token has no effect once the start has completed.
+    // C# REFERENCE: Client.cs StartAsync(CancellationToken)
+    std::future<void> start(std::stop_token token);
+
     /// Stop the client gracefully
-    /// Destroys all sessions and closes the connection
+    /// Detaches all sessions and closes the connection. Cancels a start in progress.
+    /// Session detaches share one 10 s deadline, so a hung runtime cannot stall stop()
+    /// once per session.
     /// @return Future that completes with any errors encountered during cleanup
     std::future<std::vector<StopError>> stop();
 
+    /// Stop the client gracefully, but no later than `deadline`. Work still pending at the
+    /// deadline (session detaches, runtime.shutdown, the exit wait) is abandoned and an
+    /// owned runtime is killed, as by force_stop(). Not in the official SDKs.
+    std::future<std::vector<StopError>> stop(std::chrono::steady_clock::time_point deadline);
+
     /// Force stop the client immediately
-    /// Kills the CLI process without graceful cleanup. Safe to call while stop() is
-    /// running: it kills the runtime stop() is waiting on, so stop() completes promptly.
+    /// Kills the CLI process without graceful cleanup. Cancels a start in progress. Safe
+    /// to call while stop() is running: it fails the requests stop() is waiting on and
+    /// kills the runtime, so stop() completes promptly.
     void force_stop();
+
+    /// Drop the connection without waiting for anything: cancels a start in progress,
+    /// fails every pending request with JsonRpcErrorCode::ConnectionClosed, cancels the
+    /// tokens of in-flight handlers, retires all sessions and leaves the client
+    /// Disconnected. An owned runtime is not killed (closing its stdin normally ends it);
+    /// the next start() or force_stop() reaps it. Not in the official SDKs.
+    void abort();
 
     /// Process id of the runtime this client spawned (also while stop() is waiting
     /// for it to exit), or nullopt when no spawned runtime is alive.
@@ -283,13 +322,13 @@ class Client
     /// Get session by ID (internal use)
     std::shared_ptr<Session> get_session(const std::string& session_id);
 
-    /// Get the JSON-RPC client (internal use)
+    /// Get the JSON-RPC client (internal use). Never waits on a start in progress.
     std::shared_ptr<JsonRpcClient> rpc_client_shared()
     {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (!rpc_)
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        if (!live_rpc_)
             throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client disconnected");
-        return rpc_;
+        return live_rpc_;
     }
 
   private:
@@ -318,21 +357,68 @@ class Client
     /// Route an inbound session-scoped callback, preferring an in-flight resume whose
     /// requested ID (or abbreviated prefix) matches.
     std::shared_ptr<Session> resolve_session_callback(const std::string& session_id);
-    void handle_disconnect();
+    std::shared_ptr<Session> resolve_skill_provider_session(const std::string& session_id);
+    std::shared_ptr<Session> resolve_host_policy_pre_check_session(const json& params);
+    /// `source` is the connection that closed; a close of a connection the client has
+    /// already replaced is ignored. nullptr always tears down.
+    void handle_disconnect(const JsonRpcClient* source = nullptr);
+
+    /// Resources one start() call has acquired, published so stop(), force_stop(),
+    /// abort() and a start stop_token can end the start without waiting on mutex_.
+    struct StartAttempt
+    {
+        std::mutex mutex;
+        std::atomic<bool> cancelled{false};
+        /// Cancelled with the attempt; bounds waits that have nothing to kill (TCP connect).
+        CancellationSource cancellation;
+        bool finished = false;
+        Process* process = nullptr;
+        std::shared_ptr<JsonRpcClient> rpc;
+        /// Cancels the start; returns false when it had already finished.
+        bool cancel();
+        /// Throws StartCancelled once cancel() has run.
+        void throw_if_cancelled() const;
+        void publish(Process* value);
+        void publish(std::shared_ptr<JsonRpcClient> value);
+        /// Ends the attempt successfully; throws StartCancelled if it was cancelled.
+        void finish();
+        /// Forgets the published resources before they are destroyed.
+        void release();
+    };
+    void run_start(const std::shared_ptr<StartAttempt>& attempt, std::stop_token token);
+    void start_impl(StartAttempt& attempt);
+    std::vector<StopError> stop_impl(std::chrono::steady_clock::time_point deadline);
+    /// Ends every start requested so far (and, with `end_session_initializations`, every
+    /// create/resume waiting on the runtime). Never takes mutex_.
+    void cancel_startup(bool end_session_initializations);
+    CancellationToken session_initialization_token() const;
 
     /// Start the CLI server process
-    void start_cli_server();
+    void start_cli_server(StartAttempt& attempt);
     void start_in_process_runtime();
 
     /// Connect to the server (stdio or TCP)
-    void connect_to_server();
+    void connect_to_server(StartAttempt* attempt = nullptr);
 
     /// Verify protocol version matches
     void verify_protocol_version();
 
-    /// Resolve CLI command (handle .js files and Windows PATH)
-    std::pair<std::string, std::vector<std::string>>
-    resolve_cli_command(const std::string& cli_path, const std::vector<std::string>& args);
+    /// Spawn command for the CLI: `display` is the resolved CLI path that is reported
+    /// (ProtocolVersionMismatch::cli_path), which differs from `executable` for scripts.
+    struct CliCommand
+    {
+        std::string executable;
+        std::vector<std::string> args;
+        std::string display;
+        bool verbatim_arguments = false;
+    };
+    /// Resolve CLI command (.js through node; a bare name through PATH, preferring a
+    /// native executable and running a .cmd/.bat shim through cmd)
+    CliCommand resolve_cli_command(
+        const std::string& cli_path,
+        const std::vector<std::string>& args,
+        const std::map<std::string, std::string>& environment
+    );
 
     /// Handle incoming session events
     void handle_session_event(const std::string& method, const json& params);
@@ -372,8 +458,38 @@ class Client
     std::unique_ptr<Process> process_;
     // Runtime that stop() has detached and is waiting on; force_stop() kills it.
     Process* stopping_process_ = nullptr;
+    // Connection stop() is shutting down; force_stop() and abort() fail its requests.
+    std::shared_ptr<JsonRpcClient> stopping_rpc_;
+    // An owned runtime that did not exit within stop()'s shutdown timeout, or that abort()
+    // left running, with the connection whose read loop still waits on it. It is no
+    // longer the client's process, but force_stop() and start() still kill it.
+    // NODEJS REFERENCE: client.ts unexitedCliProcess
+    struct UnexitedRuntime
+    {
+        std::shared_ptr<JsonRpcClient> rpc;
+        std::unique_ptr<Process> process;
+    };
+    std::vector<UnexitedRuntime> unexited_runtimes_;
+    void kill_unexited_process();
+    /// Kills each runtime and stops its connection once it has exited; returns the ones
+    /// that outlived `timeout`.
+    static std::vector<UnexitedRuntime>
+    reap_runtimes(std::vector<UnexitedRuntime> runtimes, std::chrono::milliseconds timeout);
     std::unique_ptr<ITransport> transport_;
     std::shared_ptr<JsonRpcClient> rpc_;
+
+    // Guards the members below. Lock order: mutex_ -> lifetime_mutex_ ->
+    // StartAttempt::mutex; nothing holding lifetime_mutex_ waits on another thread.
+    mutable std::mutex lifetime_mutex_;
+    /// rpc_ as seen by rpc_client_shared() and ensure_connected().
+    std::shared_ptr<JsonRpcClient> live_rpc_;
+    /// Starts requested and not yet finished, including ones still waiting on mutex_.
+    std::vector<std::shared_ptr<StartAttempt>> start_attempts_;
+    /// stop() calls in progress; a start requested meanwhile is refused.
+    std::atomic<int> stops_in_progress_{0};
+    // NODEJS REFERENCE: client.ts sessionInitializationLifetime
+    CancellationSource session_initialization_;
+    void set_live_rpc(std::shared_ptr<JsonRpcClient> rpc);
     bool session_admission_closed_ = true;
     std::shared_ptr<CopilotRequestHandlerBridge> request_handler_bridge_;
 
@@ -385,9 +501,34 @@ class Client
         std::shared_ptr<JsonRpcClient> connection;
         std::optional<std::string> registration_id;
         bool resolve_aliases = false;
+        /// Owner of skill-provider callbacks until the resume settles: the new session
+        /// when the resume supplies a provider, otherwise the resident it replaces.
+        std::shared_ptr<Session> skill_provider_session;
+        /// The resident session, which keeps any host-policy pre-check request for a
+        /// revision other than the one this resume declares.
+        std::shared_ptr<Session> host_policy_pre_check_session;
+        std::optional<std::int64_t> host_policy_pre_check_revision;
     };
     /// Requested session ID -> in-flight resume, guarded by mutex_.
     std::map<std::string, PendingResume> pending_resumes_;
+
+    // Events for session IDs not registered yet (NODEJS REFERENCE: client.ts
+    // heldSessionEvents). Only the read thread adds events; held_mutex_ is never
+    // taken while mutex_ is held.
+    struct HeldSessionEvent
+    {
+        SessionEvent event;
+        std::optional<std::string> request_id;
+    };
+    std::mutex held_mutex_;
+    /// Session ID -> held events, in first-seen order.
+    std::vector<std::pair<std::string, std::vector<HeldSessionEvent>>> held_session_events_;
+    std::size_t held_session_event_count_ = 0;
+    /// Session IDs whose held events are being delivered; live events for them queue behind.
+    std::set<std::string> delivering_session_ids_;
+    void hold_session_event(const std::string& session_id, HeldSessionEvent held);
+    void deliver_held_session_events();
+    void discard_held_session_events(const std::string& session_id);
 
     // Models cache
     mutable std::mutex models_cache_mutex_;

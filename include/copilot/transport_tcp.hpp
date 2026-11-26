@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <copilot/cancellation.hpp>
 #include <copilot/transport.hpp>
 
 #ifdef _WIN32
@@ -140,8 +141,14 @@ class TcpTransport : public ITransport
     /// @param host Hostname or IP address
     /// @param port Port number
     /// @param timeout_ms Connection timeout in milliseconds (0 = no timeout)
+    /// @param cancellation Ends a pending connect early (TransportError)
     /// @throws TransportError on connection failure
-    void connect(const std::string& host, int port, int timeout_ms = 30000);
+    void connect(
+        const std::string& host,
+        int port,
+        int timeout_ms = 30000,
+        const CancellationToken& cancellation = {}
+    );
 
     size_t read(char* buffer, size_t size) override;
     void write(const char* data, size_t size) override;
@@ -210,7 +217,9 @@ inline void TcpTransport::set_socket_blocking(Socket sock, bool blocking)
 #endif
 }
 
-inline void TcpTransport::connect(const std::string& host, int port, int timeout_ms)
+inline void TcpTransport::connect(
+    const std::string& host, int port, int timeout_ms, const CancellationToken& cancellation
+)
 {
     // Close any existing connection
     close();
@@ -270,28 +279,38 @@ inline void TcpTransport::connect(const std::string& host, int port, int timeout
 
         if (would_block && timeout_ms > 0)
         {
-            // Wait for connection, bounded by whatever remains of the overall budget.
-            const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
-                connect_deadline - std::chrono::steady_clock::now());
-            const auto remaining_us = remaining.count() > 0 ? remaining.count() : 0;
-
+            // Wait for connection, bounded by whatever remains of the overall budget, in
+            // short slices so a cancellation is noticed promptly.
+            int select_result = 0;
             fd_set write_fds;
-            FD_ZERO(&write_fds);
-            FD_SET(sock, &write_fds);
-
-            // A refused connection is reported through exceptfds on Windows (writefds stays
-            // clear), so it must be monitored or the select below waits out the full timeout
-            // on an address that already failed.
             fd_set except_fds;
-            FD_ZERO(&except_fds);
-            FD_SET(sock, &except_fds);
+            for (;;)
+            {
+                if (cancellation.is_cancelled())
+                    break;
+                const auto remaining = std::chrono::duration_cast<std::chrono::microseconds>(
+                    connect_deadline - std::chrono::steady_clock::now());
+                const auto remaining_us = remaining.count() > 0 ? remaining.count() : 0;
+                const auto slice_us = std::min<long long>(remaining_us, 100000);
 
-            struct timeval tv;
-            tv.tv_sec = static_cast<long>(remaining_us / 1000000);
-            tv.tv_usec = static_cast<long>(remaining_us % 1000000);
+                FD_ZERO(&write_fds);
+                FD_SET(sock, &write_fds);
 
-            int select_result =
-                select(static_cast<int>(sock) + 1, nullptr, &write_fds, &except_fds, &tv);
+                // A refused connection is reported through exceptfds on Windows (writefds
+                // stays clear), so it must be monitored or the select below waits out the
+                // full timeout on an address that already failed.
+                FD_ZERO(&except_fds);
+                FD_SET(sock, &except_fds);
+
+                struct timeval tv;
+                tv.tv_sec = static_cast<long>(slice_us / 1000000);
+                tv.tv_usec = static_cast<long>(slice_us % 1000000);
+
+                select_result =
+                    select(static_cast<int>(sock) + 1, nullptr, &write_fds, &except_fds, &tv);
+                if (select_result != 0 || remaining_us <= slice_us)
+                    break;
+            }
 
             if (select_result > 0)
             {
@@ -320,6 +339,8 @@ inline void TcpTransport::connect(const std::string& host, int port, int timeout
 
     freeaddrinfo(result);
 
+    if (sock == kInvalidSocket && cancellation.is_cancelled())
+        throw TransportError("Connection to " + host + ":" + std::to_string(port) + " cancelled");
     if (sock == kInvalidSocket)
         throw TransportError("Failed to connect to " + host + ":" + std::to_string(port));
 

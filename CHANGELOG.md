@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.4.6
+
+Targets Copilot CLI 1.0.116-3 (SDK protocol 4, unchanged). Additive; no breaking changes.
+
+- Regenerate the protocol catalog from CLI 1.0.116-3 (967 RPC methods, 185 event
+  variants). Seven new session event types map to `SessionEventType`; their payloads
+  stay raw JSON. The runtime removed `session.accounts.get`/`set`/`enumerate` in favor
+  of the reshaped `account.*` and `session.accounts.*` methods.
+- Add the experimental host-policy pre-check: `permissions.host_policy_pre_check`
+  (`HostPolicyPreCheckOptions`) answers `hostPolicy.preCheck` without prompting. The
+  client enables it with `session.permissions.configure` only when the runtime reports
+  the capability. `join_session()` strips it.
+- Add `extension_sources` to create/resume options, `defer_tools` to MCP server
+  configs, and `ToolResultObject::skip_large_output_processing`.
+- Callback context: `PermissionInvocation::request_id`, `ElicitationContext::request_id`
+  and `meta` (`_meta`), and `ElicitationResult::meta`.
+- ask_user images: `UserInputRequest::image_attachment_constraints` and
+  `UserInputResponse::attachments`.
+- Events for a session that is not registered yet, such as a session joined with
+  `sessions.connect` before it is resumed, are now held (up to 8192) and delivered when
+  the session registers. A held request whose completion was also held is shown to
+  event observers but not answered again. `delete_session()` discards held events.
+- `observability.log_level` is rejected for an attached runtime.
+- A runtime that does not exit within `stop()`'s timeout is retained, so
+  `force_stop()` and the next `start()` still kill it.
+
+### Client lifetime
+
+- `stop()`, `force_stop()` and `abort()` cancel a `start()` in progress at any phase
+  (spawn, port announcement, TCP connect, `connect`, setup requests). The start fails
+  with the new `StartCancelled`, any spawned runtime is killed, and the client is left
+  `Disconnected` and can be started again. A start that fails for another reason still
+  leaves it in `Error`.
+- `start(std::stop_token)` cancels the same way (C# `StartAsync(CancellationToken)`).
+- `stop()` gives all session detaches one shared 10 s deadline instead of a request
+  timeout per session, retries a failed detach up to three times, and skips sessions
+  whose create/resume the runtime never answered. It skips `runtime.shutdown` and the
+  exit grace period once the connection has already failed. Errors read
+  `Failed to disconnect session <id> after N attempt(s): ...`.
+- `force_stop()` during `stop()` also fails the requests `stop()` is waiting on.
+- A `create_session()`/`resume_session()` waiting on the runtime fails at once when
+  `stop()`, `force_stop()` or `abort()` runs.
+- C++ extensions, not in the official SDKs:
+  - `stop(deadline)` bounds the whole stop; past the deadline the runtime is killed and
+    an error is reported.
+  - `abort()` fails every pending request with `ConnectionClosed`, cancels in-flight
+    handler tokens, retires all sessions and returns without waiting. An owned
+    runtime's stdin is closed but it is not killed; the next `start()` or
+    `force_stop()` reaps it.
+- A bare CLI name (the default `copilot`) is resolved on `PATH` before spawning, against
+  the runtime's `environment` when one is set. A native `.exe`/`.com` is spawned
+  directly, so killing the client kills the runtime. When only a `.cmd`/`.bat` shim is
+  found, it is run by absolute path through `cmd.exe`. Nothing found is an error naming
+  `COPILOT_CLI_PATH`. Previously a relative name ran as `cmd /c <name>`, and a runtime
+  started that way could outlive `force_stop()`.
+- Fix: a request timeout shorter than the earliest pending deadline now fires on time;
+  the JSON-RPC timeout thread did not wake when such a request was added.
+
 ## 0.4.5
 
 - Add experimental session management (peer sessions), off by default:

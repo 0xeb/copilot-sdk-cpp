@@ -60,6 +60,8 @@ struct ScopeExit
 };
 
 constexpr auto kCleanupTimeout = std::chrono::seconds(10);
+constexpr const char* kSessionInitializationCancelled =
+    "Client disconnected during session initialization";
 
 bool is_ipv6_literal(const std::string& host)
 {
@@ -157,6 +159,9 @@ void register_initial_handlers(Session& session, const Options& options)
         session.register_permission_handler(options.permissions.on_request_with_context);
     else if (options.permissions.on_request)
         session.register_permission_handler(options.permissions.on_request);
+    if (options.permissions.host_policy_pre_check &&
+        options.permissions.host_policy_pre_check->on_request)
+        session.register_host_policy_pre_check(options.permissions.host_policy_pre_check->on_request);
     if (options.interaction.on_user_input_request)
         session.register_user_input_handler(options.interaction.on_user_input_request);
     if (options.interaction.on_shell_authentication_request)
@@ -189,6 +194,26 @@ void register_initial_handlers(Session& session, const Options& options)
     }
     if (options.events.on_event)
         session.register_persistent_event_handler(options.events.on_event);
+}
+
+// NODEJS REFERENCE: client.ts configureHostPolicyPreCheck
+void configure_host_policy_pre_check(
+    Session& session, const std::optional<HostPolicyPreCheckOptions>& options
+)
+{
+    if (!options)
+        return;
+    const json capabilities =
+        session.invoke(copilot::rpc::methods::kSessionPermissionsGetCapabilities, json::object())
+            .get();
+    if (!capabilities.is_object() || capabilities.value("hostPolicyPreCheck", false) != true)
+        return;
+    session
+        .invoke(
+            copilot::rpc::methods::kSessionPermissionsConfigure,
+            json{{"hostPolicyPreCheck", {{"enabled", true}, {"policyRevision", options->policy_revision}}}}
+        )
+        .get();
 }
 
 template <typename Options>
@@ -299,6 +324,8 @@ Client::Client(ClientOptions options) : options_(std::move(options))
             unsupported.push_back("github.token");
         if (options_.github.use_logged_in_user)
             unsupported.push_back("github.useLoggedInUser");
+        if (options_.observability.log_level)
+            unsupported.push_back("observability.logLevel");
         if (options_.observability.telemetry)
             unsupported.push_back("observability.telemetry");
         if (runtime_.session_idle_timeout_seconds)
@@ -412,6 +439,17 @@ Client::Client(ClientOptions options) : options_(std::move(options))
 Client::~Client()
 {
     force_stop();
+    // A cancelled start unwinds promptly; it must not outlive the members it uses.
+    for (;;)
+    {
+        {
+            std::lock_guard<std::mutex> lock(lifetime_mutex_);
+            if (start_attempts_.empty())
+                break;
+        }
+        cancel_startup(false);
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
 }
 
 // =============================================================================
@@ -422,11 +460,23 @@ std::shared_ptr<JsonRpcClient> Client::ensure_connected()
 {
     if (state_ != ConnectionState::Connected)
         start().get();
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!rpc_)
-        throw std::runtime_error("Client not connected");
-    return rpc_;
+    std::lock_guard<std::mutex> lock(lifetime_mutex_);
+    if (!live_rpc_)
+        throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client not connected");
+    return live_rpc_;
 }
+
+namespace
+{
+// NODEJS REFERENCE: client.ts createSessionInternal (signal.throwIfAborted around session.create)
+json await_session_initialization(std::future<json> response, const CancellationToken& lifetime)
+{
+    while (response.wait_for(std::chrono::milliseconds(10)) == std::future_status::timeout)
+        if (lifetime.is_cancelled())
+            throw std::runtime_error(kSessionInitializationCancelled);
+    return response.get();
+}
+} // namespace
 
 // NODEJS REFERENCE: client.ts registerGitHubTokenProvider
 std::string Client::register_github_token_provider(GitHubTokenProvider provider)
@@ -472,12 +522,16 @@ void Client::remove_github_token_registration(const std::string& id)
 }
 
 // NODEJS REFERENCE: client.ts markDisconnected
-void Client::handle_disconnect()
+void Client::handle_disconnect(const JsonRpcClient* source)
 {
-    clear_owned_runtime_port();
     std::map<std::string, std::shared_ptr<Session>> sessions;
     {
         std::lock_guard<std::mutex> lock(mutex_);
+        // A connection the client has already replaced must not tear down its successor;
+        // without a source, teardown is skipped only once a new connection is live.
+        if (rpc_ && rpc_.get() != source)
+            return;
+        clear_owned_runtime_port();
         sessions.swap(sessions_);
         session_admission_closed_ = true;
         if (rpc_)
@@ -486,6 +540,13 @@ void Client::handle_disconnect()
     for (const auto& [_, session] : sessions)
         if (session)
             session->retire();
+
+    {
+        // NODEJS REFERENCE: client.ts clearSessionRoutes
+        std::lock_guard<std::mutex> lock(held_mutex_);
+        held_session_events_.clear();
+        held_session_event_count_ = 0;
+    }
 
     std::map<std::string, std::map<std::string, CancellationSource>> shell_auth;
     std::map<uint64_t, CancellationSource> memory_stores;
@@ -507,101 +568,338 @@ void Client::handle_disconnect()
 // Connection Management
 // =============================================================================
 
+namespace
+{
+std::mutex g_start_phase_hook_mutex;
+std::function<void(detail::StartPhase)> g_start_phase_hook;
+
+void notify_start_phase(detail::StartPhase phase)
+{
+    std::function<void(detail::StartPhase)> hook;
+    {
+        std::lock_guard<std::mutex> lock(g_start_phase_hook_mutex);
+        hook = g_start_phase_hook;
+    }
+    if (hook)
+        hook(phase);
+}
+
+[[noreturn]] void throw_start_cancelled()
+{
+    throw StartCancelled("Client start was cancelled");
+}
+
+} // namespace
+
+void detail::set_start_phase_hook(std::function<void(StartPhase)> hook)
+{
+    std::lock_guard<std::mutex> lock(g_start_phase_hook_mutex);
+    g_start_phase_hook = std::move(hook);
+}
+
+bool Client::StartAttempt::cancel()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    if (finished)
+        return false;
+    if (cancelled.exchange(true))
+        return true;
+    // Kills and fails without running connection callbacks, so a cancel never waits on
+    // mutex_; the starting thread does the teardown. The starting thread destroys the
+    // process only after release(), which takes this lock.
+    if (process)
+        process->kill();
+    if (rpc)
+        rpc->fail_pending(JsonRpcErrorCode::ConnectionClosed, "Client start was cancelled");
+    cancellation.cancel();
+    return true;
+}
+
+void Client::StartAttempt::throw_if_cancelled() const
+{
+    if (cancelled.load())
+        throw_start_cancelled();
+}
+
+void Client::StartAttempt::publish(Process* value)
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    process = value;
+    // Cancelled while spawning, before stop() could see the process.
+    if (cancelled.load() && process)
+        process->kill();
+}
+
+void Client::StartAttempt::publish(std::shared_ptr<JsonRpcClient> value)
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    rpc = std::move(value);
+    if (cancelled.load() && rpc)
+        rpc->fail_pending(JsonRpcErrorCode::ConnectionClosed, "Client start was cancelled");
+}
+
+void Client::StartAttempt::finish()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    if (cancelled.load())
+        throw_start_cancelled();
+    finished = true;
+    process = nullptr;
+    rpc.reset();
+}
+
+void Client::StartAttempt::release()
+{
+    std::lock_guard<std::mutex> lock(mutex);
+    finished = true;
+    process = nullptr;
+    rpc.reset();
+}
+
+void Client::set_live_rpc(std::shared_ptr<JsonRpcClient> rpc)
+{
+    std::shared_ptr<JsonRpcClient> previous;
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        previous = std::move(live_rpc_);
+        live_rpc_ = std::move(rpc);
+    }
+}
+
+CancellationToken Client::session_initialization_token() const
+{
+    std::lock_guard<std::mutex> lock(lifetime_mutex_);
+    return session_initialization_.token();
+}
+
+// C# REFERENCE: Client.cs StopAsync/ForceStopAsync (_startupCancellation.Cancel)
+// NODEJS REFERENCE: client.ts invalidateSessionInitializations
+void Client::cancel_startup(bool end_session_initializations)
+{
+    std::vector<std::shared_ptr<StartAttempt>> attempts;
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        attempts = start_attempts_;
+    }
+    for (const auto& attempt : attempts)
+        attempt->cancel();
+    if (!end_session_initializations)
+        return;
+    // Read after the attempts: a start that finished first has already renewed the source,
+    // so the renewed one is the one cancelled.
+    CancellationSource initialization;
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        initialization = session_initialization_;
+    }
+    initialization.cancel();
+}
+
 std::future<void> Client::start()
 {
-    return std::async(
-        std::launch::async,
-        [this]()
+    return start(std::stop_token{});
+}
+
+// C# REFERENCE: Client.cs StartAsync(CancellationToken)
+std::future<void> Client::start(std::stop_token token)
+{
+    auto attempt = std::make_shared<StartAttempt>();
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        start_attempts_.push_back(attempt);
+        // NODEJS REFERENCE: client.ts start (a start requested during stop() fails)
+        if (stops_in_progress_.load() > 0)
+            attempt->cancel();
+    }
+    try
+    {
+        return std::async(
+            std::launch::async,
+            [this, attempt, token = std::move(token)] { run_start(attempt, token); }
+        );
+    }
+    catch (...)
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        std::erase(start_attempts_, attempt);
+        throw;
+    }
+}
+
+void Client::run_start(const std::shared_ptr<StartAttempt>& attempt, std::stop_token token)
+{
+    ScopeExit forget{[this, attempt]
+                     {
+                         std::lock_guard<std::mutex> lock(lifetime_mutex_);
+                         std::erase(start_attempts_, attempt);
+                     }};
+    // Declared after `forget` and before any lock: its destructor waits for a running
+    // callback, which may need mutex_.
+    std::stop_callback on_stop(token, [attempt] { attempt->cancel(); });
+    attempt->throw_if_cancelled();
+
+    {
+        // NODEJS REFERENCE: client.ts doStart (killCliProcess before spawning): reap what a
+        // timed-out stop(), an abort() or a lost connection left, outside mutex_ because
+        // closing a connection runs callbacks that take it.
+        std::vector<UnexitedRuntime> stale;
         {
             std::lock_guard<std::mutex> lock(mutex_);
-
             if (state_ == ConnectionState::Connected)
+            {
+                attempt->finish();
                 return;
-
-            state_ = ConnectionState::Connecting;
-
-            try
-            {
-                switch (runtime_.kind)
-                {
-                case RuntimeConnectionKind::InProcess:
-                    start_in_process_runtime();
-                    connect_to_server();
-                    break;
-                case RuntimeConnectionKind::Tcp:
-                    // C# REFERENCE: Client.cs StartAsync (an external runtime keeps its port)
-                    runtime_port_.store(tcp_port_);
-                    connect_to_server();
-                    break;
-                case RuntimeConnectionKind::ParentProcess:
-                    connect_to_server();
-                    break;
-                case RuntimeConnectionKind::SpawnedStdio:
-                case RuntimeConnectionKind::SpawnedTcp:
-                    start_cli_server();
-                    if (runtime_.kind == RuntimeConnectionKind::SpawnedTcp)
-                        runtime_port_.store(tcp_port_);
-                    connect_to_server();
-                    break;
-                }
-
-                verify_protocol_version();
-                session_admission_closed_ = false;
-                // NODEJS REFERENCE: client.ts start (network.setProvider)
-                if (options_.network &&
-                    (options_.network->resolve_proxy || options_.network->authenticate_negotiate ||
-                     options_.network->authenticate_basic))
-                {
-                    json params = json::object();
-                    if (options_.network->scope)
-                        params["scope"] = *options_.network->scope == NetworkScope::Runtime
-                                              ? "runtime"
-                                              : "connection";
-                    if (options_.network->resolve_proxy)
-                        params["resolveProxy"] = json::object();
-                    if (options_.network->authenticate_negotiate)
-                        params["authenticateNegotiate"] = json::object();
-                    if (options_.network->authenticate_basic)
-                        params["authenticateBasic"] = json::object();
-                    rpc_->invoke(copilot::rpc::methods::kNetworkSetProvider, params).get();
-                }
-                if (options_.extensions.launch_provider)
-                    rpc_->invoke("registerExtensionLaunchProvider", json::object()).get();
-
-                if (options_.plugins.builtin_directories &&
-                    !options_.plugins.builtin_directories->empty())
-                {
-                    rpc_->invoke(
-                            "plugins.builtin.set",
-                            json{{"paths", *options_.plugins.builtin_directories}}
-                    ).get();
-                }
-
-                if (options_.session_fs)
-                {
-                    json params{
-                        {"initialCwd", options_.session_fs->initial_cwd},
-                        {"sessionStatePath", options_.session_fs->session_state_path},
-                        {"conventions", options_.session_fs->conventions},
-                    };
-                    if (options_.session_fs->capabilities)
-                        params["capabilities"] = json(*options_.session_fs->capabilities);
-                    rpc_->invoke(copilot::rpc::methods::kSessionFsSetProvider, params).get();
-                }
-
-                if (request_handler_bridge_)
-                    rpc_->invoke("llmInference.setProvider", json::object()).get();
-
-                state_ = ConnectionState::Connected;
             }
-            catch (...)
+            stale = std::move(unexited_runtimes_);
+            unexited_runtimes_.clear();
+            if (process_ || rpc_)
+                stale.push_back(UnexitedRuntime{std::move(rpc_), std::move(process_)});
+            set_live_rpc(nullptr);
+        }
+        if (!stale.empty())
+        {
+            auto survivors = reap_runtimes(std::move(stale), kCleanupTimeout);
+            if (!survivors.empty())
             {
-                state_ = ConnectionState::Error;
-                clear_owned_runtime_port();
-                throw;
+                std::lock_guard<std::mutex> lock(mutex_);
+                for (auto& survivor : survivors)
+                    unexited_runtimes_.push_back(std::move(survivor));
             }
         }
-    );
+    }
+
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (state_ == ConnectionState::Connected)
+    {
+        attempt->finish();
+        return;
+    }
+    try
+    {
+        attempt->throw_if_cancelled();
+        state_ = ConnectionState::Connecting;
+        start_impl(*attempt);
+        set_live_rpc(rpc_);
+        {
+            // NODEJS REFERENCE: client.ts doStart (a new sessionInitializationLifetime)
+            std::lock_guard<std::mutex> lifetime(lifetime_mutex_);
+            session_initialization_ = CancellationSource{};
+        }
+        attempt->finish();
+        state_ = ConnectionState::Connected;
+    }
+    catch (...)
+    {
+        // NODEJS REFERENCE: client.ts doStart catch (doForceStop): a failed start keeps nothing.
+        const bool cancelled = attempt->cancelled.load();
+        attempt->release();
+        std::unique_ptr<Process> process = std::move(process_);
+        std::shared_ptr<JsonRpcClient> rpc = std::move(rpc_);
+        std::unique_ptr<ITransport> transport = std::move(transport_);
+        std::shared_ptr<CopilotRequestHandlerBridge> bridge = std::move(request_handler_bridge_);
+        session_admission_closed_ = true;
+        state_ = cancelled ? ConnectionState::Disconnected : ConnectionState::Error;
+        clear_owned_runtime_port();
+        set_live_rpc(nullptr);
+        lock.unlock();
+
+        if (bridge)
+            bridge->cancel_all();
+        if (process)
+        {
+            process->kill();
+            process->wait_for(std::chrono::seconds(5));
+            process->close_pipes();
+        }
+        if (rpc)
+            rpc->stop();
+        if (transport)
+            transport->close();
+        if (cancelled)
+            throw_start_cancelled();
+        throw;
+    }
+}
+
+void Client::start_impl(StartAttempt& attempt)
+{
+    switch (runtime_.kind)
+    {
+    case RuntimeConnectionKind::InProcess:
+        start_in_process_runtime();
+        attempt.throw_if_cancelled();
+        connect_to_server(&attempt);
+        break;
+    case RuntimeConnectionKind::Tcp:
+        // C# REFERENCE: Client.cs StartAsync (an external runtime keeps its port)
+        runtime_port_.store(tcp_port_);
+        connect_to_server(&attempt);
+        break;
+    case RuntimeConnectionKind::ParentProcess:
+        connect_to_server(&attempt);
+        break;
+    case RuntimeConnectionKind::SpawnedStdio:
+    case RuntimeConnectionKind::SpawnedTcp:
+        start_cli_server(attempt);
+        if (runtime_.kind == RuntimeConnectionKind::SpawnedTcp)
+            runtime_port_.store(tcp_port_);
+        connect_to_server(&attempt);
+        break;
+    }
+    attempt.throw_if_cancelled();
+
+    verify_protocol_version();
+    attempt.throw_if_cancelled();
+    session_admission_closed_ = false;
+    // NODEJS REFERENCE: client.ts start (network.setProvider)
+    if (options_.network &&
+        (options_.network->resolve_proxy || options_.network->authenticate_negotiate ||
+         options_.network->authenticate_basic))
+    {
+        json params = json::object();
+        if (options_.network->scope)
+            params["scope"] =
+                *options_.network->scope == NetworkScope::Runtime ? "runtime" : "connection";
+        if (options_.network->resolve_proxy)
+            params["resolveProxy"] = json::object();
+        if (options_.network->authenticate_negotiate)
+            params["authenticateNegotiate"] = json::object();
+        if (options_.network->authenticate_basic)
+            params["authenticateBasic"] = json::object();
+        rpc_->invoke(copilot::rpc::methods::kNetworkSetProvider, params).get();
+        attempt.throw_if_cancelled();
+    }
+    if (options_.extensions.launch_provider)
+    {
+        rpc_->invoke("registerExtensionLaunchProvider", json::object()).get();
+        attempt.throw_if_cancelled();
+    }
+
+    if (options_.plugins.builtin_directories && !options_.plugins.builtin_directories->empty())
+    {
+        rpc_->invoke("plugins.builtin.set", json{{"paths", *options_.plugins.builtin_directories}})
+            .get();
+        attempt.throw_if_cancelled();
+    }
+
+    if (options_.session_fs)
+    {
+        json params{
+            {"initialCwd", options_.session_fs->initial_cwd},
+            {"sessionStatePath", options_.session_fs->session_state_path},
+            {"conventions", options_.session_fs->conventions},
+        };
+        if (options_.session_fs->capabilities)
+            params["capabilities"] = json(*options_.session_fs->capabilities);
+        rpc_->invoke(copilot::rpc::methods::kSessionFsSetProvider, params).get();
+        attempt.throw_if_cancelled();
+    }
+
+    if (request_handler_bridge_)
+    {
+        rpc_->invoke("llmInference.setProvider", json::object()).get();
+        attempt.throw_if_cancelled();
+    }
 }
 
 std::optional<int> Client::runtime_port() const
@@ -619,135 +917,289 @@ void Client::clear_owned_runtime_port()
 
 std::future<std::vector<StopError>> Client::stop()
 {
-    return std::async(
-        std::launch::async,
-        [this]() -> std::vector<StopError>
+    return stop(std::chrono::steady_clock::time_point::max());
+}
+
+std::future<std::vector<StopError>> Client::stop(std::chrono::steady_clock::time_point deadline)
+{
+    // NODEJS REFERENCE: client.ts stop (invalidateSessionInitializations before doStop)
+    stops_in_progress_.fetch_add(1);
+    try
+    {
+        cancel_startup(true);
+        return std::async(
+            std::launch::async,
+            [this, deadline]
+            {
+                ScopeExit done{[this] { stops_in_progress_.fetch_sub(1); }};
+                return stop_impl(deadline);
+            }
+        );
+    }
+    catch (...)
+    {
+        stops_in_progress_.fetch_sub(1);
+        throw;
+    }
+}
+
+// NODEJS REFERENCE: client.ts doStop
+// C# REFERENCE: Client.cs StopAsync / CleanupConnectionAsync / CleanupCliProcessAsync
+std::vector<StopError> Client::stop_impl(std::chrono::steady_clock::time_point deadline)
+{
+    using clock = std::chrono::steady_clock;
+    const auto remaining_until = [](clock::time_point until)
+    {
+        const auto now = clock::now();
+        if (until <= now)
+            return std::chrono::milliseconds(0);
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::min<clock::duration>(until - now, std::chrono::hours(24))
+        );
+    };
+
+    std::vector<StopError> errors;
+    std::vector<std::shared_ptr<Session>> sessions;
+    std::shared_ptr<JsonRpcClient> connection;
+    std::shared_ptr<CopilotRequestHandlerBridge> bridge;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        session_admission_closed_ = true;
+        for (const auto& [_, session] : sessions_)
+            if (session)
+                sessions.push_back(session);
+        connection = rpc_;
+        bridge = request_handler_bridge_;
+    }
+
+    if (bridge)
+        bridge->cancel_all();
+    for (const auto& session : sessions)
+        session->retire();
+
+    // A hung runtime may never answer detach, so all sessions share one deadline. Sessions
+    // whose create/resume the runtime never confirmed are not detached.
+    const auto now = clock::now();
+    const bool caller_bounds_detach = deadline < now + kCleanupTimeout;
+    const auto detach_deadline = caller_bounds_detach ? deadline : now + kCleanupTimeout;
+    const auto closed =
+        connection ? connection->connection_closed_token() : CancellationToken{};
+    const std::string detach_timeout_message =
+        caller_bounds_detach
+            ? std::string("session.detach did not complete before the stop() deadline")
+            : "session.detach did not complete within the " +
+                  std::to_string(
+                      std::chrono::duration_cast<std::chrono::milliseconds>(kCleanupTimeout).count()
+                  ) +
+                  "ms shutdown timeout";
+    for (const auto& session : sessions)
+    {
+        if (!session->is_confirmed())
+            continue;
+        std::optional<std::string> last_error;
+        int attempts = 0;
+        for (int attempt = 1; attempt <= 3; ++attempt)
         {
-            std::vector<StopError> errors;
-            std::vector<std::shared_ptr<Session>> sessions;
+            // A closed connection has already disconnected every session on it.
+            if (!connection || closed.is_cancelled())
             {
-                std::lock_guard<std::mutex> lock(mutex_);
-                session_admission_closed_ = true;
-                for (const auto& [_, session] : sessions_)
-                    sessions.push_back(session);
+                last_error.reset();
+                break;
             }
-
-            if (request_handler_bridge_)
-                request_handler_bridge_->cancel_all();
-            for (const auto& session : sessions)
-                session->retire();
-
-            // Destroy all sessions
-            for (const auto& session : sessions)
+            attempts = attempt;
+            const auto remaining = remaining_until(detach_deadline);
+            if (remaining.count() <= 0)
             {
-                try
-                {
-                    session->destroy().get();
-                }
-                catch (const std::exception& e)
-                {
-                    errors.push_back(StopError{e.what()});
-                }
-                catch (...)
-                {
-                    errors.push_back(
-                        StopError{"Unknown error destroying session " + session->session_id()}
-                    );
-                }
+                // NODEJS REFERENCE: client.ts doStop (the race against an elapsed deadline)
+                last_error = detach_timeout_message;
+                break;
             }
-
-            // Clear models cache
+            try
             {
-                std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
-                models_cache_.reset();
+                connection
+                    ->invoke(
+                        copilot::rpc::methods::kSessionDetach,
+                        json{{"sessionId", session->session_id()}},
+                        remaining
+                    )
+                    .get();
+                last_error.reset();
+                break;
             }
-
-            std::unique_ptr<Process> process;
-            std::shared_ptr<JsonRpcClient> rpc;
-            std::unique_ptr<ITransport> transport;
+            catch (const JsonRpcError& error)
             {
-                std::lock_guard<std::mutex> lock(mutex_);
-                session_admission_closed_ = true;
-                // Before dropping the sessions: ~Session waits on in-flight tool handlers,
-                // and each answers with an RPC. Cancel first so a handler finishing during
-                // teardown drops its result instead of calling into a transport that is
-                // already going away.
-                for (auto& [id, session] : sessions_)
-                    if (session)
-                        session->retire();
-                sessions_.clear();
-                process = std::move(process_);
-                stopping_process_ = process.get();
-                rpc = std::move(rpc_);
-                transport = std::move(transport_);
-                state_ = ConnectionState::Disconnected;
+                if (closed.is_cancelled())
+                {
+                    last_error.reset();
+                    break;
+                }
+                if (error.code() == JsonRpcErrorCode::Timeout)
+                {
+                    // The detach is still in flight on the runtime; do not retry it.
+                    last_error = detach_timeout_message;
+                    break;
+                }
+                last_error = error.what();
             }
-            struct StoppingProcessReset
+            catch (const std::exception& error)
             {
-                Client* client;
-                ~StoppingProcessReset()
+                if (closed.is_cancelled())
                 {
-                    std::lock_guard<std::mutex> lock(client->mutex_);
-                    client->stopping_process_ = nullptr;
+                    last_error.reset();
+                    break;
                 }
-            } stopping_reset{this};
-
-            // C# REFERENCE: dotnet/src/Client.cs CleanupConnectionAsync / CleanupCliProcessAsync.
-            if (rpc && (process || runtime_.kind == RuntimeConnectionKind::InProcess))
-            {
-                try
-                {
-                    rpc->invoke("runtime.shutdown", json::object(), kCleanupTimeout).get();
-                }
-                catch (...)
-                {
-                }
+                last_error = error.what();
             }
-            // Close stdin before the grace period so the runtime can flush telemetry.
-            if (request_handler_bridge_)
-            {
-                request_handler_bridge_->cancel_all();
-                request_handler_bridge_.reset();
-            }
-            const bool use_stdio = runtime_.kind == RuntimeConnectionKind::SpawnedStdio;
-            if (process)
-            {
-                if (use_stdio)
-                {
-                    try
-                    {
-                        process->stdin_pipe().close();
-                    }
-                    catch (...)
-                    {
-                    }
-                }
-                if (!use_stdio || !process->wait_for(std::chrono::seconds(10)))
-                {
-                    process->kill();
-                    if (!process->wait_for(std::chrono::seconds(10)))
-                        errors.push_back(StopError{"Timed out waiting for runtime process to exit"}
-                        );
-                }
-                process->close_pipes();
-            }
-
-            // Now stop RPC client - read thread will unblock since pipes are closed
-            if (rpc)
-                rpc->stop();
-
-            // Close transport
-            if (transport)
-                transport->close();
-            handle_disconnect();
-            return errors;
+            if (attempt < 3)
+                std::this_thread::sleep_for(std::min(
+                    std::chrono::milliseconds(100 << (attempt - 1)), remaining_until(detach_deadline)
+                ));
         }
-    );
+        if (last_error)
+            errors.push_back(StopError{
+                "Failed to disconnect session " + session->session_id() + " after " +
+                std::to_string(attempts) + (attempts == 1 ? " attempt: " : " attempts: ") +
+                *last_error
+            });
+    }
+
+    {
+        std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
+        models_cache_.reset();
+    }
+
+    std::unique_ptr<Process> process;
+    std::shared_ptr<JsonRpcClient> rpc;
+    std::unique_ptr<ITransport> transport;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        session_admission_closed_ = true;
+        // Before dropping the sessions: ~Session waits on in-flight tool handlers,
+        // and each answers with an RPC. Cancel first so a handler finishing during
+        // teardown drops its result instead of calling into a transport that is
+        // already going away.
+        for (auto& [id, session] : sessions_)
+            if (session)
+                session->retire();
+        sessions_.clear();
+        process = std::move(process_);
+        stopping_process_ = process.get();
+        rpc = std::move(rpc_);
+        stopping_rpc_ = rpc;
+        transport = std::move(transport_);
+        bridge = std::move(request_handler_bridge_);
+        state_ = ConnectionState::Disconnected;
+    }
+    set_live_rpc(nullptr);
+    struct StoppingReset
+    {
+        Client* client;
+        ~StoppingReset()
+        {
+            std::lock_guard<std::mutex> lock(client->mutex_);
+            client->stopping_process_ = nullptr;
+            client->stopping_rpc_.reset();
+        }
+    } stopping_reset{this};
+
+    // A connection that already failed cannot carry runtime.shutdown, and a runtime that
+    // dropped it gets no grace period.
+    const bool connection_alive = rpc && !rpc->connection_closed_token().is_cancelled();
+    if (connection_alive && (process || runtime_.kind == RuntimeConnectionKind::InProcess))
+    {
+        const auto timeout = std::min<std::chrono::milliseconds>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(kCleanupTimeout),
+            remaining_until(deadline)
+        );
+        if (timeout.count() > 0)
+        {
+            try
+            {
+                rpc->invoke("runtime.shutdown", json::object(), timeout).get();
+            }
+            catch (...)
+            {
+            }
+        }
+    }
+    // Close stdin before the grace period so the runtime can flush telemetry.
+    if (bridge)
+    {
+        bridge->cancel_all();
+        bridge.reset();
+    }
+    const bool use_stdio = runtime_.kind == RuntimeConnectionKind::SpawnedStdio;
+    if (process)
+    {
+        if (use_stdio)
+        {
+            try
+            {
+                process->stdin_pipe().close();
+            }
+            catch (...)
+            {
+            }
+        }
+        bool exited = false;
+        bool deadline_cut_grace = false;
+        if (use_stdio && connection_alive)
+        {
+            const auto grace = std::min<std::chrono::milliseconds>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(kCleanupTimeout),
+                remaining_until(deadline)
+            );
+            deadline_cut_grace = grace < kCleanupTimeout;
+            exited = process->wait_for(grace).has_value();
+        }
+        else
+        {
+            exited = process->wait_for(std::chrono::milliseconds(0)).has_value();
+        }
+        bool exit_timed_out = false;
+        if (!exited)
+        {
+            if (use_stdio && deadline_cut_grace)
+                errors.push_back(
+                    StopError{"Runtime did not exit before the stop() deadline; it was killed"}
+                );
+            process->kill();
+            // Past the caller's deadline the kill still gets a moment to land.
+            const auto wait = std::max<std::chrono::milliseconds>(
+                std::min<std::chrono::milliseconds>(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(kCleanupTimeout),
+                    remaining_until(deadline)
+                ),
+                std::chrono::milliseconds(250)
+            );
+            if (!process->wait_for(wait))
+            {
+                exit_timed_out = true;
+                errors.push_back(StopError{"Timed out waiting for runtime process to exit"});
+            }
+        }
+        process->close_pipes();
+        if (exit_timed_out)
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            stopping_process_ = nullptr;
+            unexited_runtimes_.push_back(UnexitedRuntime{nullptr, std::move(process)});
+        }
+    }
+
+    // Now stop RPC client - read thread will unblock since pipes are closed
+    if (rpc)
+        rpc->stop();
+
+    if (transport)
+        transport->close();
+    handle_disconnect();
+    return errors;
 }
 
 void Client::force_stop()
 {
-    // Clear models cache
+    cancel_startup(true);
     {
         std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
         models_cache_.reset();
@@ -757,6 +1209,8 @@ void Client::force_stop()
     std::unique_ptr<Process> process;
     std::shared_ptr<JsonRpcClient> rpc;
     std::unique_ptr<ITransport> transport;
+    std::shared_ptr<CopilotRequestHandlerBridge> bridge;
+    std::shared_ptr<JsonRpcClient> stopping_rpc;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         session_admission_closed_ = true;
@@ -773,25 +1227,29 @@ void Client::force_stop()
         process = std::move(process_);
         rpc = std::move(rpc_);
         transport = std::move(transport_);
+        bridge = std::move(request_handler_bridge_);
         state_ = ConnectionState::Disconnected;
         // TS REFERENCE: nodejs/src/client.ts doForceStop kills this.cliProcess, which a
         // concurrent stop() still holds while it waits for the runtime to exit.
         if (stopping_process_)
             stopping_process_->kill();
+        stopping_rpc = stopping_rpc_;
     }
+    set_live_rpc(nullptr);
+    // Fails whatever a concurrent stop() is still waiting on (runtime.shutdown).
+    if (stopping_rpc)
+        stopping_rpc->signal_connection_closed();
 
+    if (bridge)
+        bridge->cancel_all();
     // Kill process FIRST - this closes the pipe ends and unblocks reads
-    if (request_handler_bridge_)
-    {
-        request_handler_bridge_->cancel_all();
-        request_handler_bridge_.reset();
-    }
     if (process)
     {
         process->kill();
         process->wait_for(std::chrono::seconds(5));
         process->close_pipes();
     }
+    kill_unexited_process();
 
     // Now stop RPC client - read thread will unblock since pipes are closed
     if (rpc)
@@ -800,6 +1258,104 @@ void Client::force_stop()
     if (transport)
         transport->close();
     handle_disconnect();
+}
+
+void Client::abort()
+{
+    cancel_startup(true);
+    {
+        std::lock_guard<std::mutex> cache_lock(models_cache_mutex_);
+        models_cache_.reset();
+    }
+
+    std::unique_ptr<Process> process;
+    std::shared_ptr<JsonRpcClient> rpc;
+    std::unique_ptr<ITransport> transport;
+    std::shared_ptr<CopilotRequestHandlerBridge> bridge;
+    std::shared_ptr<JsonRpcClient> stopping_rpc;
+    std::map<std::string, std::shared_ptr<Session>> sessions;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        session_admission_closed_ = true;
+        sessions.swap(sessions_);
+        process = std::move(process_);
+        rpc = std::move(rpc_);
+        transport = std::move(transport_);
+        bridge = std::move(request_handler_bridge_);
+        stopping_rpc = stopping_rpc_;
+        state_ = ConnectionState::Disconnected;
+    }
+    set_live_rpc(nullptr);
+    for (const auto& [_, session] : sessions)
+        if (session)
+            session->retire();
+    if (bridge)
+        bridge->cancel_all();
+    if (stopping_rpc)
+        stopping_rpc->signal_connection_closed();
+    // Fails every pending request and cancels in-flight handler tokens without joining the
+    // read thread, which waits on the runtime's stdout until the runtime exits.
+    if (rpc)
+        rpc->signal_connection_closed();
+    if (transport)
+        transport->close();
+    if (process && runtime_.kind == RuntimeConnectionKind::SpawnedStdio)
+    {
+        // End of input is the runtime's signal to exit.
+        try
+        {
+            process->stdin_pipe().close();
+        }
+        catch (...)
+        {
+        }
+    }
+    if (process || rpc)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        unexited_runtimes_.push_back(UnexitedRuntime{std::move(rpc), std::move(process)});
+    }
+    handle_disconnect();
+}
+
+std::vector<Client::UnexitedRuntime>
+Client::reap_runtimes(std::vector<UnexitedRuntime> runtimes, std::chrono::milliseconds timeout)
+{
+    std::vector<UnexitedRuntime> survivors;
+    for (auto& runtime : runtimes)
+    {
+        if (runtime.process)
+        {
+            runtime.process->kill();
+            if (!runtime.process->wait_for(timeout))
+            {
+                survivors.push_back(std::move(runtime));
+                continue;
+            }
+            runtime.process->close_pipes();
+        }
+        if (runtime.rpc)
+            runtime.rpc->stop();
+    }
+    return survivors;
+}
+
+// NODEJS REFERENCE: client.ts killCliProcess (cliProcess ?? unexitedCliProcess)
+void Client::kill_unexited_process()
+{
+    std::vector<UnexitedRuntime> runtimes;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        runtimes.swap(unexited_runtimes_);
+    }
+    if (runtimes.empty())
+        return;
+    auto survivors = reap_runtimes(std::move(runtimes), kCleanupTimeout);
+    if (survivors.empty())
+        return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto& survivor : survivors)
+        unexited_runtimes_.push_back(std::move(survivor));
 }
 
 std::optional<int> Client::cli_process_id() const
@@ -821,11 +1377,72 @@ ConnectionState Client::state() const
 // CLI Server Management
 // =============================================================================
 
-std::pair<std::string, std::vector<std::string>>
-Client::resolve_cli_command(const std::string& cli_path, const std::vector<std::string>& args)
+namespace
 {
+bool iequals(const std::string& left, const std::string& right)
+{
+    return left.size() == right.size() && starts_with_icase(left, right);
+}
 
-    // Check if it's a Node.js script
+#ifdef _WIN32
+std::string lookup_environment(
+    const std::map<std::string, std::string>& environment, const std::string& name
+)
+{
+    for (const auto& [key, value] : environment)
+        if (iequals(key, name))
+            return value;
+    return {};
+}
+
+std::vector<std::string> split_list(const std::string& value, char separator)
+{
+    std::vector<std::string> parts;
+    std::size_t start = 0;
+    while (start <= value.size())
+    {
+        const auto end = value.find(separator, start);
+        auto part = value.substr(start, end == std::string::npos ? std::string::npos : end - start);
+        if (!part.empty())
+            parts.push_back(std::move(part));
+        if (end == std::string::npos)
+            break;
+        start = end + 1;
+    }
+    return parts;
+}
+
+bool file_exists(const std::filesystem::path& candidate)
+{
+    std::error_code ec;
+    if (std::filesystem::is_regular_file(candidate, ec))
+        return true;
+    // App execution aliases (WindowsApps\*.exe) are reparse points std::filesystem cannot stat.
+    const auto attributes = GetFileAttributesW(candidate.c_str());
+    return attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+// cmd.exe expands or splits on these even inside quotes; a shim cannot carry them safely.
+bool safe_for_cmd(const std::string& value)
+{
+    return value.find_first_of("\"%!^\r\n") == std::string::npos;
+}
+
+std::string cmd_quote(const std::string& value)
+{
+    return "\"" + value + "\"";
+}
+#endif
+} // namespace
+
+// NODEJS REFERENCE: client.ts startCLIServer (spawn(cliPath, args) without a shell)
+// C# REFERENCE: Client.cs StartCliServerAsync (UseShellExecute = false; no cmd /c since 42539466f)
+Client::CliCommand Client::resolve_cli_command(
+    const std::string& cli_path,
+    const std::vector<std::string>& args,
+    const std::map<std::string, std::string>& environment
+)
+{
     if (is_node_script(cli_path))
     {
         auto node_path = find_node();
@@ -833,21 +1450,130 @@ Client::resolve_cli_command(const std::string& cli_path, const std::vector<std::
             throw std::runtime_error("Node.js not found in PATH but required for .js CLI");
         std::vector<std::string> full_args = {cli_path};
         full_args.insert(full_args.end(), args.begin(), args.end());
-        return {*node_path, full_args};
+        return {*node_path, std::move(full_args), cli_path};
     }
 
+    const std::filesystem::path path(cli_path);
+    // An absolute path, or one relative to the working directory, is spawned as given.
+    if (path.is_absolute() || path.has_parent_path())
+        return {cli_path, args, cli_path};
+
+    // A bare name is resolved here, against the PATH the runtime will see, so a native
+    // executable is spawned directly: an intermediate cmd.exe would let a runtime that
+    // re-launches itself escape the kill.
 #ifdef _WIN32
-    // On Windows, use cmd /c for PATH resolution if path is not absolute
-    std::filesystem::path path(cli_path);
-    if (!path.is_absolute())
+    const bool own_environment = runtime_.environment.has_value();
+    std::string search_path = own_environment ? lookup_environment(environment, "PATH") : "";
+    if (search_path.empty())
+        search_path = detail::env_value("PATH").value_or("");
+    std::string pathext = own_environment ? lookup_environment(environment, "PATHEXT") : "";
+    if (pathext.empty())
+        pathext = detail::env_value("PATHEXT").value_or("");
+    if (pathext.empty())
+        pathext = ".COM;.EXE;.BAT;.CMD";
+
+    const auto extension = path.extension().string();
+    const bool has_extension = !extension.empty();
+    std::vector<std::string> native{".EXE", ".COM"};
+    std::vector<std::string> scripts;
+    for (const auto& value : split_list(pathext, ';'))
+        if (iequals(value, ".BAT") || iequals(value, ".CMD"))
+            scripts.push_back(value);
+
+    std::optional<std::filesystem::path> script;
+    for (const auto& directory : split_list(search_path, ';'))
     {
-        std::vector<std::string> full_args = {"/c", cli_path};
-        full_args.insert(full_args.end(), args.begin(), args.end());
-        return {"cmd", full_args};
+        const std::filesystem::path base(directory);
+        if (has_extension)
+        {
+            const auto candidate = base / path;
+            if (!file_exists(candidate))
+                continue;
+            if (iequals(extension, ".bat") || iequals(extension, ".cmd"))
+            {
+                if (!script)
+                    script = candidate;
+                continue;
+            }
+            const auto found = candidate.string();
+            return {found, args, found};
+        }
+        for (const auto& ext : native)
+        {
+            const auto candidate = base / (cli_path + ext);
+            if (file_exists(candidate))
+            {
+                const auto found = candidate.string();
+                return {found, args, found};
+            }
+        }
+        if (!script)
+            for (const auto& ext : scripts)
+            {
+                const auto candidate = base / (cli_path + ext);
+                if (file_exists(candidate))
+                {
+                    script = candidate;
+                    break;
+                }
+            }
+    }
+    if (script)
+    {
+        // Only the npm shim was found: run it by absolute path through cmd.exe. /s strips
+        // the outer quotes, so the inner ones survive.
+        const auto found = script->string();
+        std::string line = cmd_quote(found);
+        for (const auto& arg : args)
+        {
+            if (!safe_for_cmd(arg))
+                throw std::runtime_error(
+                    "Copilot CLI argument cannot be passed through " + found + ": " + arg
+                );
+            line += " " + cmd_quote(arg);
+        }
+        std::string comspec = detail::env_value("ComSpec").value_or("");
+        if (comspec.empty())
+            comspec = "cmd.exe";
+        CliCommand command{comspec, {"/d", "/s", "/c", cmd_quote(line)}, found};
+        command.verbatim_arguments = true;
+        return command;
+    }
+#else
+    std::optional<std::string> search_path;
+    if (runtime_.environment.has_value())
+        if (const auto it = environment.find("PATH"); it != environment.end())
+            search_path = it->second;
+    if (!search_path)
+        search_path = detail::env_value("PATH");
+    if (search_path)
+    {
+        std::size_t start = 0;
+        while (start <= search_path->size())
+        {
+            const auto end = search_path->find(':', start);
+            const auto directory = search_path->substr(
+                start, end == std::string::npos ? std::string::npos : end - start
+            );
+            const auto candidate = std::filesystem::path(directory.empty() ? "." : directory) / path;
+            std::error_code ec;
+            if (std::filesystem::is_regular_file(candidate, ec) &&
+                ::access(candidate.c_str(), X_OK) == 0)
+            {
+                const auto found = std::filesystem::absolute(candidate, ec).string();
+                return {found, args, found};
+            }
+            if (end == std::string::npos)
+                break;
+            start = end + 1;
+        }
     }
 #endif
-
-    return {cli_path, args};
+    throw std::runtime_error(
+        "Copilot CLI '" + cli_path +
+        "' was not found on PATH. Install it, or set COPILOT_CLI_PATH or "
+        "RuntimeConnection::path to its location."
+    );
 }
 
 // NODEJS REFERENCE: client.ts startInProcessRuntime
@@ -908,10 +1634,8 @@ void Client::start_in_process_runtime()
 }
 
 // NODEJS REFERENCE: client.ts startCLIServer
-void Client::start_cli_server()
+void Client::start_cli_server(StartAttempt& attempt)
 {
-    auto [executable, full_args] = resolve_cli_command(cli_path_, build_cli_command_args(options_));
-
     const bool use_stdio = runtime_.kind == RuntimeConnectionKind::SpawnedStdio;
     ProcessOptions proc_opts;
     proc_opts.redirect_stdin = use_stdio;
@@ -923,27 +1647,67 @@ void Client::start_cli_server()
     proc_opts.inherit_environment = !runtime_.environment.has_value();
     proc_opts.environment = build_cli_environment(options_, effective_token_);
 
+    auto command = resolve_cli_command(cli_path_, build_cli_command_args(options_), proc_opts.environment);
+    proc_opts.verbatim_arguments = command.verbatim_arguments;
+
     process_ = std::make_unique<Process>();
-    process_->spawn(executable, full_args, proc_opts);
-    spawned_cli_path_ = executable;
+    process_->spawn(command.executable, command.args, proc_opts);
+    spawned_cli_path_ = command.display;
+    notify_start_phase(detail::StartPhase::RuntimeSpawned);
+    attempt.publish(process_.get());
+    attempt.throw_if_cancelled();
 
     if (!use_stdio)
     {
         std::regex port_regex(R"(listening on port (\d+))", std::regex::icase);
-        auto start_time = std::chrono::steady_clock::now();
-        const auto timeout = std::chrono::seconds(30);
-
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        auto& output = process_->stdout_pipe();
+        std::string line;
         while (true)
         {
-            if (std::chrono::steady_clock::now() - start_time > timeout)
+            attempt.throw_if_cancelled();
+            if (std::chrono::steady_clock::now() >= deadline)
                 throw std::runtime_error("Timeout waiting for CLI port announcement");
 
-            std::string line = process_->stdout_pipe().read_line();
-            if (line.empty())
+            // Poll so the overall deadline holds even while the runtime prints nothing.
+            bool readable = false;
+            try
             {
-                if (!process_->is_running())
+                readable = output.has_data(50);
+            }
+            catch (const ProcessError&)
+            {
+                readable = true; // let read() report the closed pipe
+            }
+            if (!readable)
+            {
+                if (!process_->is_running() && !output.has_data(0))
+                {
+                    attempt.throw_if_cancelled();
                     throw std::runtime_error("CLI process exited unexpectedly");
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                }
+                continue;
+            }
+
+            char ch = 0;
+            std::size_t read = 0;
+            try
+            {
+                read = output.read(&ch, 1);
+            }
+            catch (const ProcessError&)
+            {
+                read = 0;
+            }
+            if (read == 0)
+            {
+                attempt.throw_if_cancelled();
+                throw std::runtime_error("CLI process exited unexpectedly");
+            }
+            if (ch != '\n')
+            {
+                if (line.size() < 4096)
+                    line.push_back(ch);
                 continue;
             }
 
@@ -954,11 +1718,12 @@ void Client::start_cli_server()
                 tcp_port_ = std::stoi(match[1].str());
                 break;
             }
+            line.clear();
         }
     }
 }
 
-void Client::connect_to_server()
+void Client::connect_to_server(StartAttempt* attempt)
 {
     const auto kind = runtime_.kind;
     if (transport_)
@@ -983,7 +1748,11 @@ void Client::connect_to_server()
     else if (kind == RuntimeConnectionKind::Tcp || kind == RuntimeConnectionKind::SpawnedTcp)
     {
         auto tcp_transport = std::make_unique<TcpTransport>();
-        tcp_transport->connect(tcp_host_, tcp_port_);
+        tcp_transport->connect(
+            tcp_host_, tcp_port_, 30000, attempt ? attempt->cancellation.token() : CancellationToken{}
+        );
+        if (attempt)
+            attempt->throw_if_cancelled();
         transport_ = std::move(tcp_transport);
     }
     else
@@ -1007,11 +1776,13 @@ void Client::connect_to_server()
     }
 
     rpc_->set_on_closed(
-        [this, bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)]
+        [this,
+         source = rpc_.get(),
+         bridge = std::weak_ptr<CopilotRequestHandlerBridge>(request_handler_bridge_)]
         {
             if (auto value = bridge.lock())
                 value->cancel_all();
-            handle_disconnect();
+            handle_disconnect(source);
         }
     );
 
@@ -1166,10 +1937,21 @@ void Client::connect_to_server()
             }
             if (method == "skillProvider.list" || method == "skillProvider.read")
             {
-                const auto session = resolve_session_callback(params.at("sessionId").get<std::string>());
+                const auto session =
+                    resolve_skill_provider_session(params.at("sessionId").get<std::string>());
                 if (!session)
                     throw std::invalid_argument("Unknown skill-provider session");
                 return session->handle_skill_provider_request(method, params, cancellation);
+            }
+            // NODEJS REFERENCE: client.ts onRequest("hostPolicy.preCheck")
+            if (method == copilot::rpc::methods::kHostPolicyPreCheck)
+            {
+                const auto session = resolve_host_policy_pre_check_session(params);
+                if (!session)
+                    throw JsonRpcError(
+                        JsonRpcErrorCode::InvalidRequest, "Host policy pre-check owner is unavailable"
+                    );
+                return session->handle_host_policy_pre_check(params, cancellation);
             }
             if (method == "userInput.request")
                 return handle_user_input_request(params);
@@ -1295,9 +2077,15 @@ void Client::connect_to_server()
         }
     );
 
+    if (attempt)
+        attempt->publish(rpc_);
     rpc_->start();
     if (process_)
-        process_->on_exit([rpc = rpc_] { rpc->signal_connection_closed(); });
+        process_->on_exit([rpc = std::weak_ptr<JsonRpcClient>(rpc_)]
+                          {
+                              if (auto value = rpc.lock())
+                                  value->signal_connection_closed();
+                          });
     // NODEJS REFERENCE: client.ts connectViaFfi configureUiThread
     if (ffi_host)
         ffi_host->configure_ui_thread(
@@ -1475,6 +2263,9 @@ void Client::setup_session_fs_or_retire(Session& session, const SessionStateOpti
 std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions options)
 {
     ensure_connected();
+    const auto lifetime = session_initialization_token();
+    if (lifetime.is_cancelled())
+        throw std::runtime_error(kSessionInitializationCancelled);
 
     std::shared_ptr<JsonRpcClient> connection;
     {
@@ -1571,8 +2362,11 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
             sessions_[session_id] = session;
         }
     }
+    deliver_held_session_events();
 
-    const json response = connection->invoke(copilot::rpc::methods::kSessionCreate, request).get();
+    const json response = await_session_initialization(
+        connection->invoke(copilot::rpc::methods::kSessionCreate, request), lifetime
+    );
     returned_id = string_field(response, "sessionId");
     if (!returned_id || returned_id->empty())
     {
@@ -1584,6 +2378,7 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
             "session.create returned sessionId " + *returned_id + " but the caller requested " +
             session_id
         );
+    session->mark_confirmed();
     if (session_id.empty())
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -1593,6 +2388,8 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
         session->set_session_id(session_id);
         sessions_[session_id] = session;
     }
+    // NODEJS REFERENCE: client.ts routeSession (cloud sessions learn their ID here)
+    deliver_held_session_events();
     if (registration_id)
         assign_github_token_registration(*registration_id, session_id);
 
@@ -1606,6 +2403,7 @@ std::shared_ptr<Session> Client::create_session_impl(CreateSessionOptions option
         session->set_permission_mode_result(
             generated::api::PermissionsSetModeResult(response["permissionModeResult"])
         );
+    configure_host_policy_pre_check(*session, options.permissions.host_policy_pre_check);
     if (auto_mode_unsupported)
     {
         detach_quietly(connection, session_id);
@@ -1658,6 +2456,9 @@ std::shared_ptr<Session> Client::resume_session_impl(
 )
 {
     ensure_connected();
+    const auto lifetime = session_initialization_token();
+    if (lifetime.is_cancelled())
+        throw std::runtime_error(kSessionInitializationCancelled);
     session_id = resolve_session_id_prefix(session_id, options);
 
     std::shared_ptr<JsonRpcClient> connection;
@@ -1704,8 +2505,16 @@ std::shared_ptr<Session> Client::resume_session_impl(
             .registration_id = registration_id,
             .resolve_aliases =
                 options.interaction.auto_mode_recovery.value_or(false) && !options_.session_fs,
+            .skill_provider_session = options.skills.provider ? session : replaced,
+            .host_policy_pre_check_session = replaced,
+            .host_policy_pre_check_revision =
+                options.permissions.host_policy_pre_check
+                    ? std::optional<std::int64_t>(options.permissions.host_policy_pre_check->policy_revision)
+                    : std::nullopt,
         };
     }
+    // NODEJS REFERENCE: client.ts resumeSession deliverHeldSessionEvents (before the RPC)
+    deliver_held_session_events();
     const std::string requested_id = session_id;
     ScopeExit drop_pending{[&]
                            {
@@ -1735,8 +2544,10 @@ std::shared_ptr<Session> Client::resume_session_impl(
                 ahp_snapshot = request;
         }
         request.update(trace_context());
-        const json response =
-            connection->invoke(copilot::rpc::methods::kSessionResume, request).get();
+        const json response = await_session_initialization(
+            connection->invoke(copilot::rpc::methods::kSessionResume, request), lifetime
+        );
+        session->mark_confirmed();
 
         const auto returned_id = string_field(response, "sessionId");
         if (returned_id && !returned_id->empty() && *returned_id != session_id)
@@ -1760,6 +2571,8 @@ std::shared_ptr<Session> Client::resume_session_impl(
             if (registration_id)
                 assign_github_token_registration(*registration_id, active_id);
         }
+        if (active_id != session_id)
+            deliver_held_session_events();
 
         apply_granted_environment(response, options.requested_environment_variables);
 
@@ -1782,6 +2595,7 @@ std::shared_ptr<Session> Client::resume_session_impl(
                     generated::api::PermissionsSetModeResult(response["permissionModeResult"]);
             session->set_permission_mode_result(std::move(permission_mode_result));
         }
+        configure_host_policy_pre_check(*session, options.permissions.host_policy_pre_check);
         if (auto_mode_unsupported)
         {
             // NODEJS REFERENCE: client.ts requireAutoModeRecovery(detachOnFailure = !replaced)
@@ -1919,8 +2733,13 @@ std::future<void> Client::delete_session(const std::string& session_id)
                 throw std::runtime_error("Failed to delete session " + session_id + ": " + error);
             }
 
-            std::lock_guard<std::mutex> lock(mutex_);
-            sessions_.erase(session_id);
+            {
+                std::lock_guard<std::mutex> lock(mutex_);
+                sessions_.erase(session_id);
+            }
+            // The deleted conversation's events must not reach a new session created
+            // with the same ID.
+            discard_held_session_events(session_id);
         }
     );
 }
@@ -2163,19 +2982,238 @@ std::shared_ptr<Session> Client::resolve_session_callback(const std::string& ses
 // RPC Handlers
 // =============================================================================
 
+// NODEJS REFERENCE: client.ts resolveSkillProviderSession
+std::shared_ptr<Session> Client::resolve_skill_provider_session(const std::string& session_id)
+{
+    const auto session = resolve_session_callback(session_id);
+    if (!session)
+        return nullptr;
+    // An omitted provider creates no new binding, so pending provider requests still
+    // belong to the resident until the resume settles.
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (const auto& [_, pending] : pending_resumes_)
+    {
+        if (pending.connection == rpc_ && pending.session == session)
+        {
+            if (pending.skill_provider_session)
+                return pending.skill_provider_session;
+            const auto it = sessions_.find(session_id);
+            return it != sessions_.end() ? it->second : session;
+        }
+    }
+    return session;
+}
+
+// NODEJS REFERENCE: client.ts onRequest("hostPolicy.preCheck") pending-resume routing
+std::shared_ptr<Session> Client::resolve_host_policy_pre_check_session(const json& params)
+{
+    auto session = resolve_session_callback(params.value("sessionId", std::string{}));
+    if (!session)
+        return nullptr;
+    const auto revision = params.contains("policyRevision") && params["policyRevision"].is_number_integer()
+                              ? std::optional<std::int64_t>(params["policyRevision"].get<std::int64_t>())
+                              : std::nullopt;
+    // Until a resume settles, a request for any revision other than the one the resume
+    // declares belongs to the resident session.
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (const auto& [_, pending] : pending_resumes_)
+    {
+        if (pending.connection == rpc_ && pending.session == session &&
+            revision != pending.host_policy_pre_check_revision)
+        {
+            if (pending.host_policy_pre_check_session)
+                session = pending.host_policy_pre_check_session;
+        }
+    }
+    return session;
+}
+
+namespace
+{
+// NODEJS REFERENCE: client.ts MAX_HELD_SESSION_EVENTS
+constexpr std::size_t kMaxHeldSessionEvents = 8192;
+
+// NODEJS REFERENCE: client.ts SETTLED_BY (request event -> the event that settles it)
+const char* settled_by(const std::string& type)
+{
+    if (type == "permission.requested")
+        return "permission.completed";
+    if (type == "external_tool.requested")
+        return "external_tool.completed";
+    if (type == "elicitation.requested")
+        return "elicitation.completed";
+    if (type == "mcp.oauth_required")
+        return "mcp.oauth_completed";
+    if (type == "command.execute")
+        return "command.completed";
+    return nullptr;
+}
+} // namespace
+
+// NODEJS REFERENCE: client.ts handleSessionEventNotification
 void Client::handle_session_event(const std::string& /*method*/, const json& params)
 {
-    if (!params.contains("sessionId") || !params.contains("event"))
+    if (!params.contains("sessionId") || !params["sessionId"].is_string() ||
+        !params.contains("event"))
         return;
 
-    std::string session_id = params["sessionId"].get<std::string>();
-    auto session = resolve_session_callback(session_id);
-    if (!session)
-        return;
+    const std::string session_id = params["sessionId"].get<std::string>();
+    HeldSessionEvent held{.event = parse_session_event(params["event"])};
+    const auto& event_json = params["event"];
+    if (event_json.contains("data") && event_json["data"].is_object() &&
+        event_json["data"].contains("requestId") && event_json["data"]["requestId"].is_string())
+        held.request_id = event_json["data"]["requestId"].get<std::string>();
 
-    // Parse and dispatch the event
-    auto event = parse_session_event(params["event"]);
-    session->dispatch_event(event);
+    const auto session = resolve_session_callback(session_id);
+    bool dispatch_now = false;
+    {
+        // A session whose held events are still pending or being delivered receives its
+        // live events behind them, so no live event overtakes a held one.
+        std::lock_guard<std::mutex> lock(held_mutex_);
+        const bool queued =
+            delivering_session_ids_.contains(session_id) ||
+            std::any_of(
+                held_session_events_.begin(),
+                held_session_events_.end(),
+                [&](const auto& entry) { return entry.first == session_id; }
+            );
+        dispatch_now = session && !queued;
+        if (!dispatch_now)
+            hold_session_event(session_id, held);
+    }
+    if (dispatch_now)
+    {
+        session->dispatch_event(held.event);
+        return;
+    }
+    // The session may have registered after the lookup above.
+    if (resolve_session_callback(session_id))
+        deliver_held_session_events();
+}
+
+// NODEJS REFERENCE: client.ts holdSessionEvent. Caller holds held_mutex_.
+void Client::hold_session_event(const std::string& session_id, HeldSessionEvent held)
+{
+    while (held_session_event_count_ >= kMaxHeldSessionEvents)
+    {
+        // A session whose held events are being delivered takes its events; only
+        // unregistered IDs give theirs up, oldest first.
+        const auto victim = std::find_if(
+            held_session_events_.begin(),
+            held_session_events_.end(),
+            [&](const auto& entry) { return !delivering_session_ids_.contains(entry.first); }
+        );
+        if (victim == held_session_events_.end())
+            break;
+        held_session_event_count_ -= victim->second.size();
+        held_session_events_.erase(victim);
+    }
+    auto it = std::find_if(
+        held_session_events_.begin(),
+        held_session_events_.end(),
+        [&](const auto& entry) { return entry.first == session_id; }
+    );
+    if (it == held_session_events_.end())
+    {
+        held_session_events_.emplace_back(session_id, std::vector<HeldSessionEvent>{});
+        it = std::prev(held_session_events_.end());
+    }
+    it->second.push_back(std::move(held));
+    ++held_session_event_count_;
+}
+
+// NODEJS REFERENCE: client.ts deliverHeldSessionEvents. A held request whose settling
+// event was also held was answered while this client was not listening: observers see
+// it, but no handler is asked to answer it again.
+void Client::deliver_held_session_events()
+{
+    for (;;)
+    {
+        std::vector<std::string> candidates;
+        {
+            std::lock_guard<std::mutex> lock(held_mutex_);
+            for (const auto& [id, _] : held_session_events_)
+                if (!delivering_session_ids_.contains(id))
+                    candidates.push_back(id);
+        }
+        std::string session_id;
+        std::shared_ptr<Session> session;
+        for (const auto& id : candidates)
+        {
+            if (auto resolved = resolve_session_callback(id))
+            {
+                session_id = id;
+                session = std::move(resolved);
+                break;
+            }
+        }
+        if (!session)
+            return;
+
+        std::vector<HeldSessionEvent> batch;
+        {
+            std::lock_guard<std::mutex> lock(held_mutex_);
+            if (delivering_session_ids_.contains(session_id))
+                continue;
+            const auto it = std::find_if(
+                held_session_events_.begin(),
+                held_session_events_.end(),
+                [&](const auto& entry) { return entry.first == session_id; }
+            );
+            if (it == held_session_events_.end())
+                continue;
+            batch = std::move(it->second);
+            held_session_event_count_ -= batch.size();
+            held_session_events_.erase(it);
+            delivering_session_ids_.insert(session_id);
+        }
+        while (!batch.empty())
+        {
+            std::set<std::pair<std::string, std::string>> held_keys;
+            for (const auto& held : batch)
+                if (held.request_id)
+                    held_keys.emplace(held.event.type_string, *held.request_id);
+            for (const auto& held : batch)
+            {
+                const char* settling = settled_by(held.event.type_string);
+                const bool settled = settling && held.request_id &&
+                                     held_keys.contains({settling, *held.request_id});
+                session->dispatch_event(held.event, settled);
+            }
+            batch.clear();
+            std::lock_guard<std::mutex> lock(held_mutex_);
+            const auto it = std::find_if(
+                held_session_events_.begin(),
+                held_session_events_.end(),
+                [&](const auto& entry) { return entry.first == session_id; }
+            );
+            if (it != held_session_events_.end())
+            {
+                batch = std::move(it->second);
+                held_session_event_count_ -= batch.size();
+                held_session_events_.erase(it);
+            }
+            else
+            {
+                delivering_session_ids_.erase(session_id);
+            }
+        }
+    }
+}
+
+void Client::discard_held_session_events(const std::string& session_id)
+{
+    std::lock_guard<std::mutex> lock(held_mutex_);
+    const auto it = std::find_if(
+        held_session_events_.begin(),
+        held_session_events_.end(),
+        [&](const auto& entry) { return entry.first == session_id; }
+    );
+    if (it != held_session_events_.end())
+    {
+        held_session_event_count_ -= it->second.size();
+        held_session_events_.erase(it);
+    }
 }
 
 // NODEJS REFERENCE: client.ts handleGitHubTokenRequest
@@ -2356,10 +3394,7 @@ json Client::handle_user_input_request(const json& params)
 
         auto result = session->handle_user_input_request(request);
 
-        json response;
-        response["answer"] = result.answer;
-        response["wasFreeform"] = result.was_freeform;
-        return response;
+        return json(result);
     }
     catch (const std::exception& e)
     {

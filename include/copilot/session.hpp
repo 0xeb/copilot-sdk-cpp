@@ -300,7 +300,9 @@ class Session : public std::enable_shared_from_this<Session>
     void register_persistent_event_handler(EventHandler handler);
 
     /// Dispatch an event to all subscribers (called by Client)
-    void dispatch_event(const SessionEvent& event);
+    /// Dispatch an event. A `settled` event was a request already answered by another
+    /// client before this session registered: observers see it, but no handler runs.
+    void dispatch_event(const SessionEvent& event, bool settled = false);
 
     // =========================================================================
     // Tool Management
@@ -354,6 +356,13 @@ class Session : public std::enable_shared_from_this<Session>
     // NODEJS REFERENCE: nodejs/src/session.ts _handleSessionManagementCreate
     json handle_session_management_create(const json& request, const CancellationToken& cancellation);
 
+    /// Install the experimental `hostPolicy.preCheck` callback.
+    // NODEJS REFERENCE: nodejs/src/session.ts _registerHostPolicyPreCheck
+    void register_host_policy_pre_check(HostPolicyPreCheckHandler handler);
+    /// Answer a `hostPolicy.preCheck` request. Retiring the session cancels the callback.
+    // NODEJS REFERENCE: nodejs/src/session.ts _handleHostPolicyPreCheck
+    json handle_host_policy_pre_check(const json& params, const CancellationToken& cancellation);
+
     /// Section transform callbacks keyed by section id (`systemMessage.transform`).
     void register_transform_callbacks(std::map<std::string, SectionTransformFn> callbacks);
     /// Answer a `systemMessage.transform` request. Sections without a callback, or
@@ -372,6 +381,16 @@ class Session : public std::enable_shared_from_this<Session>
     bool is_disconnected() const noexcept
     {
         return dispatch_stopped_.load();
+    }
+    /// Set once the runtime has answered this session's create/resume; stop() detaches
+    /// only confirmed sessions.
+    void mark_confirmed() noexcept
+    {
+        confirmed_.store(true);
+    }
+    bool is_confirmed() const noexcept
+    {
+        return confirmed_.load();
     }
 
     /// Mark the session disconnected: stop dispatch, cancel pending work, drop callbacks.
@@ -422,7 +441,8 @@ class Session : public std::enable_shared_from_this<Session>
         const PermissionRequest& request,
         std::optional<json> prompt_request = std::nullopt,
         std::optional<json> assisted_approval_assessment = std::nullopt,
-        std::optional<std::string> program_tool_call_id = std::nullopt
+        std::optional<std::string> program_tool_call_id = std::nullopt,
+        std::optional<std::string> request_id = std::nullopt
     );
 
     // =========================================================================
@@ -696,12 +716,15 @@ class Session : public std::enable_shared_from_this<Session>
     );
     bool claim_external_tool(const std::string& request_id);
     void merge_capabilities(const json& changed);
+    void handle_broadcast_event(const SessionEvent& event);
+    void notify_event_handlers(const SessionEvent& event);
 
     std::string session_id_;
     Client* client_;
     std::future<std::optional<SessionEvent>>
     wait_for_response(MessageOptions options, std::chrono::seconds timeout, bool structured);
     std::atomic<bool> dispatch_stopped_{false};
+    std::atomic<bool> confirmed_{false};
     std::map<int, std::function<void()>> retirement_handlers_;
     std::optional<TranscriptRecoveryReport> transcript_recovery_;
     mutable std::mutex resume_state_mutex_;
@@ -722,6 +745,9 @@ class Session : public std::enable_shared_from_this<Session>
     std::map<uint64_t, CancellationSource> pending_session_creations_;
     uint64_t next_session_creation_id_ = 1;
     uint64_t session_creation_generation_ = 0;
+    HostPolicyPreCheckHandler host_policy_pre_check_;
+    std::map<uint64_t, CancellationSource> pending_host_policy_pre_checks_;
+    uint64_t next_host_policy_pre_check_id_ = 1;
     std::map<std::string, SectionTransformFn> transform_callbacks_;
     SessionFsHandler session_fs_handler_;
     std::function<void()> on_disconnected_;

@@ -448,7 +448,9 @@ void Process::spawn(
     std::string resolved_executable = resolve_executable_for_spawn(executable, options);
 
     // Build command line
-    std::string cmdline = build_command_line(resolved_executable, args);
+    std::string cmdline = build_command_line(resolved_executable, {});
+    for (const auto& arg : args)
+        cmdline += " " + (options.verbatim_arguments ? arg : quote_argument(arg));
 
     // Build environment block
     std::string env_block;

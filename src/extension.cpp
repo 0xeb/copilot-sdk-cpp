@@ -25,6 +25,10 @@ std::future<ExtensionSession> join_session(JoinSessionOptions options)
             session_options.extensions.sdk_path.reset();
             session_options.skills.provider.reset();
             session_options.tools.image_generation.reset();
+            // Only the session's owning connection may set extension sources.
+            session_options.extension_sources.reset();
+            // Only the session's owning connection may declare a host-policy pre-check.
+            session_options.permissions.host_policy_pre_check.reset();
             if (!session_options.suppress_resume_event)
                 session_options.suppress_resume_event = true;
             if (!options.requested_environment_variables.empty())

@@ -145,6 +145,10 @@ struct ProcessOptions
 
     /// On Windows: whether to create the process in a new console window
     bool create_no_window = true;
+
+    /// On Windows: append `args` to the command line unquoted (for `cmd.exe /s /c "..."`,
+    /// which parses its own command line). Ignored on POSIX.
+    bool verbatim_arguments = false;
 };
 
 // =============================================================================

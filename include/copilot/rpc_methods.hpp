@@ -80,6 +80,7 @@ inline constexpr const char* kSessionFsSqliteTransaction = "sessionFs.sqliteTran
 inline constexpr const char* kSessionFsSqliteExists = "sessionFs.sqliteExists";
 inline constexpr const char* kTasksCancel = "tasks.cancel";
 inline constexpr const char* kUiThreadRun = "uiThread.run";
+inline constexpr const char* kHostPolicyPreCheck = "hostPolicy.preCheck";
 
 // =============================================================================
 // Session-scoped methods (per-session API; each carries a `sessionId`)
@@ -172,6 +173,9 @@ inline constexpr const char* kSessionPermissionsHandlePendingPermissionRequest =
 inline constexpr const char* kSessionPermissionsSetApproveAll = "session.permissions.setApproveAll";
 inline constexpr const char* kSessionPermissionsResetSessionApprovals =
     "session.permissions.resetSessionApprovals";
+inline constexpr const char* kSessionPermissionsGetCapabilities =
+    "session.permissions.getCapabilities";
+inline constexpr const char* kSessionPermissionsConfigure = "session.permissions.configure";
 
 inline constexpr const char* kSessionShellExec = "session.shell.exec";
 inline constexpr const char* kSessionShellKill = "session.shell.kill";

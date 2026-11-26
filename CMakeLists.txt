@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(copilot_sdk_cpp VERSION 0.4.5 LANGUAGES CXX)
+project(copilot_sdk_cpp VERSION 0.4.6 LANGUAGES CXX)
 
 # Enable folder organization in IDEs
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

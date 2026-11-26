@@ -180,6 +180,7 @@ json build_session_request_common(
     put(request, "workingDirectory", options.working_directory);
     put(request, "configDirectory", options.config_directory);
     put(request, "enableConfigDiscovery", options.enable_config_discovery);
+    put(request, "extensionSources", options.extension_sources);
     put(request, "diagnostics", options.diagnostics);
     put(request, "lifecycleDiagnostics", options.lifecycle_diagnostics);
 

@@ -84,6 +84,16 @@ inline constexpr int kSdkProtocolVersion = generated::kSdkProtocolVersion;
 /// Older servers (reporting < kMinProtocolVersion) are rejected.
 inline constexpr int kMinProtocolVersion = generated::kMinProtocolVersion;
 
+/// Thrown by Client::start() when stop(), force_stop(), abort() or the start's stop_token
+/// ended the start before it connected. The client is left Disconnected and can be started
+/// again.
+// C# REFERENCE: Client.cs StartAsync (OperationCanceledException from _startupCancellation)
+class StartCancelled : public std::runtime_error
+{
+  public:
+    using std::runtime_error::runtime_error;
+};
+
 /// Thrown by Client::start() when the runtime's protocol version is outside
 /// [kMinProtocolVersion, kSdkProtocolVersion] or the runtime does not report one.
 /// Lets a host tell an incompatible CLI apart from network or authentication failures.
@@ -341,6 +351,9 @@ struct ToolResultObject
     std::optional<std::string> error;
     std::optional<std::string> session_log;
     std::optional<std::map<std::string, json>> tool_telemetry;
+    /// When true, bypasses spill-to-file processing for this result; unset keeps the session's
+    /// normal large-output policy.
+    std::optional<bool> skip_large_output_processing;
     std::optional<std::vector<std::string>> tool_references;
 };
 
@@ -355,6 +368,8 @@ inline void to_json(json& j, const ToolResultObject& r)
         j["sessionLog"] = *r.session_log;
     if (r.tool_telemetry)
         j["toolTelemetry"] = *r.tool_telemetry;
+    if (r.skip_large_output_processing)
+        j["skipLargeOutputProcessing"] = *r.skip_large_output_processing;
     if (r.tool_references)
         j["toolReferences"] = *r.tool_references;
 }
@@ -372,6 +387,8 @@ inline void from_json(const json& j, ToolResultObject& r)
         r.session_log = j.at("sessionLog").get<std::string>();
     if (j.contains("toolTelemetry"))
         r.tool_telemetry = j.at("toolTelemetry").get<std::map<std::string, json>>();
+    if (j.contains("skipLargeOutputProcessing") && j["skipLargeOutputProcessing"].is_boolean())
+        r.skip_large_output_processing = j["skipLargeOutputProcessing"].get<bool>();
     if (j.contains("toolReferences"))
         r.tool_references = j.at("toolReferences").get<std::vector<std::string>>();
 }
@@ -469,6 +486,8 @@ inline void from_json(const json& j, PermissionRequestResult& r)
 struct PermissionInvocation
 {
     std::string session_id;
+    /// Identifier of the pending request that the handler will answer.
+    std::optional<std::string> request_id;
     bool managed_settings_enabled = false;
     std::optional<json> prompt_request;
     std::optional<json> assisted_approval_assessment;
@@ -627,6 +646,62 @@ using McpAuthHandler = std::function<
 // User Input Types
 // =============================================================================
 
+/// Runtime-advertised image support for an ask_user request. Absent when the request cannot
+/// accept images.
+// NODEJS REFERENCE: generated/session-events.ts UserInputImageAttachmentConstraints
+struct UserInputImageAttachmentConstraints
+{
+    std::vector<std::string> allowed_mime_types;
+    std::int64_t max_count = 0;
+    std::int64_t max_bytes_per_image = 0;
+};
+
+inline void from_json(const json& j, UserInputImageAttachmentConstraints& c)
+{
+    j.at("allowedMimeTypes").get_to(c.allowed_mime_types);
+    j.at("maxCount").get_to(c.max_count);
+    j.at("maxBytesPerImage").get_to(c.max_bytes_per_image);
+}
+
+inline void to_json(json& j, const UserInputImageAttachmentConstraints& c)
+{
+    j = json{
+        {"allowedMimeTypes", c.allowed_mime_types},
+        {"maxCount", c.max_count},
+        {"maxBytesPerImage", c.max_bytes_per_image},
+    };
+}
+
+/// An inline image in an answer to an ask_user request that advertised image support.
+// NODEJS REFERENCE: generated/session-events.ts UserInputImageAttachment
+struct UserInputImageAttachment
+{
+    /// Image bytes as strict padded standard base64 (no data URL prefix).
+    std::string data;
+    std::string mime_type;
+    std::optional<std::string> display_name;
+    std::optional<std::string> description;
+};
+
+inline void from_json(const json& j, UserInputImageAttachment& a)
+{
+    j.at("data").get_to(a.data);
+    j.at("mimeType").get_to(a.mime_type);
+    if (j.contains("displayName") && j["displayName"].is_string())
+        a.display_name = j["displayName"].get<std::string>();
+    if (j.contains("description") && j["description"].is_string())
+        a.description = j["description"].get<std::string>();
+}
+
+inline void to_json(json& j, const UserInputImageAttachment& a)
+{
+    j = json{{"type", "image"}, {"data", a.data}, {"mimeType", a.mime_type}};
+    if (a.display_name)
+        j["displayName"] = *a.display_name;
+    if (a.description)
+        j["description"] = *a.description;
+}
+
 /// Request for user input from the agent (ask_user tool)
 struct UserInputRequest
 {
@@ -637,6 +712,8 @@ struct UserInputRequest
     /// `requestId` to answer this exact request through the session UI RPCs.
     /// Absent when the runtime predates the field.
     std::optional<std::string> request_id;
+    /// Runtime-advertised image support. Absent when images are unsupported.
+    std::optional<UserInputImageAttachmentConstraints> image_attachment_constraints;
 };
 
 inline void from_json(const json& j, UserInputRequest& r)
@@ -648,6 +725,9 @@ inline void from_json(const json& j, UserInputRequest& r)
         r.allow_freeform = j.at("allowFreeform").get<bool>();
     if (j.contains("requestId") && j["requestId"].is_string())
         r.request_id = j.at("requestId").get<std::string>();
+    if (j.contains("imageAttachmentConstraints") && j["imageAttachmentConstraints"].is_object())
+        r.image_attachment_constraints =
+            j["imageAttachmentConstraints"].get<UserInputImageAttachmentConstraints>();
 }
 
 inline void to_json(json& j, const UserInputRequest& r)
@@ -659,6 +739,8 @@ inline void to_json(json& j, const UserInputRequest& r)
         j["allowFreeform"] = *r.allow_freeform;
     if (r.request_id)
         j["requestId"] = *r.request_id;
+    if (r.image_attachment_constraints)
+        j["imageAttachmentConstraints"] = *r.image_attachment_constraints;
 }
 
 /// Response to a user input request
@@ -666,6 +748,9 @@ struct UserInputResponse
 {
     std::string answer;
     bool was_freeform = false;
+    /// Optional images, accepted only when the request advertised image attachment
+    /// constraints. For an image-only answer use an empty answer and was_freeform = true.
+    std::optional<std::vector<UserInputImageAttachment>> attachments;
 };
 
 inline void from_json(const json& j, UserInputResponse& r)
@@ -673,11 +758,15 @@ inline void from_json(const json& j, UserInputResponse& r)
     j.at("answer").get_to(r.answer);
     if (j.contains("wasFreeform"))
         j.at("wasFreeform").get_to(r.was_freeform);
+    if (j.contains("attachments") && j["attachments"].is_array())
+        r.attachments = j["attachments"].get<std::vector<UserInputImageAttachment>>();
 }
 
 inline void to_json(json& j, const UserInputResponse& r)
 {
     j = json{{"answer", r.answer}, {"wasFreeform", r.was_freeform}};
+    if (r.attachments)
+        j["attachments"] = *r.attachments;
 }
 
 /// Context for a user input request invocation
@@ -756,6 +845,10 @@ NLOHMANN_JSON_SERIALIZE_ENUM(
 /// Context for an elicitation request from the server
 struct ElicitationContext
 {
+    /// Pending request ID for correlated out-of-band elicitation answers.
+    std::optional<std::string> request_id;
+    /// Request metadata (`_meta`), including negotiated built-in ask_user image constraints.
+    std::optional<json> meta;
     std::string session_id;
     std::string message;
     std::optional<ElicitationSchema> requested_schema;
@@ -766,6 +859,10 @@ struct ElicitationContext
 
 inline void from_json(const json& j, ElicitationContext& c)
 {
+    if (j.contains("requestId") && j["requestId"].is_string())
+        c.request_id = j["requestId"].get<std::string>();
+    if (j.contains("_meta") && !j["_meta"].is_null())
+        c.meta = j["_meta"];
     if (j.contains("sessionId"))
         j.at("sessionId").get_to(c.session_id);
     j.at("message").get_to(c.message);
@@ -782,6 +879,10 @@ inline void from_json(const json& j, ElicitationContext& c)
 inline void to_json(json& j, const ElicitationContext& c)
 {
     j = json{{"message", c.message}};
+    if (c.request_id)
+        j["requestId"] = *c.request_id;
+    if (c.meta)
+        j["_meta"] = *c.meta;
     if (!c.session_id.empty())
         j["sessionId"] = c.session_id;
     if (c.requested_schema)
@@ -799,6 +900,8 @@ struct ElicitationResult
 {
     ElicitationAction action = ElicitationAction::Cancel;
     std::optional<std::map<std::string, json>> content;
+    /// Private negotiated extensions (`_meta`); never put image bytes in primitive content.
+    std::optional<json> meta;
 };
 
 inline void to_json(json& j, const ElicitationResult& r)
@@ -806,6 +909,8 @@ inline void to_json(json& j, const ElicitationResult& r)
     j = json{{"action", r.action}};
     if (r.content)
         j["content"] = *r.content;
+    if (r.meta)
+        j["_meta"] = *r.meta;
 }
 
 inline void from_json(const json& j, ElicitationResult& r)
@@ -813,6 +918,8 @@ inline void from_json(const json& j, ElicitationResult& r)
     j.at("action").get_to(r.action);
     if (j.contains("content") && !j["content"].is_null())
         r.content = j.at("content").get<std::map<std::string, json>>();
+    if (j.contains("_meta") && !j["_meta"].is_null())
+        r.meta = j["_meta"];
 }
 
 /// Elicitation handler function type
@@ -2097,23 +2204,33 @@ struct ProviderConfig
 namespace detail
 {
 inline void mcp_base_to_json(
-    json& j, const std::optional<std::vector<std::string>>& tools, const std::optional<int>& timeout
+    json& j,
+    const std::optional<std::vector<std::string>>& tools,
+    const std::optional<int>& timeout,
+    const std::optional<std::string>& defer_tools
 )
 {
     if (tools)
         j["tools"] = *tools;
     if (timeout)
         j["timeout"] = *timeout;
+    if (defer_tools)
+        j["deferTools"] = *defer_tools;
 }
 
 inline void mcp_base_from_json(
-    const json& j, std::optional<std::vector<std::string>>& tools, std::optional<int>& timeout
+    const json& j,
+    std::optional<std::vector<std::string>>& tools,
+    std::optional<int>& timeout,
+    std::optional<std::string>& defer_tools
 )
 {
     if (j.contains("tools") && j["tools"].is_array())
         tools = j["tools"].get<std::vector<std::string>>();
     if (j.contains("timeout") && j["timeout"].is_number())
         timeout = j["timeout"].get<int>();
+    if (j.contains("deferTools") && j["deferTools"].is_string())
+        defer_tools = j["deferTools"].get<std::string>();
 }
 } // namespace detail
 
@@ -2126,6 +2243,10 @@ struct McpLocalServerConfig
     std::optional<std::string> type;
     /// Tool-call timeout in milliseconds.
     std::optional<int> timeout;
+    /// "auto" lets the runtime defer this server's tools behind tool search; "never" keeps
+    /// them in the initial tool list. Unset lets the runtime decide.
+    // NODEJS REFERENCE: nodejs/src/types.ts MCPServerConfigBase.deferTools
+    std::optional<std::string> defer_tools;
     std::string command;
     std::optional<std::vector<std::string>> args;
     std::optional<std::map<std::string, std::string>> env;
@@ -2136,7 +2257,7 @@ struct McpLocalServerConfig
 inline void to_json(json& j, const McpLocalServerConfig& c)
 {
     j = json::object();
-    detail::mcp_base_to_json(j, c.tools, c.timeout);
+    detail::mcp_base_to_json(j, c.tools, c.timeout, c.defer_tools);
     if (c.type)
         j["type"] = *c.type;
     j["command"] = c.command;
@@ -2150,7 +2271,7 @@ inline void to_json(json& j, const McpLocalServerConfig& c)
 
 inline void from_json(const json& j, McpLocalServerConfig& c)
 {
-    detail::mcp_base_from_json(j, c.tools, c.timeout);
+    detail::mcp_base_from_json(j, c.tools, c.timeout, c.defer_tools);
     j.at("command").get_to(c.command);
     if (j.contains("type") && j["type"].is_string())
         c.type = j["type"].get<std::string>();
@@ -2171,6 +2292,10 @@ struct McpRemoteServerConfig
     std::string type = "http";
     /// Tool-call timeout in milliseconds.
     std::optional<int> timeout;
+    /// "auto" lets the runtime defer this server's tools behind tool search; "never" keeps
+    /// them in the initial tool list. Unset lets the runtime decide.
+    // NODEJS REFERENCE: nodejs/src/types.ts MCPServerConfigBase.deferTools
+    std::optional<std::string> defer_tools;
     std::string url;
     std::optional<std::map<std::string, std::string>> headers;
     std::optional<std::string> oauth_client_id;
@@ -2183,7 +2308,7 @@ struct McpRemoteServerConfig
 inline void to_json(json& j, const McpRemoteServerConfig& c)
 {
     j = json::object();
-    detail::mcp_base_to_json(j, c.tools, c.timeout);
+    detail::mcp_base_to_json(j, c.tools, c.timeout, c.defer_tools);
     j["type"] = c.type;
     j["url"] = c.url;
     if (c.headers)
@@ -2200,7 +2325,7 @@ inline void to_json(json& j, const McpRemoteServerConfig& c)
 
 inline void from_json(const json& j, McpRemoteServerConfig& c)
 {
-    detail::mcp_base_from_json(j, c.tools, c.timeout);
+    detail::mcp_base_from_json(j, c.tools, c.timeout, c.defer_tools);
     if (j.contains("type") && j["type"].is_string())
         c.type = j["type"].get<std::string>();
     j.at("url").get_to(c.url);
@@ -3354,11 +3479,90 @@ struct SessionGitOptions
     std::optional<bool> enable_host_git_operations;
 };
 
+/// Request passed to a host-policy pre-check callback.
+// NODEJS REFERENCE: generated/rpc.ts HostPolicyPreCheckRequest
+struct HostPolicyPreCheckRequest
+{
+    std::string session_id;
+    /// Runtime correlation identifier for the permission request.
+    std::string request_id;
+    /// Same shape as `permission.requested.data.permissionRequest`.
+    json permission_request;
+    /// Same shape as `permission.requested.data.promptRequest`.
+    std::optional<json> prompt_request;
+    std::optional<std::string> agent_mode;
+    /// Live host policy revision whose decision the runtime will accept.
+    std::int64_t policy_revision = 0;
+};
+
+inline void from_json(const json& j, HostPolicyPreCheckRequest& r)
+{
+    r.session_id = j.value("sessionId", std::string{});
+    r.request_id = j.value("requestId", std::string{});
+    r.permission_request = j.value("permissionRequest", json(nullptr));
+    if (j.contains("promptRequest") && !j["promptRequest"].is_null())
+        r.prompt_request = j["promptRequest"];
+    if (j.contains("agentMode") && j["agentMode"].is_string())
+        r.agent_mode = j["agentMode"].get<std::string>();
+    r.policy_revision = j.value("policyRevision", std::int64_t{0});
+}
+
+enum class HostPolicyPreCheckDecision
+{
+    /// Host policy approves the request; the runtime skips the Assisted Permissions judge.
+    Approve,
+    /// Keep the existing permission path.
+    Defer,
+};
+
+NLOHMANN_JSON_SERIALIZE_ENUM(
+    HostPolicyPreCheckDecision,
+    {
+        {HostPolicyPreCheckDecision::Approve, "approve"},
+        {HostPolicyPreCheckDecision::Defer, "defer"},
+    }
+)
+
+/// Host policy decision and the exact policy revision used to make it.
+struct HostPolicyPreCheckResult
+{
+    HostPolicyPreCheckDecision decision = HostPolicyPreCheckDecision::Defer;
+    std::int64_t policy_revision = 0;
+};
+
+inline void to_json(json& j, const HostPolicyPreCheckResult& r)
+{
+    j = json{{"decision", r.decision}, {"policyRevision", r.policy_revision}};
+}
+
+inline void from_json(const json& j, HostPolicyPreCheckResult& r)
+{
+    j.at("decision").get_to(r.decision);
+    j.at("policyRevision").get_to(r.policy_revision);
+}
+
+/// Callback that decides without prompting or side effects.
+using HostPolicyPreCheckHandler = std::function<
+    HostPolicyPreCheckResult(const HostPolicyPreCheckRequest&, const CancellationToken&)>;
+
+/// Experimental: non-prompting host-policy callback invoked before the Assisted Permissions
+/// judge for eligible path, read and custom-tool requests. Re-supply it on resume.
+/// Unsupported and remote runtimes ignore it.
+// NODEJS REFERENCE: nodejs/src/types.ts HostPolicyPreCheckOptions
+struct HostPolicyPreCheckOptions
+{
+    /// Host policy revision from 0 through 2^53 - 1.
+    std::int64_t policy_revision = 0;
+    HostPolicyPreCheckHandler on_request;
+};
+
 struct SessionPermissionOptions
 {
     PermissionHandler on_request;
     /// Context-aware variant; takes precedence over on_request when both are set.
     PermissionHandlerWithContext on_request_with_context;
+    /// Experimental host-policy pre-check (see HostPolicyPreCheckOptions).
+    std::optional<HostPolicyPreCheckOptions> host_policy_pre_check;
     std::optional<SandboxConfig> sandbox;
     std::optional<std::string> mode;
 };
@@ -3408,6 +3612,35 @@ struct SessionStateOptions
     // NODEJS REFERENCE: nodejs/src/types.ts SessionOptionsBase.state.createSessionFsProvider
     std::function<std::shared_ptr<SessionFsProvider>(Session& session)> create_session_fs_provider;
 };
+
+/// Session-owned extension source overrides. These do not enable extensions or activate
+/// plugins; unset fields keep the existing discovery.
+// NODEJS REFERENCE: generated/rpc.ts ExtensionSources
+struct ExtensionSources
+{
+    std::optional<bool> user;
+    std::optional<bool> project;
+    /// Permit extensions from otherwise-active plugins (runtime default: true).
+    std::optional<bool> plugins;
+};
+
+inline void to_json(json& j, const ExtensionSources& s)
+{
+    j = json::object();
+    if (s.user)
+        j["user"] = *s.user;
+    if (s.project)
+        j["project"] = *s.project;
+    if (s.plugins)
+        j["plugins"] = *s.plugins;
+}
+
+inline void from_json(const json& j, ExtensionSources& s)
+{
+    detail::get_optional(j, "user", s.user);
+    detail::get_optional(j, "project", s.project);
+    detail::get_optional(j, "plugins", s.plugins);
+}
 
 struct CloudSessionRepository
 {
@@ -3467,6 +3700,10 @@ struct CreateSessionOptions
     std::optional<bool> enable_config_discovery;
     SessionCanvasOptions canvases;
     SessionExtensionOptions extensions;
+    /// Selects extension discovery sources without enabling extensions. Warm resumes cannot
+    /// change overrides; a cold resume without it restores defaults. Requires a supporting
+    /// runtime.
+    std::optional<ExtensionSources> extension_sources;
     SessionInteractionOptions interaction;
     std::optional<SystemMessageConfig> system_message;
     SessionAgentOptions agents;
@@ -3504,6 +3741,10 @@ struct ResumeSessionOptions
     std::optional<bool> enable_config_discovery;
     ResumeSessionCanvasOptions canvases;
     SessionExtensionOptions extensions;
+    /// Selects extension discovery sources without enabling extensions. Warm resumes cannot
+    /// change overrides; a cold resume without it restores defaults. Requires a supporting
+    /// runtime.
+    std::optional<ExtensionSources> extension_sources;
     SessionInteractionOptions interaction;
     std::optional<SystemMessageConfig> system_message;
     SessionAgentOptions agents;

@@ -412,11 +412,19 @@ void Session::register_persistent_event_handler(EventHandler handler)
     owned_event_subscriptions_.push_back(std::move(subscription));
 }
 
-// NODEJS REFERENCE: nodejs/src/session.ts _handleBroadcastEvent
-void Session::dispatch_event(const SessionEvent& event)
+// NODEJS REFERENCE: nodejs/src/session.ts _dispatchEvent(event, settled)
+void Session::dispatch_event(const SessionEvent& event, bool settled)
 {
     if (dispatch_stopped_)
         return;
+    if (!settled)
+        handle_broadcast_event(event);
+    notify_event_handlers(event);
+}
+
+// NODEJS REFERENCE: nodejs/src/session.ts _handleBroadcastEvent
+void Session::handle_broadcast_event(const SessionEvent& event)
+{
     PermissionHandler permission_handler;
     PermissionHandlerWithContext permission_context_handler;
     McpAuthHandler mcp_handler;
@@ -482,7 +490,8 @@ void Session::dispatch_event(const SessionEvent& event)
                             request,
                             value.prompt_request,
                             value.assisted_approval_assessment,
-                            value.program_tool_call_id
+                            value.program_tool_call_id,
+                            value.request_id
                         );
                         if (result.kind == "no-result" || dispatch_stopped_)
                             return;
@@ -629,7 +638,10 @@ void Session::dispatch_event(const SessionEvent& event)
         const auto* data = event.try_as<ElicitationRequestedData>();
         if (handler && data)
         {
+            // NODEJS REFERENCE: session.ts _handleBroadcastEvent (requestId, _meta)
             ElicitationContext context{
+                .request_id = data->request_id,
+                .meta = data->meta,
                 .session_id = session_id_,
                 .message = data->message,
                 .elicitation_source = data->elicitation_source,
@@ -724,7 +736,10 @@ void Session::dispatch_event(const SessionEvent& event)
             );
         }
     }
+}
 
+void Session::notify_event_handlers(const SessionEvent& event)
+{
     std::vector<EventHandler> handlers_copy;
 
     {
@@ -1044,7 +1059,8 @@ PermissionRequestResult Session::handle_permission_request(
     const PermissionRequest& request,
     std::optional<json> prompt_request,
     std::optional<json> assisted_approval_assessment,
-    std::optional<std::string> program_tool_call_id
+    std::optional<std::string> program_tool_call_id,
+    std::optional<std::string> request_id
 )
 {
     PermissionHandler handler;
@@ -1056,8 +1072,10 @@ PermissionRequestResult Session::handle_permission_request(
         handler = permission_handler_;
         context_handler = permission_handler_with_context_;
     }
+    // NODEJS REFERENCE: session.ts _executePermissionAndRespond (invocation.requestId)
     PermissionInvocation invocation{
         .session_id = session_id_,
+        .request_id = std::move(request_id),
         .managed_settings_enabled = managed_settings_enabled_,
         .prompt_request = std::move(prompt_request),
         .assisted_approval_assessment = std::move(assisted_approval_assessment),
@@ -1337,6 +1355,47 @@ json Session::handle_session_management_create(
     }
 }
 
+void Session::register_host_policy_pre_check(HostPolicyPreCheckHandler handler)
+{
+    std::lock_guard<std::mutex> lock(callbacks_mutex_);
+    if (dispatch_stopped_)
+        throw std::runtime_error("Session callbacks retired");
+    host_policy_pre_check_ = std::move(handler);
+}
+
+json Session::handle_host_policy_pre_check(const json& params, const CancellationToken& cancellation)
+{
+    HostPolicyPreCheckHandler handler;
+    CancellationSource source;
+    uint64_t id = 0;
+    {
+        std::lock_guard<std::mutex> lock(callbacks_mutex_);
+        if (dispatch_stopped_)
+            throw std::runtime_error("Session callbacks retired");
+        handler = host_policy_pre_check_;
+        if (!handler)
+            throw std::runtime_error("Host policy pre-check owner is unavailable");
+        id = next_host_policy_pre_check_id_++;
+        pending_host_policy_pre_checks_.emplace(id, source);
+    }
+    // Disconnecting the session also ends the callback.
+    const auto subscription = cancellation.on_cancel([source]() mutable { source.cancel(); });
+    struct Cleanup
+    {
+        std::function<void()> run;
+        ~Cleanup()
+        {
+            run();
+        }
+    } cleanup{[&]
+              {
+                  cancellation.unregister(subscription);
+                  std::lock_guard<std::mutex> lock(callbacks_mutex_);
+                  pending_host_policy_pre_checks_.erase(id);
+              }};
+    return json(handler(params.get<HostPolicyPreCheckRequest>(), source.token()));
+}
+
 // NODEJS REFERENCE: nodejs/src/session.ts _handleMemoryStore
 void Session::handle_memory_store_request(const json& params, const CancellationToken& cancellation)
 {
@@ -1532,6 +1591,7 @@ void Session::retire()
         wake();
     std::function<void()> on_disconnected;
     std::map<uint64_t, CancellationSource> pending_creations;
+    std::map<uint64_t, CancellationSource> pending_pre_checks;
     {
         std::lock_guard<std::mutex> lock(callbacks_mutex_);
         permission_handler_ = {};
@@ -1545,11 +1605,15 @@ void Session::retire()
         session_creation_handler_ = {};
         ++session_creation_generation_;
         pending_creations.swap(pending_session_creations_);
+        host_policy_pre_check_ = {};
+        pending_pre_checks.swap(pending_host_policy_pre_checks_);
         transform_callbacks_.clear();
         session_fs_handler_ = {};
         on_disconnected.swap(on_disconnected_);
     }
     for (auto& [_, source] : pending_creations)
+        source.cancel();
+    for (auto& [_, source] : pending_pre_checks)
         source.cancel();
     {
         std::lock_guard<std::mutex> lock(tools_mutex_);

@@ -330,6 +330,13 @@ class JsonRpcClient
             wire_->transport->close();
     }
 
+    /// Fail every pending request, and every later one, with `code` without closing the
+    /// transport or running on_closed.
+    void fail_pending(JsonRpcErrorCode code, const std::string& message)
+    {
+        fail_all_pending(code, message);
+    }
+
     /// Check if client is running
     bool is_running() const
     {
@@ -651,20 +658,12 @@ class JsonRpcClient
                 {
                     if (!running_)
                         break;
+                    // No predicate: a newly added request (possibly with an earlier
+                    // deadline) must wake this wait so the deadline is recomputed.
                     if (next_deadline == clock::time_point::max())
-                    {
-                        pending_cv_.wait_for(
-                            lock,
-                            std::chrono::milliseconds(250),
-                            [this] { return !running_.load(); }
-                        );
-                    }
+                        pending_cv_.wait_for(lock, std::chrono::milliseconds(250));
                     else
-                    {
-                        pending_cv_.wait_until(
-                            lock, next_deadline, [this] { return !running_.load(); }
-                        );
-                    }
+                        pending_cv_.wait_until(lock, next_deadline);
                     continue;
                 }
             }

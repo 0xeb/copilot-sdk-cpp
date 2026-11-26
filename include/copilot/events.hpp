@@ -1590,6 +1590,8 @@ struct ElicitationRequestedData
     std::optional<std::string> tool_call_id;
     std::optional<std::string> url;
     std::optional<json> requested_schema;
+    /// Request metadata (`_meta`), such as negotiated ask_user image constraints.
+    std::optional<json> meta;
 };
 
 inline void from_json(const json& j, ElicitationRequestedData& d)
@@ -1606,6 +1608,8 @@ inline void from_json(const json& j, ElicitationRequestedData& d)
         d.url = j.at("url").get<std::string>();
     if (j.contains("requestedSchema"))
         d.requested_schema = j.at("requestedSchema");
+    if (j.contains("_meta") && !j["_meta"].is_null())
+        d.meta = j["_meta"];
 }
 
 /// Data for elicitation.completed event.
@@ -3202,6 +3206,14 @@ enum class SessionEventType
     AutoModeRecoveryConsentRequested,
     AutoModeRecoveryConsentCompleted,
     AutoModeRecoveryOutcome,
+    // Added with the @github/copilot 1.0.116-3 re-pin (upstream 6295d6a4).
+    PromptCachePrefixChange,
+    PromptCacheToolUpdate,
+    SessionPermissionGrantsRecorded,
+    SessionSandboxStateChanged,
+    SessionSensitivityLabelObservation,
+    SessionToolBaseline,
+    SessionToolUpdate,
     Unknown
 };
 
@@ -3592,6 +3604,15 @@ inline SessionEvent parse_session_event(const json& j)
         {"auto_mode_recovery_consent.completed",
          SessionEventType::AutoModeRecoveryConsentCompleted},
         {"auto_mode_recovery.outcome", SessionEventType::AutoModeRecoveryOutcome},
+        // @github/copilot 1.0.116-3 (upstream 6295d6a4). Payloads stay raw json.
+        {"prompt_cache_prefix_change", SessionEventType::PromptCachePrefixChange},
+        {"prompt_cache_tool_update", SessionEventType::PromptCacheToolUpdate},
+        {"session.permission_grants_recorded", SessionEventType::SessionPermissionGrantsRecorded},
+        {"session.sandbox_state_changed", SessionEventType::SessionSandboxStateChanged},
+        {"session.sensitivity_label_observation",
+         SessionEventType::SessionSensitivityLabelObservation},
+        {"session.tool_baseline", SessionEventType::SessionToolBaseline},
+        {"session.tool_update", SessionEventType::SessionToolUpdate},
     };
 
     auto it = type_map.find(event.type_string);
