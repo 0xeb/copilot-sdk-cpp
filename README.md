@@ -6,7 +6,12 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.6
+## Version 0.4.6.1
+
+Fixes CLI lookup on Windows: a bare CLI name is resolved in the shell's `PATH` order,
+and environment lookups see changes made with `SetEnvironmentVariable`. See `CHANGELOG.md`.
+
+### 0.4.6
 
 Targets Copilot CLI 1.0.116-3. Adds the experimental host-policy pre-check
 (`permissions.host_policy_pre_check`), `extension_sources`, MCP `defer_tools`,
@@ -45,6 +50,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.6.1         | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.6           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.5           | 4                 | 1.0.115-1              | 1.0.115-1               |
 | 0.4.4           | 4                 | 1.0.115-1              | 1.0.115-1               |
@@ -190,7 +196,8 @@ client.abort();                             // fail pending requests, do not wai
   and fails pending requests with `JsonRpcErrorCode::ConnectionClosed` without waiting;
   a spawned runtime it leaves is reaped by the next `start()` or `force_stop()`.
 - A spawned runtime named without a directory (default `copilot`, or
-  `COPILOT_CLI_PATH=copilot`) is looked up on `PATH`. A native executable is spawned
+  `COPILOT_CLI_PATH=copilot`) is looked up on `PATH` in the shell's order (first
+  directory with a match, then `PATHEXT` order). A native executable is spawned
   directly; a `.cmd`/`.bat` shim runs through `cmd.exe` by absolute path. Set
   `COPILOT_CLI_PATH` to the executable to skip the lookup.
 

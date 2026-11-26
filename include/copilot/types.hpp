@@ -40,23 +40,10 @@ using json = nlohmann::json;
 
 namespace detail
 {
-/// Value of an environment variable, or nullopt when unset. Uses _dupenv_s on MSVC so
-/// consumers compiling with /W4 /WX do not trip C4996 on std::getenv.
-inline std::optional<std::string> env_value(const char* name)
-{
-#ifdef _MSC_VER
-    char* buffer = nullptr;
-    size_t length = 0;
-    if (_dupenv_s(&buffer, &length, name) != 0 || buffer == nullptr)
-        return std::nullopt;
-    std::string value(buffer);
-    std::free(buffer);
-    return value;
-#else
-    const char* value = std::getenv(name);
-    return value ? std::optional<std::string>(value) : std::nullopt;
-#endif
-}
+/// Value of an environment variable, or nullopt when unset. On Windows this reads the
+/// process environment block (GetEnvironmentVariable), the copy a spawned child inherits,
+/// so a change made with SetEnvironmentVariable is seen; the C runtime's copy may lag it.
+std::optional<std::string> env_value(const char* name);
 
 /// Like env_value(), but an empty value counts as unset.
 inline std::optional<std::string> non_empty_env_value(const char* name)

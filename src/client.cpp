@@ -1472,56 +1472,54 @@ Client::CliCommand Client::resolve_cli_command(
     if (pathext.empty())
         pathext = ".COM;.EXE;.BAT;.CMD";
 
+    // Same order as cmd.exe and where.exe: the first PATH directory holding a match wins,
+    // and within a directory the PATHEXT order decides. A name that already ends in a
+    // PATHEXT extension is looked up as given.
+    const auto extensions = split_list(pathext, ';');
     const auto extension = path.extension().string();
-    const bool has_extension = !extension.empty();
-    std::vector<std::string> native{".EXE", ".COM"};
-    std::vector<std::string> scripts;
-    for (const auto& value : split_list(pathext, ';'))
-        if (iequals(value, ".BAT") || iequals(value, ".CMD"))
-            scripts.push_back(value);
+    const bool has_extension =
+        !extension.empty() &&
+        std::any_of(
+            extensions.begin(),
+            extensions.end(),
+            [&](const std::string& value) { return iequals(value, extension); }
+        );
+    std::vector<std::string> suffixes;
+    if (has_extension)
+        suffixes.emplace_back();
+    else
+        suffixes = extensions;
 
     std::optional<std::filesystem::path> script;
     for (const auto& directory : split_list(search_path, ';'))
     {
         const std::filesystem::path base(directory);
-        if (has_extension)
+        for (const auto& suffix : suffixes)
         {
-            const auto candidate = base / path;
+            const auto candidate = base / (cli_path + suffix);
+            const auto kind = candidate.extension().string();
+            const bool is_script = iequals(kind, ".bat") || iequals(kind, ".cmd");
+            // Other PATHEXT types (.vbs, .js, ...) run through a file association, which
+            // CreateProcess cannot spawn; keep searching past them.
+            if (!is_script && !iequals(kind, ".exe") && !iequals(kind, ".com"))
+                continue;
             if (!file_exists(candidate))
                 continue;
-            if (iequals(extension, ".bat") || iequals(extension, ".cmd"))
+            if (is_script)
             {
-                if (!script)
-                    script = candidate;
-                continue;
+                script = candidate;
+                break;
             }
             const auto found = candidate.string();
             return {found, args, found};
         }
-        for (const auto& ext : native)
-        {
-            const auto candidate = base / (cli_path + ext);
-            if (file_exists(candidate))
-            {
-                const auto found = candidate.string();
-                return {found, args, found};
-            }
-        }
-        if (!script)
-            for (const auto& ext : scripts)
-            {
-                const auto candidate = base / (cli_path + ext);
-                if (file_exists(candidate))
-                {
-                    script = candidate;
-                    break;
-                }
-            }
+        if (script)
+            break;
     }
     if (script)
     {
-        // Only the npm shim was found: run it by absolute path through cmd.exe. /s strips
-        // the outer quotes, so the inner ones survive.
+        // A .cmd/.bat (such as the npm shim) came first: run it by absolute path through
+        // cmd.exe. /s strips the outer quotes, so the inner ones survive.
         const auto found = script->string();
         std::string line = cmd_quote(found);
         for (const auto& arg : args)

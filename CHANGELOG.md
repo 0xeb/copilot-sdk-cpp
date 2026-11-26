@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.6.1
+
+Fixes to CLI lookup on Windows. No API changes.
+
+- A bare CLI name is now resolved in the same order as `cmd.exe` and `where.exe`: the
+  first `PATH` directory holding a match wins, and `PATHEXT` decides within it.
+  0.4.6 preferred a native `.exe`/`.com` from any `PATH` directory over a `.cmd`/`.bat`
+  in an earlier one, so it could run a different CLI than the shell would.
+- Environment lookups (`PATH`, `PATHEXT`, `ComSpec`, `COPILOT_CLI_PATH`, ...) read the
+  process environment block with `GetEnvironmentVariable` instead of the C runtime's
+  copy. A variable changed with `SetEnvironmentVariable`, which is what a spawned child
+  inherits, is now seen. `detail::env_value` moved out of line into the library.
+
 ## 0.4.6
 
 Targets Copilot CLI 1.0.116-3 (SDK protocol 4, unchanged). Additive; no breaking changes.

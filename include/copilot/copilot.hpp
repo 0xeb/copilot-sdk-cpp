@@ -39,6 +39,6 @@ namespace copilot
 {
 
 /// SDK version string
-inline constexpr const char* kSdkVersion = "0.4.6";
+inline constexpr const char* kSdkVersion = "0.4.6.1";
 
 } // namespace copilot
