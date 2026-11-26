@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.10
+
+One shared start, as in the official SDKs. No API changes.
+
+- Only one start runs at a time. A `start()` made while a start is in progress, and the
+  auto-start of `ping()`, `get_status()`, `create_session()` and the other calls, joins
+  that start instead of queueing another behind it. Previously every caller that found
+  the client disconnected began its own start and held a thread until it got its turn.
+- A caller that joined a start and is cancelled (its `std::stop_token` fires) stops
+  waiting at once and costs no thread; the shared start continues. Previously each
+  cancelled caller left a thread waiting for the start to finish.
+- `start(token)` cancels the start when it began it; when it joined another caller's
+  start, the token ends only its own wait (`StartCancelled`).
+- The future `start()` returns no longer blocks in its destructor.
+
 ## 0.4.9
 
 Targets Copilot CLI 1.0.117-2 (SDK protocol 4, unchanged). Additive; no breaking changes.

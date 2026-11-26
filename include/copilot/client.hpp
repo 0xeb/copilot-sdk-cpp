@@ -150,6 +150,9 @@ class Client
     // =========================================================================
 
     /// Start the client and connect to the server
+    /// Only one start runs at a time: a call made while a start is in progress (including
+    /// the auto-start of ping(), create_session() and the other calls) joins it instead of
+    /// starting another. The returned future never blocks in its destructor.
     /// @return Future that completes when connected
     /// @throws std::runtime_error on connection failure
     /// @throws StartCancelled when stop(), force_stop() or abort() ends the start first.
@@ -158,8 +161,10 @@ class Client
 
     /// Start the client; a stop request on `token` cancels the start the same way stop()
     /// does (the future fails with StartCancelled and any spawned runtime is killed).
-    /// The token has no effect once the start has completed.
-    // C# REFERENCE: Client.cs StartAsync(CancellationToken)
+    /// If another caller's start is already in progress, this call joins it and `token`
+    /// ends only this caller's wait (the future fails with StartCancelled; the shared start
+    /// continues). The token has no effect once the start has completed.
+    // C# REFERENCE: Client.cs StartAsync(CancellationToken) / StartConnectionAsync
     std::future<void> start(std::stop_token token);
 
     /// Stop the client gracefully
@@ -594,6 +599,36 @@ class Client
         void release();
     };
     void run_start(const std::shared_ptr<StartAttempt>& attempt, std::stop_token token);
+
+    /// One caller waiting on the shared start.
+    struct StartWaiter
+    {
+        std::promise<void> promise;
+        std::atomic<bool> settled{false};
+        /// Keeps `wait_token` alive when it comes from a std::stop_token.
+        std::unique_ptr<detail::StopTokenCancellation> stop_wait;
+        /// Ends this caller's wait (not the start); unregistered on destruction.
+        CancellationToken wait_token;
+        uint64_t wait_callback = 0;
+        ~StartWaiter();
+        /// Completes the caller's future once; later calls do nothing.
+        void settle(std::exception_ptr error);
+    };
+    /// The start every caller joins while it runs (C# _connectionTask, TS startPromise).
+    struct SharedStart
+    {
+        std::shared_ptr<StartAttempt> attempt;
+        std::vector<std::shared_ptr<StartWaiter>> waiters;
+    };
+    /// Begins a start or joins the one in progress. `token` cancels a start this call
+    /// begins; `wait` ends only this caller's wait, failing it with `wait_cancelled`.
+    std::future<void> acquire_start(
+        std::stop_token token,
+        std::unique_ptr<detail::StopTokenCancellation> stop_wait,
+        CancellationToken wait,
+        std::exception_ptr wait_cancelled
+    );
+    void run_shared_start(const std::shared_ptr<SharedStart>& shared, std::stop_token token);
     void start_impl(StartAttempt& attempt);
     std::vector<StopError> stop_impl(std::chrono::steady_clock::time_point deadline);
     /// Ends every start requested so far (and, with `end_session_initializations`, every
@@ -693,6 +728,8 @@ class Client
     std::shared_ptr<JsonRpcClient> live_rpc_;
     /// Starts requested and not yet finished, including ones still waiting on mutex_.
     std::vector<std::shared_ptr<StartAttempt>> start_attempts_;
+    /// The start in progress that new callers join; reset when it finishes.
+    std::shared_ptr<SharedStart> shared_start_;
     /// stop() calls in progress; a start requested meanwhile is refused.
     std::atomic<int> stops_in_progress_{0};
     // NODEJS REFERENCE: client.ts sessionInitializationLifetime

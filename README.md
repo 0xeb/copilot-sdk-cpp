@@ -6,7 +6,13 @@ C++ SDK for interacting with the Copilot CLI agent runtime (JSON-RPC over stdio 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-## Version 0.4.9
+## Version 0.4.10
+
+Callers share one start: a `start()` or auto-start made while a start is in progress
+joins it, and a cancelled caller stops waiting without holding a thread. See
+`CHANGELOG.md`.
+
+### 0.4.9
 
 Targets Copilot CLI 1.0.117-2. Adds tool progress reporting
 (`ToolInvocation::report_progress`), tool exposure, `max_tool_turns` limits,
@@ -68,6 +74,7 @@ executable path) for any other runtime. Copilot CLI 1.0.113 and later speak prot
 
 | copilot-sdk-cpp | Protocol accepted | Schemas generated from | Tested with Copilot CLI |
 |-----------------|-------------------|------------------------|-------------------------|
+| 0.4.10          | 4                 | 1.0.117-2              | 1.0.117-2               |
 | 0.4.9           | 4                 | 1.0.117-2              | 1.0.117-2               |
 | 0.4.8           | 4                 | 1.0.116-3              | 1.0.116-3               |
 | 0.4.7           | 4                 | 1.0.116-3              | 1.0.116-3               |
@@ -213,6 +220,10 @@ client.abort();                             // fail pending requests, do not wai
 
 - `stop()`, `force_stop()`, `abort()` and a stop request on the token all end a start in
   progress; the start throws `StartCancelled` and the client can be started again.
+- One start runs at a time. A `start()` made while one is in progress, and the auto-start
+  of `ping()`, `create_session()` and the other calls, joins it. A joined caller's token
+  ends only its own wait; the token of the call that began the start cancels the start
+  for everyone. The future `start()` returns never blocks in its destructor.
 - `stop(deadline)` and `abort()` are C++ extensions. `abort()` closes the connection
   and fails pending requests with `JsonRpcErrorCode::ConnectionClosed` without waiting;
   a spawned runtime it leaves is reaped by the next `start()` or `force_stop()`.
@@ -241,8 +252,8 @@ catch (const copilot::JsonRpcError&) { client.force_stop(); }
 
 - A create/resume cancelled after the runtime already made the session reports its id
   in `RequestCancelledError::session_id()`; the SDK removes the session in the background.
-- The token also ends the wait for a start in progress; calls made during `stop()` fail
-  with `ConnectionClosed`.
+- The token also ends the wait for a start in progress, at once and without holding a
+  thread (the start continues); calls made during `stop()` fail with `ConnectionClosed`.
 
 ## Session options
 

@@ -507,30 +507,10 @@ std::shared_ptr<JsonRpcClient> Client::ensure_connected(const CancellationToken&
         throw JsonRpcError(JsonRpcErrorCode::ConnectionClosed, "Client is stopping");
     if (state_ != ConnectionState::Connected)
     {
-        auto started = start();
-        // C# REFERENCE: Client.cs StartConnectionAsync (a joining caller stops waiting when its
-        // token is cancelled; the shared startup keeps running)
-        if (cancellation.can_be_cancelled())
-        {
-            while (started.wait_for(std::chrono::milliseconds(10)) == std::future_status::timeout)
-                if (cancellation.is_cancelled())
-                {
-                    // The start continues; its future is waited on by a detached thread so
-                    // this caller returns now.
-                    std::thread([started = std::move(started)]() mutable
-                                {
-                                    try
-                                    {
-                                        started.get();
-                                    }
-                                    catch (...)
-                                    {
-                                    }
-                                }).detach();
-                    throw RequestCancelledError();
-                }
-        }
-        started.get();
+        // C# REFERENCE: Client.cs EnsureConnectedAsync / StartConnectionAsync (callers join the
+        // shared start; a cancelled caller stops waiting while the start continues)
+        acquire_start({}, nullptr, cancellation, std::make_exception_ptr(RequestCancelledError()))
+            .get();
     }
     std::lock_guard<std::mutex> lock(lifetime_mutex_);
     if (!live_rpc_)
@@ -843,38 +823,136 @@ std::future<void> Client::start()
 // C# REFERENCE: Client.cs StartAsync(CancellationToken)
 std::future<void> Client::start(std::stop_token token)
 {
-    auto attempt = std::make_shared<StartAttempt>();
+    auto stop_wait = token.stop_possible()
+                         ? std::make_unique<detail::StopTokenCancellation>(token)
+                         : nullptr;
+    const auto wait = stop_wait ? stop_wait->token() : CancellationToken{};
+    return acquire_start(
+        std::move(token),
+        std::move(stop_wait),
+        wait,
+        std::make_exception_ptr(StartCancelled("Client start was cancelled"))
+    );
+}
+
+Client::StartWaiter::~StartWaiter()
+{
+    wait_token.unregister(wait_callback);
+}
+
+void Client::StartWaiter::settle(std::exception_ptr error)
+{
+    if (settled.exchange(true))
+        return;
+    if (error)
+        promise.set_exception(std::move(error));
+    else
+        promise.set_value();
+}
+
+// C# REFERENCE: Client.cs StartConnectionAsync (one _connectionTask; a joining caller's
+// token ends only its WaitAsync)
+// NODEJS REFERENCE: client.ts start (startPromise shared by concurrent callers)
+std::future<void> Client::acquire_start(
+    std::stop_token token,
+    std::unique_ptr<detail::StopTokenCancellation> stop_wait,
+    CancellationToken wait,
+    std::exception_ptr wait_cancelled
+)
+{
+    const bool token_cancels_start = token.stop_possible();
+    auto waiter = std::make_shared<StartWaiter>();
+    auto future = waiter->promise.get_future();
+    waiter->stop_wait = std::move(stop_wait);
+    waiter->wait_token = wait;
+
+    std::shared_ptr<SharedStart> begun;
     {
         std::lock_guard<std::mutex> lock(lifetime_mutex_);
-        start_attempts_.push_back(attempt);
-        // NODEJS REFERENCE: client.ts start (a start requested during stop() fails)
-        if (stops_in_progress_.load() > 0)
-            attempt->cancel();
+        if (shared_start_)
+        {
+            // Callers that stopped waiting leave settled entries; drop them here so a
+            // long start does not accumulate them.
+            std::erase_if(shared_start_->waiters, [](const auto& w) { return w->settled.load(); });
+            shared_start_->waiters.push_back(waiter);
+        }
+        else
+        {
+            begun = std::make_shared<SharedStart>();
+            begun->attempt = std::make_shared<StartAttempt>();
+            begun->waiters.push_back(waiter);
+            start_attempts_.push_back(begun->attempt);
+            // NODEJS REFERENCE: client.ts start (a start requested during stop() fails)
+            if (stops_in_progress_.load() > 0)
+                begun->attempt->cancel();
+            shared_start_ = begun;
+        }
     }
+
+    if (begun)
+    {
+        try
+        {
+            std::thread([this, begun, token = std::move(token)]() mutable
+                        { run_shared_start(begun, std::move(token)); })
+                .detach();
+        }
+        catch (...)
+        {
+            std::lock_guard<std::mutex> lock(lifetime_mutex_);
+            std::erase(start_attempts_, begun->attempt);
+            if (shared_start_ == begun)
+                shared_start_.reset();
+            throw;
+        }
+    }
+
+    // A joining caller stops waiting when `wait` is cancelled, at once and without a
+    // thread. The start itself is ended only by the token of the call that began it (whose
+    // future then reports the cancelled start once it has unwound), or by stop().
+    if (wait.can_be_cancelled() && !(begun && token_cancels_start))
+    {
+        std::weak_ptr<StartWaiter> weak = waiter;
+        waiter->wait_callback = wait.on_cancel(
+            [weak, wait_cancelled]
+            {
+                if (auto w = weak.lock())
+                    w->settle(wait_cancelled);
+            }
+        );
+    }
+    return future;
+}
+
+void Client::run_shared_start(const std::shared_ptr<SharedStart>& shared, std::stop_token token)
+{
+    std::exception_ptr error;
     try
     {
-        return std::async(
-            std::launch::async,
-            [this, attempt, token = std::move(token)] { run_start(attempt, token); }
-        );
+        run_start(shared->attempt, std::move(token));
     }
     catch (...)
     {
-        std::lock_guard<std::mutex> lock(lifetime_mutex_);
-        std::erase(start_attempts_, attempt);
-        throw;
+        error = std::current_exception();
     }
+    std::vector<std::shared_ptr<StartWaiter>> waiters;
+    {
+        std::lock_guard<std::mutex> lock(lifetime_mutex_);
+        if (shared_start_ == shared)
+            shared_start_.reset();
+        waiters.swap(shared->waiters);
+    }
+    for (const auto& waiter : waiters)
+        waiter->settle(error);
+    // Last: ~Client waits for start_attempts_ to drain before tearing down members.
+    std::lock_guard<std::mutex> lock(lifetime_mutex_);
+    std::erase(start_attempts_, shared->attempt);
 }
 
 void Client::run_start(const std::shared_ptr<StartAttempt>& attempt, std::stop_token token)
 {
-    ScopeExit forget{[this, attempt]
-                     {
-                         std::lock_guard<std::mutex> lock(lifetime_mutex_);
-                         std::erase(start_attempts_, attempt);
-                     }};
-    // Declared after `forget` and before any lock: its destructor waits for a running
-    // callback, which may need mutex_.
+    // Declared before any lock: its destructor waits for a running callback, which may
+    // need mutex_. run_shared_start removes the attempt from start_attempts_.
     std::stop_callback on_stop(token, [attempt] { attempt->cancel(); });
     attempt->throw_if_cancelled();
 
